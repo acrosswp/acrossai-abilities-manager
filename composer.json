@@ -1,0 +1,33 @@
+{
+  "name": "wordpress/abilities-editor",
+  "description": "Override WordPress Abilities metadata from wp-admin.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "ext-json": "*",
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "automattic/vipwpcs": "^3.0",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
+    "phpunit/phpunit": "^8.5|^9.6",
+    "wp-coding-standards/wpcs": "^3.2.0",
+    "wp-phpunit/wp-phpunit": "^6.9",
+    "yoast/phpunit-polyfills": "^4.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Abilities_Editor\": "includes/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Abilities_Editor\Tests\": "tests/"
+    }
+  },
+  "scripts": {
+    "format": "phpcbf --standard=phpcs.xml",
+    "lint": "phpcs --standard=phpcs.xml",
+    "test": "phpunit"
+  }
+}

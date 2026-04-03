@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<ruleset name="Abilities Editor">
+	<description>PHPCS configuration for the Abilities Editor plugin.</description>
+	<file>abilities-editor.php</file>
+	<file>includes</file>
+	<file>uninstall.php</file>
+	<file>tests</file>
+	<exclude-pattern>vendor/*</exclude-pattern>
+	<rule ref="WordPress-Core" />
+	<rule ref="WordPress-Docs" />
+	<rule ref="WordPress-Extra" />
+	<config name="minimum_supported_wp_version" value="7.0" />
+	<arg name="basepath" value="." />
+	<arg value="sp" />
+</ruleset>
