@@ -25,10 +25,10 @@ class Menu {
 	/**
 	 * WordPress screen ID for the plugin's list page.
 	 *
-	 * Derived from the parent menu slug (`tools.php`) and the page slug
-	 * (`acrossai-abilities-manager`), following WordPress's naming convention.
+	 * Derived from the top-level menu slug (`acrossai-abilities-manager`),
+	 * following WordPress's naming convention for top-level pages.
 	 */
-	private const SCREEN_ID = 'tools_page_acrossai-abilities-manager';
+	private const SCREEN_ID = 'toplevel_page_acrossai-abilities-manager';
 
 	/**
 	 * Registers the submenu page, column filters, and the screen-option action.
@@ -45,20 +45,22 @@ class Menu {
 		add_filter( 'manage_' . self::SCREEN_ID . '_columns', array( __CLASS__, 'screen_columns' ) );
 		add_filter( 'set-screen-option', array( __CLASS__, 'set_screen_option' ), 10, 3 );
 
-		$hook_suffix = add_submenu_page(
-			'tools.php',
-			esc_html__( 'Ability Manager', 'acrossai-abilities-manager' ),
-			esc_html__( 'Ability Manager', 'acrossai-abilities-manager' ),
+		$hook_suffix = add_menu_page(
+			esc_html__( 'Abilities Manager', 'acrossai-abilities-manager' ),
+			esc_html__( 'Abilities Manager', 'acrossai-abilities-manager' ),
 			'manage_options',
 			'acrossai-abilities-manager',
-			array( __CLASS__, 'render_page' )
+			array( __CLASS__, 'render_page' ),
+			'dashicons-superhero-alt',
+			100
 		);
 
-		// Only register the screen-options callback when the submenu page was
-		// actually added. add_submenu_page() returns false when the capability
-		// check fails, which would make hook registration unsafe.
+		// Only register the screen-options and enqueue callbacks when the menu
+		// page was actually added. add_menu_page() returns false when the
+		// capability check fails, which would make hook registration unsafe.
 		if ( false !== $hook_suffix ) {
 			add_action( 'load-' . $hook_suffix, array( __CLASS__, 'configure_screen_options' ) );
+			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		}
 	}
 
@@ -78,6 +80,33 @@ class Menu {
 				'default' => 20,
 				'option'  => 'acrossai_abilities_manager_per_page',
 			)
+		);
+	}
+
+	/**
+	 * Enqueues the plugin's CSS and JS on the plugin's own admin page only.
+	 *
+	 * @param string $hook_suffix The current admin page hook suffix.
+	 * @return void
+	 */
+	public static function enqueue_assets( string $hook_suffix ): void {
+		if ( self::SCREEN_ID !== $hook_suffix ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'acrossai-abilities-manager-admin',
+			ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'assets/css/admin.css',
+			array(),
+			ACROSSAI_ABILITIES_MANAGER_VERSION
+		);
+
+		wp_enqueue_script(
+			'acrossai-abilities-manager-admin',
+			ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'assets/js/admin.js',
+			array( 'jquery' ),
+			ACROSSAI_ABILITIES_MANAGER_VERSION,
+			true
 		);
 	}
 
@@ -132,7 +161,7 @@ class Menu {
 			return $links;
 		}
 
-		$settings_link = '<a href="' . esc_url( admin_url( 'tools.php?page=acrossai-abilities-manager' ) ) . '">' . esc_html__( 'Settings', 'acrossai-abilities-manager' ) . '</a>';
+		$settings_link = '<a href="' . esc_url( admin_url( 'admin.php?page=acrossai-abilities-manager' ) ) . '">' . esc_html__( 'Settings', 'acrossai-abilities-manager' ) . '</a>';
 
 		array_unshift( $links, $settings_link );
 
