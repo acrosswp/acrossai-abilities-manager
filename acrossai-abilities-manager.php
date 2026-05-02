@@ -4,8 +4,8 @@
  * Plugin URI:        https://github.com/AcrossWP/acrossai-abilities-manager
  * Description:       Manage WordPress Abilities metadata from a classic wp-admin UI.
  * Version:           0.1.0
- * Requires at least: 7.0
- * Requires PHP:      7.4
+ * Requires at least: 6.9
+ * Requires PHP:      8.0
  * Author:            acrosswp
  * Author URI:        https://acrosswp.com/
  * License:           GPL-2.0-or-later

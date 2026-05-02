@@ -6,7 +6,17 @@
       "Read(//Users/raftaar1191/Desktop/**)",
       "Bash(grep -E \"\\\\.\\(json|md|txt\\)$\")",
       "Bash(git mv:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(composer exec:*)",
+      "Bash(./vendor/bin/phpcs:*)",
+      "Bash(./vendor/bin/phpcbf:*)",
+      "Bash(zip -r '~/Desktop/acrossai-abilities-manager.zip' acrossai-abilities-manager --exclude 'acrossai-abilities-manager/.git/*' --exclude 'acrossai-abilities-manager/.github/*' --exclude 'acrossai-abilities-manager/.claude/*' --exclude 'acrossai-abilities-manager/vendor/*' --exclude acrossai-abilities-manager/composer.json --exclude acrossai-abilities-manager/composer.lock --exclude acrossai-abilities-manager/phpcs.xml --exclude acrossai-abilities-manager/README.md)",
+      "Bash(unzip -l ~/Desktop/acrossai-abilities-manager.zip)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/acrossai-abilities-manager/assets/css)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/acrossai-abilities-manager/assets/js)",
+      "Bash(git *)"
     ]
   }
 }
