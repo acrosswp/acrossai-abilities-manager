@@ -85,6 +85,7 @@ function acrossai_abilities_manager_bootstrap(): void {
 		add_filter( 'plugin_action_links_' . plugin_basename( ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE ), array( 'AcrossAI_Abilities_Manager\Admin\Menu', 'plugin_action_links' ) );
 	}
 	add_action( 'wp_abilities_api_init', array( 'AcrossAI_Abilities_Manager\Runtime\Override_Applier', 'bootstrap' ), 0 );
+	add_action( 'rest_api_init', array( 'AcrossAI_Abilities_Manager\REST\Custom_Abilities_Controller', 'register_rest_routes' ) );
 }
 add_action( 'plugins_loaded', 'acrossai_abilities_manager_bootstrap' );
 

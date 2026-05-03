@@ -35,12 +35,32 @@ The repository stores only values that differ from the current live ability stat
 
 ## REST API
 
+### Overrides endpoints
+
 - GET /wp-json/acrossai-abilities-manager/v1/overrides
 - GET /wp-json/acrossai-abilities-manager/v1/overrides/{slug}
 - POST /wp-json/acrossai-abilities-manager/v1/overrides/{slug}
 - DELETE /wp-json/acrossai-abilities-manager/v1/overrides/{slug}
 
 Supported writable fields include site_allowed, readonly, destructive, idempotent, show_in_rest, mcp_public, mcp_type, and custom_meta.
+
+### Custom abilities endpoints
+
+- GET /wp-json/acrossai-abilities-manager/v1/custom-abilities
+- GET /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+- POST /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+- DELETE /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+
+Supported writable fields include label, description, category, status, input_schema, output_schema, execute_callback, permission_callback, readonly, destructive, idempotent, show_in_rest, mcp_public, mcp_type, and custom_meta.
+
+List endpoint supports filters:
+- status: Filter by status (active/draft/archived)
+- category: Filter by category
+- search: Search in ability slug and label
+- page: Page number (1-based, default 1)
+- per_page: Results per page (default 20)
+- orderby: Sort by field (ability_slug, label, status, category, created_at)
+- order: Sort direction (ASC or DESC)
 
 ## Maintenance rules
 

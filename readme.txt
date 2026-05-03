@@ -115,7 +115,9 @@ If a runtime merge fails for a specific ability, the plugin falls back to the or
 
 = REST API =
 
-The plugin exposes a REST namespace for programmatic override management:
+The plugin exposes two REST namespaces for programmatic management:
+
+== Overrides Endpoints ==
 
 * GET /wp-json/acrossai-abilities-manager/v1/overrides
 * GET /wp-json/acrossai-abilities-manager/v1/overrides/{slug}
@@ -134,6 +136,43 @@ Supported writable fields include:
 * mcp_public
 * mcp_type
 * custom_meta
+
+== Custom Abilities Endpoints ==
+
+* GET /wp-json/acrossai-abilities-manager/v1/custom-abilities
+* GET /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+* POST /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+* DELETE /wp-json/acrossai-abilities-manager/v1/custom-abilities/{slug}
+
+The route slug pattern is a custom ability slug, such as my-site/custom-processor.
+
+Supported writable fields include:
+
+* label (required for create)
+* description
+* category
+* status (active/draft/archived)
+* input_schema
+* output_schema
+* execute_callback
+* permission_callback
+* readonly
+* destructive
+* idempotent
+* show_in_rest
+* mcp_public
+* mcp_type
+* custom_meta
+
+List endpoint supports filters:
+
+* status: Filter by status (active/draft/archived)
+* category: Filter by category
+* search: Search in ability slug and label
+* page: Page number (1-based, default 1)
+* per_page: Results per page (default 20)
+* orderby: Sort by field (ability_slug, label, status, category, created_at)
+* order: Sort direction (ASC or DESC)
 
 All REST routes require a user who can pass the plugin permission check, which currently maps to manage_options.
 
