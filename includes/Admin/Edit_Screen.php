@@ -202,14 +202,14 @@ class Edit_Screen {
 
 			if ( mcpVisibilityMode.length > 0 ) {
 				function syncMcpUI() {
-					var mode = Array.from( mcpVisibilityMode ).find( r => r.checked )?.value || 'none';
+					var mode = Array.from( mcpVisibilityMode ).find( r => r.checked )?.value || 'default';
 
 					if ( mcpServersContainer ) {
 						mcpServersContainer.style.display = 'specific' === mode ? 'block' : 'none';
 					}
 
 					if ( mcpTypeRow ) {
-						mcpTypeRow.style.display = 'none' !== mode ? '' : 'none';
+						mcpTypeRow.style.display = ( 'none' !== mode && 'default' !== mode ) ? '' : 'none';
 					}
 				}
 
@@ -535,12 +535,16 @@ class Edit_Screen {
 	 */
 	private static function render_mcp_visibility( $mcp_public, $mcp_servers, bool $disabled ): void {
 		$servers          = self::get_available_mcp_servers();
-		$current_mode     = null === $mcp_public ? 'none' : ( $mcp_public ? 'all' : ( ! empty( $mcp_servers ) ? 'specific' : 'none' ) );
+		$current_mode     = null === $mcp_public ? 'default' : ( $mcp_public ? 'all' : ( ! empty( $mcp_servers ) ? 'specific' : 'none' ) );
 		$selected_servers = is_array( $mcp_servers ) ? $mcp_servers : array();
 
 		?>
 		<div class="mcp-visibility-control">
 			<p style="margin-top: 0;">
+				<label style="display: block; margin-bottom: 8px;">
+					<input type="radio" name="mcp_visibility_mode" value="default" <?php checked( $current_mode, 'default' ); ?> <?php disabled( $disabled ); ?> />
+					<?php esc_html_e( 'Keep as Default', 'acrossai-abilities-manager' ); ?>
+				</label>
 				<label style="display: block; margin-bottom: 8px;">
 					<input type="radio" name="mcp_visibility_mode" value="none" <?php checked( $current_mode, 'none' ); ?> <?php disabled( $disabled ); ?> />
 					<?php esc_html_e( 'Disable for MCP', 'acrossai-abilities-manager' ); ?>
@@ -592,7 +596,7 @@ class Edit_Screen {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce is checked in save() before this helper is called.
 
 		// Parse MCP visibility mode and convert to mcp_public/mcp_servers.
-		$mcp_mode    = isset( $_POST['mcp_visibility_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['mcp_visibility_mode'] ) ) : 'none';
+		$mcp_mode    = isset( $_POST['mcp_visibility_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['mcp_visibility_mode'] ) ) : 'default';
 		$mcp_public  = null;
 		$mcp_servers = null;
 
@@ -606,10 +610,15 @@ class Edit_Screen {
 				$mcp_servers = isset( $_POST['mcp_servers'] ) ? array_map( 'sanitize_text_field', wp_unslash( (array) $_POST['mcp_servers'] ) ) : array();
 				break;
 			case 'none':
-			default:
 				// Explicit false so Override_Applier recognises this as "disabled",
 				// not "no override set". null means no override; false means disabled.
 				$mcp_public  = false;
+				$mcp_servers = null;
+				break;
+			case 'default':
+			default:
+				// null means no override — the ability's original registration value is used.
+				$mcp_public  = null;
 				$mcp_servers = null;
 				break;
 		}
