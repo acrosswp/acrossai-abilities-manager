@@ -10,8 +10,6 @@ declare( strict_types=1 );
 namespace AcrossAI_Abilities_Manager\Runtime;
 
 use AcrossAI_Abilities_Manager\Database\Repository;
-use AcrossAI_Abilities_Manager\Access_Control\Manager as AccessControlManager;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -24,15 +22,6 @@ class Override_Applier {
 	 * @var array<string, array<string, mixed>>|null
 	 */
 	private static ?array $overrides = null;
-
-	/**
-	 * Ability slugs that have a non-empty, non-'everyone' access control rule
-	 * stored in the wpb_access_control table under this plugin's namespace.
-	 * Populated lazily by prime_ac_slugs(). Null = not yet loaded.
-	 *
-	 * @var array<int, string>|null
-	 */
-	private static ?array $ac_slugs = null;
 
 	/**
 	 * Tracks whether runtime bootstrap has already completed for the request.
@@ -66,11 +55,10 @@ class Override_Applier {
 
 		self::$bootstrapped = true;
 		self::prime_overrides();
-		self::prime_ac_slugs();
 
-		// If both caches are empty there is nothing to apply; leave the core
+		// If the overrides cache is empty there is nothing to apply; leave the core
 		// registration path untouched.
-		if ( array() === self::$overrides && array() === self::$ac_slugs ) {
+		if ( array() === self::$overrides ) {
 			return;
 		}
 
@@ -134,9 +122,7 @@ class Override_Applier {
 	public static function apply( array $args, string $slug ): array {
 		$override = self::$overrides[ $slug ] ?? null;
 
-		// This condition checks the slug-keyed cache. If no override row exists
-		// for the current ability, skip metadata merging but still apply any
-		// access-control permission wrapping below.
+		// If there is no override row for this slug, return the original args unchanged.
 		if ( null !== $override ) {
 			try {
 				// Merge only the supported override fields into the original args.
@@ -146,23 +132,6 @@ class Override_Applier {
 				// original args so registration can continue safely.
 				self::notify_failure( $slug, $throwable->getMessage() );
 			}
-		}
-
-		// Access-control enforcement: wrap the permission_callback so the check
-		// runs at execution time (when the user is authenticated), not at the
-		// init-time when wp_abilities_api_init fires and get_current_user_id()
-		// may still return 0 for REST API requests.
-		if ( in_array( $slug, self::$ac_slugs ?? array(), true ) ) {
-			$original_callback = $args['permission_callback'] ?? null;
-			$args['permission_callback'] = static function () use ( $original_callback, $slug ) {
-				if ( ! AccessControlManager::user_has_access( get_current_user_id(), $slug ) ) {
-					return false;
-				}
-				if ( null === $original_callback ) {
-					return true;
-				}
-				return (bool) call_user_func( $original_callback );
-			};
 		}
 
 		return $args;
@@ -218,48 +187,6 @@ class Override_Applier {
 				self::$overrides[ (string) $override['ability_slug'] ] = $override;
 			}
 		}
-	}
-
-	/**
-	 * Loads ability slugs that have an active (non-empty, non-'everyone') access
-	 * control rule in the wpb_access_control table for this plugin's namespace.
-	 *
-	 * These slugs are used by apply() to wrap the permission_callback so the
-	 * access check runs at ability-execution time — when the current user is
-	 * fully authenticated — rather than at wp_abilities_api_init time where
-	 * get_current_user_id() may still return 0 for REST API requests.
-	 *
-	 * @return void
-	 */
-	private static function prime_ac_slugs(): void {
-		if ( null !== self::$ac_slugs ) {
-			return;
-		}
-
-		self::$ac_slugs = array();
-
-		if ( ! class_exists( '\WPBoilerplate\AccessControl\AccessControlTable' ) ) {
-			return;
-		}
-
-		global $wpdb;
-
-		$table = \WPBoilerplate\AccessControl\AccessControlTable::get_table_name();
-		$ns    = 'acrossai-abilities-manager';
-
-		// Retrieve only slugs whose rule is set to something specific (not empty
-		// and not 'everyone'), so we only wrap permission callbacks that actually
-		// restrict access. Abilities set to '' or 'everyone' allow all users and
-		// do not need a wrapper.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT `key` FROM `{$table}` WHERE namespace = %s AND access_control_key != '' AND access_control_key != 'everyone'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$ns
-			)
-		);
-
-		self::$ac_slugs = is_array( $rows ) ? array_values( $rows ) : array();
 	}
 
 	/**

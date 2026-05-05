@@ -10,8 +10,6 @@ declare( strict_types=1 );
 namespace AcrossAI_Abilities_Manager\Admin;
 
 use AcrossAI_Abilities_Manager\Database\Repository;
-use AcrossAI_Abilities_Manager\Access_Control\Manager as AccessControlManager;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -72,20 +70,12 @@ class Edit_Screen {
 	/**
 	 * Enqueues the necessary scripts and styles for the edit screen.
 	 *
-	 * Called on admin_enqueue_scripts to load AccessControlUI assets on the
-	 * abilities edit screen.
-	 *
 	 * @return void
 	 */
 	public static function enqueue_assets(): void {
 		$screen = get_current_screen();
 		if ( ! $screen || 'toplevel_page_acrossai-abilities-manager' !== $screen->id ) {
 			return;
-		}
-
-		// Enqueue AccessControlUI assets if on edit screen.
-		if ( isset( $_GET['action'] ) && 'edit' === sanitize_key( wp_unslash( $_GET['action'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			AccessControlManager::enqueue_assets();
 		}
 	}
 
@@ -129,7 +119,7 @@ class Edit_Screen {
 			$values        = self::resolved_values( null, $ability );
 		}
 
-		$valid_tabs = array( 'general', 'mcp', 'access-control' );
+		$valid_tabs = array( 'general', 'mcp' );
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! in_array( $active_tab, $valid_tabs, true ) ) {
 			$active_tab = 'general';
@@ -148,16 +138,8 @@ class Edit_Screen {
 			<a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'mcp' ), admin_url( 'admin.php?page=acrossai-abilities-manager&action=edit&slug=' . $slug ) ) ); ?>" class="nav-tab <?php echo 'mcp' === $active_tab ? 'nav-tab-active' : ''; ?>">
 				<?php esc_html_e( 'MCP', 'acrossai-abilities-manager' ); ?>
 			</a>
-			<a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'access-control' ), admin_url( 'admin.php?page=acrossai-abilities-manager&action=edit&slug=' . $slug ) ) ); ?>" class="nav-tab <?php echo 'access-control' === $active_tab ? 'nav-tab-active' : ''; ?>">
-				<?php esc_html_e( 'Access Control', 'acrossai-abilities-manager' ); ?>
-			</a>
 		</nav>
 
-		<?php if ( 'access-control' === $active_tab ) : ?>
-			<div class="aam-tab-panel">
-				<?php AccessControlManager::render( $slug ); ?>
-			</div>
-		<?php else : ?>
 		<form method="post" action="<?php echo esc_url( add_query_arg( array( 'tab' => $active_tab ), admin_url( 'admin.php?page=acrossai-abilities-manager' ) ) ); ?>">
 			<input type="hidden" name="page" value="acrossai-abilities-manager" />
 			<input type="hidden" name="aam_action" value="save" />
@@ -211,7 +193,6 @@ class Edit_Screen {
 					<?php endif; ?>
 			</p>
 		</form>
-		<?php endif; ?>
 		<script>
 		document.addEventListener( 'DOMContentLoaded', function() {
 			// MCP Visibility show/hide logic (only relevant on the MCP tab).
@@ -262,7 +243,7 @@ class Edit_Screen {
 		$slug = isset( $_POST['slug'] ) ? sanitize_text_field( wp_unslash( $_POST['slug'] ) ) : '';
 		check_admin_referer( 'aam_save_meta_' . $slug, 'aam_meta_nonce' );
 
-		$valid_tabs = array( 'general', 'mcp', 'access-control' );
+		$valid_tabs = array( 'general', 'mcp' );
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! in_array( $active_tab, $valid_tabs, true ) ) {
 			$active_tab = 'general';

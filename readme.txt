@@ -35,7 +35,6 @@ AcrossAI Abilities Manager currently lets administrators manage these override f
 * mcp_public
 * mcp_servers (for per-MCP-server visibility control)
 * mcp_type
-* access control rules (role-based restriction to specific WordPress roles)
 * custom_meta through the REST API
 
 The plugin does not replace the original ability registration. It layers stored metadata overrides on top of the arguments WordPress receives during registration, and it can remove a disallowed ability from the live registry when site policy requires it.
@@ -58,7 +57,6 @@ The plugin does not replace the original ability registration. It layers stored 
 * Dedicated custom database tables for overrides and custom abilities.
 * Runtime metadata application through wp_register_ability_args.
 * Runtime site disallow through a late wp_unregister_ability() pass.
-* Runtime role-based access control that restricts ability access to specific WordPress roles by wrapping the permission_callback at registration time, so the access check runs after full authentication.
 * Request guard that avoids mutating registrations while the AcrossAI Abilities Manager admin screen itself is rendering.
 * REST API endpoints for listing, reading, saving, and deleting overrides and custom abilities.
 * Capability checks based on manage_options.
@@ -92,9 +90,6 @@ The edit screen is designed for fast manual administration.
   - Allow in all MCP servers
   - Allow in specific MCP servers (with conditional server selector)
 * Select the MCP type from supported values.
-* Configure role-based access control on the Access Control tab:
-  - Restrict ability use to specific WordPress roles
-  - Administrators always have access
 * Save and stay on the same screen.
 * Save and return to the main Ability Manager list.
 * Reset the stored override from the same action area.

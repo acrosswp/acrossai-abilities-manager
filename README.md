@@ -26,7 +26,6 @@ That split is intentional. Metadata changes stay lightweight, while site-level d
 - The edit screen for provider abilities exposes the ability slug, provider, category, site allow toggle, metadata flags, REST exposure, and MCP server visibility controls.
   - **MCP visibility**: Radio button group to control MCP exposure (none/all servers/specific servers)
   - When "Specific servers" is selected, a list of available MCP servers appears as checkboxes for granular server selection
-  - **Access control**: Role-based access control to restrict ability use to specific WordPress roles. Administrators always have access regardless of settings.
 - Save actions are Save, Save and Exit, and Reset Override for overrides.
 - Tools -> Add New Ability allows site administrators to create custom abilities.
 - The add/edit custom ability screen supports all custom ability fields including label, description, schema definitions, callbacks, and metadata flags.
@@ -57,20 +56,6 @@ The plugin supports granular MCP (Model Context Protocol) server visibility cont
 - **Allow in specific MCP servers**: `mcp_public = false` and `mcp_servers = ["server-id-1", "server-id-2"]` — Ability exposed only to listed servers
 
 The admin edit form presents these options as radio buttons with a conditional server selector. MCP server discovery is handled via the `acrossai_abilities_manager_get_mcp_servers` action hook, allowing integration with MCP adapter plugins.
-
-### Role-Based Access Control
-
-The plugin supports role-based access control to restrict ability use to specific WordPress roles via the access control tab in the edit screen:
-
-- **No restriction** (default): Ability is accessible to all roles
-- **Restrict to specific roles**: Select which WordPress roles can use the ability. Administrators (users with `manage_options`) always have access regardless of settings.
-
-Access control rules are managed via a dedicated table (`wpb_access_control`) and are enforced at runtime:
-- When an ability has a role restriction, its `permission_callback` is wrapped at registration time so the access check runs when the ability is actually executed (after full authentication), not during plugin initialization
-- This ensures correct behavior for REST API requests that use Application Passwords or token-based authentication, where the user identity is resolved lazily
-- Role-based access control is separate from metadata overrides and site-level disallow
-
-Administrators can configure access control on the "Access Control" tab of the ability edit screen.
 
 ## REST API
 

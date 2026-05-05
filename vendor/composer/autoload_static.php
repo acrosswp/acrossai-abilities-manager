@@ -14,10 +14,6 @@ class ComposerStaticInitc37c888d8420bbcf73444a88a4d510b4
     );
 
     public static $prefixLengthsPsr4 = array (
-        'W' => 
-        array (
-            'WPBoilerplate\\AccessControl\\' => 28,
-        ),
         'V' => 
         array (
             'VariableAnalysis\\' => 17,
@@ -40,10 +36,6 @@ class ComposerStaticInitc37c888d8420bbcf73444a88a4d510b4
     );
 
     public static $prefixDirsPsr4 = array (
-        'WPBoilerplate\\AccessControl\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/wpboilerplate/wpb-access-control/src',
-        ),
         'VariableAnalysis\\' => 
         array (
             0 => __DIR__ . '/..' . '/sirbrillig/phpcs-variable-analysis/VariableAnalysis',

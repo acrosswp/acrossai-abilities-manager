@@ -4,62 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "82dbc392c8c34542ef0006c70b563964",
-    "packages": [
-        {
-            "name": "wpboilerplate/wpb-access-control",
-            "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/WPBoilerplate/wpb-access-control.git",
-                "reference": "95165efe3feadb07cc3b85c8686343a10050a1bf"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/95165efe3feadb07cc3b85c8686343a10050a1bf",
-                "reference": "95165efe3feadb07cc3b85c8686343a10050a1bf",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=7.4"
-            },
-            "require-dev": {
-                "brain/monkey": "^2.6",
-                "phpunit/phpunit": "^9.6"
-            },
-            "default-branch": true,
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "WPBoilerplate\\AccessControl\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "GPL-2.0-or-later"
-            ],
-            "authors": [
-                {
-                    "name": "WPBoilerplate Team",
-                    "homepage": "https://github.com/WPBoilerplate"
-                }
-            ],
-            "description": "Extensible per-resource access control library for WordPress plugins",
-            "homepage": "https://github.com/WPBoilerplate/wpb-access-control",
-            "keywords": [
-                "access-control",
-                "authorization",
-                "permissions",
-                "roles",
-                "wordpress"
-            ],
-            "support": {
-                "issues": "https://github.com/WPBoilerplate/wpb-access-control/issues",
-                "source": "https://github.com/WPBoilerplate/wpb-access-control"
-            },
-            "time": "2026-05-04T04:37:25+00:00"
-        }
-    ],
+    "content-hash": "a1788bfa8779764865e497ed53bf7d9c",
+    "packages": [],
     "packages-dev": [
         {
             "name": "automattic/vipwpcs",
@@ -2497,9 +2443,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "wpboilerplate/wpb-access-control": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

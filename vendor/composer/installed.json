@@ -2479,62 +2479,6 @@
             "install-path": "../wp-phpunit/wp-phpunit"
         },
         {
-            "name": "wpboilerplate/wpb-access-control",
-            "version": "dev-main",
-            "version_normalized": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/WPBoilerplate/wpb-access-control.git",
-                "reference": "95165efe3feadb07cc3b85c8686343a10050a1bf"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/95165efe3feadb07cc3b85c8686343a10050a1bf",
-                "reference": "95165efe3feadb07cc3b85c8686343a10050a1bf",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=7.4"
-            },
-            "require-dev": {
-                "brain/monkey": "^2.6",
-                "phpunit/phpunit": "^9.6"
-            },
-            "time": "2026-05-04T04:37:25+00:00",
-            "default-branch": true,
-            "type": "library",
-            "installation-source": "dist",
-            "autoload": {
-                "psr-4": {
-                    "WPBoilerplate\\AccessControl\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "GPL-2.0-or-later"
-            ],
-            "authors": [
-                {
-                    "name": "WPBoilerplate Team",
-                    "homepage": "https://github.com/WPBoilerplate"
-                }
-            ],
-            "description": "Extensible per-resource access control library for WordPress plugins",
-            "homepage": "https://github.com/WPBoilerplate/wpb-access-control",
-            "keywords": [
-                "access-control",
-                "authorization",
-                "permissions",
-                "roles",
-                "wordpress"
-            ],
-            "support": {
-                "issues": "https://github.com/WPBoilerplate/wpb-access-control/issues",
-                "source": "https://github.com/WPBoilerplate/wpb-access-control"
-            },
-            "install-path": "../wpboilerplate/wpb-access-control"
-        },
-        {
             "name": "yoast/phpunit-polyfills",
             "version": "4.0.0",
             "version_normalized": "4.0.0.0",
