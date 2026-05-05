@@ -148,8 +148,12 @@ class AccessControlUI {
 	 * @param string $namespace Resource namespace (e.g. 'mcp', 'procureco/v1').
 	 * @param string $key       Resource key within that namespace.
 	 * @param array  $args {
-	 *     @type string $submit_label Submit button label. Default "Save Access Control".
-	 *     @type string $description  Paragraph shown below the heading.
+	 *     @type string $submit_label  Submit button label. Default "Save Access Control".
+	 *     @type string $description   Paragraph shown below the heading.
+	 *     @type string $default_type  Type key to pre-select when no rule is stored yet.
+	 *                                 Useful for showing 'everyone' instead of the blank
+	 *                                 "No user access added by admin" option as the initial
+	 *                                 state. Has no effect once a rule has been saved.
 	 * }
 	 *
 	 * @return void
@@ -162,11 +166,17 @@ class AccessControlUI {
 		$description  = isset( $args['description'] )
 			? (string) $args['description']
 			: __( 'Control which users are allowed to access this resource. Administrators always have access regardless of this setting.', 'wpb-access-control' );
+		$default_type = isset( $args['default_type'] ) ? (string) $args['default_type'] : '';
 
 		// Resolve current stored config.
 		$row       = AccessControlTable::get( $namespace, $key );
 		$ac_key    = $row['key'];
 		$ac_values = $row['value'];
+
+		// When no rule has been saved yet, fall back to the caller-supplied default.
+		if ( '' === $ac_key && '' !== $default_type ) {
+			$ac_key = $default_type;
+		}
 
 		$providers = $this->manager->get_providers();
 		?>

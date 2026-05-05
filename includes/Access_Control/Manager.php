@@ -124,6 +124,7 @@ class Manager {
 	public static function render( string $slug, array $args = array() ): void {
 		$defaults = array(
 			'submit_label' => __( 'Save', 'acrossai-abilities-manager' ),
+			'default_type' => 'everyone',
 		);
 		$args     = wp_parse_args( $args, $defaults );
 
