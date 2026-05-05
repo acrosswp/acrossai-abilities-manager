@@ -629,7 +629,9 @@ class Edit_Screen {
 				break;
 			case 'none':
 			default:
-				$mcp_public  = null;
+				// Explicit false so Override_Applier recognises this as "disabled",
+				// not "no override set". null means no override; false means disabled.
+				$mcp_public  = false;
 				$mcp_servers = null;
 				break;
 		}
