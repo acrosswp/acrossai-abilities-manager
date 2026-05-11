@@ -78,8 +78,15 @@ See: `references/structure.md`
 - Only `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_FILE` is defined in the bootstrap.
 - All other constants belong in `includes/Main.php::define_constants()` using the private
   `define($name, $value)` guard. Never define constants elsewhere.
-- Hook registration happens in `define_admin_hooks()` / `define_public_hooks()` via the Loader,
-  never with direct `add_action`/`add_filter` calls inside class constructors.
+- **`includes/Main.php` is the single and only place where hooks enter WordPress.**
+  `define_admin_hooks()` and `define_public_hooks()` are the only methods that call
+  `$this->loader->add_action()` / `$this->loader->add_filter()`, whether directly or by
+  delegating to a module's `register_hooks( Loader $loader )` method.
+- Feature modules may expose a `register_hooks( Loader $loader )` method, but they must
+  **never** call `Loader::instance()` themselves. `includes/Main.php` passes `$this->loader`
+  to them — the module does not reach for the Loader on its own.
+- `load_dependencies()` is for wiring up the Loader singleton and loading files only.
+  **Never call `boot()`, `register_hooks()`, or any hook-registering method from `load_dependencies()`.**
 - The `apply_filters('wordpress-plugin-boilerplate-load', true)` gate in `load_hooks()` is the
   supported kill switch for third-party integrations.
 - Hook naming convention: `{plugin-prefix}/{context}/{event}` (e.g. `myplugin/admin/before_render`).
@@ -90,9 +97,22 @@ See: `references/boot-flow.md`, `references/hooks.md`
 ### 3) Add admin pages and enqueues correctly
 
 - Create new screen classes under `admin/Partials/` with namespace `...\Admin\Partials`.
-- Instantiate the class in `includes/Main.php::define_admin_hooks()`.
+  **This applies to feature modules too.** If a module has admin UI (menu page, asset enqueue,
+  page renderer), that class belongs in `admin/Partials/`, not in `includes/Modules/`.
+  `includes/` is for shared, context-neutral code only.
+- Instantiate the class in `includes/Main.php::define_admin_hooks()` — not in `load_dependencies()`.
+  `load_dependencies()` is only for wiring up the Loader and loading files; hook registration
+  belongs in `define_admin_hooks()` / `define_public_hooks()`.
 - Register every hook through `$this->loader->add_action(...)` — never directly.
-- Enqueue assets only on the pages that need them (check `$screen->id`); never globally.
+- When replacing or extending an existing menu class (e.g. the boilerplate `Admin\Partials\Menu`),
+  **remove the old class and its hook registrations entirely**. Two classes registering
+  `add_menu_page()` with the same slug causes silent conflicts — WordPress silently drops one.
+- Enqueue assets only on the pages that need them; guard with `get_current_screen()` or the
+  `$hook_suffix` argument. **Never enqueue globally on all admin pages.**
+- Read asset versions and dependency arrays from the sibling `build/*.asset.php` manifest.
+  **Never hardcode the dependency array or version string.**
+- Never put `<style>` or `<script>` tags inline in a page-render callback. Enqueue via
+  `wp_enqueue_style()` / `wp_enqueue_script()` in the `admin_enqueue_scripts` hook instead.
 - Add entry points to `webpack.config.js` and enqueue via `Admin\Main` using the `*.asset.php` manifest.
 - Follow notice and UX patterns: dismissible notices, no aggressive upsells, one top-level menu item.
 
@@ -175,6 +195,11 @@ See: `references/multisite.md`
 - Instantiate in `includes/Main.php::define_public_hooks()` and register via the Loader.
 - Source JS → `src/js/`, source SCSS → `src/scss/`. Never edit `build/` directly.
 - Read asset versions and dependencies from `build/*.asset.php` — never hardcode.
+- **Do not enqueue frontend assets globally.** `Public\Main::enqueue_styles()` and
+  `enqueue_scripts()` must scope their output with WordPress conditional tags
+  (`is_singular()`, `is_page()`, `is_post_type_archive()`, etc.) unless the plugin
+  genuinely needs the asset on every front-end page. Unconditional enqueue on every
+  page load wastes bandwidth and risks conflicts.
 
 See: `references/public.md`
 

@@ -32,7 +32,7 @@ Screen classes go under `admin/Partials/` with namespace `WordPress_Plugin_Boile
    namespace WordPress_Plugin_Boilerplate\Admin\Partials;
    class MyPage {
        public function add_menu() { add_submenu_page( ... ); }
-       public function render()   { /* output */ }
+       public function render()   { /* escape all output here */ }
    }
    ```
 2. In `includes/Main.php::define_admin_hooks()`, instantiate and register:
@@ -44,6 +44,28 @@ Screen classes go under `admin/Partials/` with namespace `WordPress_Plugin_Boile
 
 **Never** call `add_action()` directly inside `MyPage::__construct()` or any other constructor.
 All hooks must be registered through the Loader.
+
+### Rules that are commonly broken
+
+**Do not put admin classes inside `includes/Modules/`.**
+If a feature module needs an admin menu page, its admin class still belongs in `admin/Partials/`.
+`includes/` is for shared, context-neutral code (Loader, I18n, Activator, module orchestrators).
+
+**Do not boot modules inside `load_dependencies()`.**
+`load_dependencies()` wires up the Loader singleton and loads files. Hook registration —
+including any module's `boot()` or `register_hooks()` call — belongs in `define_admin_hooks()`
+or `define_public_hooks()`.
+
+**Remove the old menu class when you replace it.**
+If the boilerplate `Admin\Partials\Menu` is being superseded by a new class, delete `Menu.php`
+and remove its hook registrations from `define_admin_hooks()`. Leaving both classes registered
+with the same `add_menu_page()` slug causes a silent conflict — WordPress silently drops one and
+the plugin action links may point to the wrong page.
+
+**No inline `<style>` or `<script>` in page callbacks.**
+Every stylesheet and script must be enqueued via `wp_enqueue_style()` / `wp_enqueue_script()`
+in the `admin_enqueue_scripts` hook. Inline blocks in render callbacks are not cache-friendly,
+bypass CSP headers, and cannot be conditionally dequeued.
 
 ## How to add new admin assets
 
@@ -57,10 +79,26 @@ directly. Missing `build/` artifacts cause a PHP fatal on every admin page load,
 
 ## Conditional per-screen enqueuing
 
-To load assets only on a specific admin screen, guard the enqueue call with `get_current_screen()`:
+**Always** scope asset enqueuing to the screen(s) that need it. Global enqueuing on every
+admin page wastes bandwidth, risks JS conflicts, and violates the boilerplate's one-page-one-asset
+principle.
+
+Guard with the `$hook_suffix` argument (preferred, zero overhead):
 
 ```php
-public function enqueue_scripts() {
+public function enqueue_assets( string $hook_suffix ): void {
+    if ( 'toplevel_page_my-plugin' !== $hook_suffix ) {
+        return;
+    }
+    wp_enqueue_script( ... );
+    wp_enqueue_style( ... );
+}
+```
+
+Or with `get_current_screen()` when you need the full screen object:
+
+```php
+public function enqueue_scripts(): void {
     $screen = get_current_screen();
     if ( ! $screen || 'toplevel_page_my-plugin' !== $screen->id ) {
         return;

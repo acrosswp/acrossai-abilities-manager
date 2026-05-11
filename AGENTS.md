@@ -1,6 +1,6 @@
 ---
-name: "WordPress Plugin Development"
-description: "Agency standards for professional WordPress plugin development"
+name: "AcrossAI Abilities Manager"
+description: "Agency standards for professional AcrossAI Abilities Manager"
 version: "1.0.0"
 ---
 
@@ -19,7 +19,7 @@ composer_version: "2.0"
 ## Plugin Configuration
 
 ```yaml
-naming_prefix: "agency_"
+naming_prefix: "acrossai_"
 coding_standard: "wpcs-strict"
 multisite_support: true
 ```
@@ -58,7 +58,7 @@ package_hierarchy:
 
 - [ ] PHPCS pass
 - [ ] PHPStan pass
-- [ ] All functions prefixed with "agency_"
+- [ ] All functions prefixed with "acrossai_"
 - [ ] Nonces on all forms/AJAX
 - [ ] Capabilities checked
 - [ ] Input sanitized, output escaped

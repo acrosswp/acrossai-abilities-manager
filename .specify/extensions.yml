@@ -34,6 +34,13 @@ hooks:
     prompt: Commit outstanding changes before planning?
     description: Auto-commit before implementation planning
     condition: null
+  - extension: memory-md
+    command: speckit.memory-md.plan-with-memory
+    enabled: true
+    optional: true
+    prompt: Would you like to synthesize project memory before planning?
+    description: ''
+    condition: null
   before_tasks:
   - extension: git
     command: speckit.git.commit
@@ -106,6 +113,22 @@ hooks:
     prompt: Commit plan changes?
     description: Auto-commit after implementation planning
     condition: null
+  - extension: security-review
+    command: speckit.security-review.plan
+    enabled: true
+    optional: true
+    prompt: Would you like to perform a security review on the proposed technical
+      plan?
+    description: ''
+    condition: null
+  - extension: architecture-guard
+    command: speckit.architecture-guard.violation-detection
+    enabled: true
+    optional: true
+    prompt: Would you like to scan the technical plan for architectural drift and
+      Constitution violations?
+    description: ''
+    condition: null
   after_tasks:
   - extension: git
     command: speckit.git.commit
@@ -114,6 +137,21 @@ hooks:
     prompt: Commit task changes?
     description: Auto-commit after task generation
     condition: null
+  - extension: security-review
+    command: speckit.security-review.tasks
+    enabled: true
+    optional: true
+    prompt: Would you like to verify that security boundaries are represented in the
+      tasks?
+    description: ''
+    condition: null
+  - extension: architecture-guard
+    command: speckit.architecture-guard.refactor-generator
+    enabled: true
+    optional: true
+    prompt: Would you like to generate architectural refactor tasks before implementation?
+    description: ''
+    condition: null
   after_implement:
   - extension: git
     command: speckit.git.commit
@@ -121,6 +159,28 @@ hooks:
     optional: true
     prompt: Commit implementation changes?
     description: Auto-commit after implementation
+    condition: null
+  - extension: security-review
+    command: speckit.security-review.branch
+    enabled: true
+    optional: true
+    prompt: Would you like to scan the new implementation for security vulnerabilities?
+    description: ''
+    condition: null
+  - extension: memory-md
+    command: speckit.memory-md.capture-from-diff
+    enabled: true
+    optional: true
+    prompt: Would you like to capture durable lessons from this implementation to
+      project memory?
+    description: ''
+    condition: null
+  - extension: architecture-guard
+    command: speckit.architecture-guard.architecture-review
+    enabled: true
+    optional: true
+    prompt: Would you like to run a post-implementation architecture review?
+    description: ''
     condition: null
   after_checklist:
   - extension: git

@@ -102,7 +102,7 @@ A feature is ONLY considered complete when ALL of the following gates pass:
 - [ ] All data input uses DataForms (`@wordpress/dataforms`)
 - [ ] All data display uses DataViews (`@wordpress/dataviews`)
 - [ ] No code duplication or DRY violations exist in the changeset
-- [ ] All functions, hooks, and classes are prefixed with `agency_`
+- [ ] All functions, hooks, and classes are prefixed with `acrossai_`
 - [ ] All standards in `AGENTS.md` are met
 - [ ] `npm run validate-packages` passes
 
@@ -111,7 +111,7 @@ enforces consistent, shippable quality at every increment.
 
 ## Code Quality & Workflow
 
-- All PHP functions, hooks, filters, and class names MUST be prefixed with `agency_`
+- All PHP functions, hooks, filters, and class names MUST be prefixed with `acrossai_`
 - All forms and AJAX handlers MUST verify nonces using `check_ajax_referer()` or `wp_verify_nonce()`
 - Capability checks MUST be enforced on all admin page renders and all data-mutation endpoints
 - Input MUST be sanitized immediately upon receipt; output MUST be escaped at the point of render

@@ -92,4 +92,51 @@ $this->loader->add_action( 'plugin_action_links', $menu_obj, 'plugin_action_link
 
 Never call `add_action()` or `add_filter()` directly in any class — always go through the Loader.
 
+## `includes/Main.php` is the single source of all hook registration
+
+`define_admin_hooks()` and `define_public_hooks()` in `includes/Main.php` are the **only**
+methods that feed hooks into the Loader. Every hook the plugin registers must trace back to
+one of those two methods.
+
+**Correct pattern for feature modules:**
+
+```php
+// includes/Main.php::define_admin_hooks()
+private function define_admin_hooks(): void {
+    // Direct hooks
+    $plugin_admin = new \My_Plugin\Admin\Main( $this->get_plugin_name(), $this->get_version() );
+    $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+
+    // Module hooks — pass $this->loader; do NOT let the module self-register
+    $module = new \My_Plugin\Includes\Modules\MyFeature\MyFeature_Module();
+    $module->register_hooks( $this->loader );
+}
+```
+
+```php
+// includes/Modules/MyFeature/MyFeature_Module.php
+public function register_hooks( Loader $loader ): void {
+    $admin_page = new \My_Plugin\Admin\Partials\MyFeaturePage();
+    $loader->add_action( 'admin_menu', $admin_page, 'register_menu' );
+    $loader->add_action( 'admin_enqueue_scripts', $admin_page, 'enqueue_assets' );
+}
+```
+
+**What to avoid:**
+
+```php
+// ❌ Module grabbing the Loader singleton itself
+public function boot(): void {
+    $loader = Loader::instance();   // wrong — module must not self-register
+    $this->register_hooks( $loader );
+}
+
+// ❌ Calling boot() / register_hooks() from load_dependencies()
+private function load_dependencies(): void {
+    $this->loader = Loader::instance();
+    $module = new SomeModule();
+    $module->boot(); // wrong — this runs before define_admin_hooks()
+}
+```
+
 - Upstream reference: `https://github.com/WPBoilerplate/wordpress-plugin-boilerplate/blob/main/includes/Main.php`

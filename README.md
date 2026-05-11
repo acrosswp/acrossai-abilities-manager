@@ -119,7 +119,7 @@ All standards, rules, and requirements are defined in AGENTS.md (source of truth
 - Composer: 2.0+
 
 ### Standards
-- Naming prefix: `agency_`
+- Naming prefix: `acrossai_`
 - Coding: WPCS strict
 - Analysis: PHPStan level 8
 - Linting: ESLint

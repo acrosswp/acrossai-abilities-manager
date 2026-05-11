@@ -11,11 +11,17 @@ plugin-root/
 │   ├── Autoloader.php   # custom spl_autoload_register (namespace → directory)
 │   ├── Activator.php    # static activate() stub
 │   ├── Deactivator.php  # static deactivate() stub
-│   └── I18n.php         # do_load_textdomain() hooked on init
+│   ├── I18n.php         # do_load_textdomain() hooked on init
+│   └── Modules/
+│       └── MyFeature/
+│           ├── MyFeature_Module.php        # orchestrator: boot() calls register_hooks()
+│           ├── database/                   # DB schema/query/row classes (context-neutral)
+│           └── (no admin classes here — see admin/Partials/)
 ├── admin/
 │   ├── Main.php         # Admin\Main: enqueue backend CSS/JS
 │   └── Partials/
-│       └── Menu.php     # Admin\Partials\Menu: add_menu_page + plugin_action_links
+│       ├── Menu.php           # Admin\Partials\Menu: top-level add_menu_page + plugin_action_links
+│       └── MyFeaturePage.php  # Admin\Partials\MyFeaturePage: feature-specific menu + render
 ├── public/
 │   ├── Main.php         # Public\Main: enqueue frontend CSS/JS
 │   └── partials/        # frontend template partials (placeholder)
@@ -36,6 +42,19 @@ plugin-root/
 ├── package.json
 └── uninstall.php
 ```
+
+### Where does feature module code live?
+
+| Code type | Correct location |
+|---|---|
+| Module orchestrator (`boot()`, `register_hooks()`) | `includes/Modules/MyFeature/` |
+| DB schema / query / row classes | `includes/Modules/MyFeature/database/` |
+| Admin menu, page renderer, admin asset enqueue | `admin/Partials/MyFeaturePage.php` |
+| Frontend template output | `public/partials/` |
+| REST controller | `includes/Modules/MyFeature/` (context-neutral) |
+
+The key rule: **`includes/` is for shared, context-neutral code.** Anything that calls
+`add_menu_page()`, `wp_enqueue_style()` for admin, or renders admin HTML belongs in `admin/`.
 
 ## PSR-4 namespace map
 

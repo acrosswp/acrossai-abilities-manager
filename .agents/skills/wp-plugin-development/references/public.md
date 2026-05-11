@@ -42,8 +42,29 @@ Source files: `src/js/frontend.js` (stub) and `src/scss/frontend.scss`.
 - Never write to or read from `build/` directly in PHP.
 - Always read `['version']` and `['dependencies']` from the `*.asset.php` manifest when
   calling `wp_enqueue_style()` / `wp_enqueue_script()`.
-- To conditionally enqueue (e.g., only on a specific post type), wrap `wp_enqueue_*` calls
-  inside an `is_*()` check inside the hooked method — do not change the hook itself.
+- **Never enqueue frontend assets unconditionally on every page.** Wrap `wp_enqueue_*` calls
+  with the appropriate WordPress conditional tag inside the hooked method:
+
+  ```php
+  public function enqueue_scripts(): void {
+      // Only load on singular posts/pages that use this plugin's shortcode or block.
+      if ( ! is_singular() ) {
+          return;
+      }
+      wp_enqueue_script(
+          $this->plugin_name,
+          \WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_URL . 'build/js/frontend.js',
+          $this->js_asset_file['dependencies'],
+          $this->js_asset_file['version'],
+          true
+      );
+  }
+  ```
+
+  Common guards: `is_singular()`, `is_page( 'slug' )`, `is_post_type_archive( 'cpt' )`,
+  `has_block( 'my-plugin/block-name' )`. Choose the narrowest one that covers all pages
+  where the asset is actually used. Only skip the guard when the plugin genuinely needs the
+  asset on **every** front-end page (e.g. a site-wide widget or global script).
 
 ⚠️ **PHP fatal if build not run:** `Public\Main::__construct()` `include`s manifest files
 directly. Missing `build/` artifacts cause a PHP fatal on every front-end page load, not a 404.

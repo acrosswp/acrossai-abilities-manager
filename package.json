@@ -1,17 +1,17 @@
 {
-	"name": "acrossai-abilities-manager",
-	"title": "AcrossAI Abilities Manager",
-	"description": "AcrossAI Abilities Manager by WPBoilerplate.",
+	"name": "wordpress-plugin-boilerplate",
+	"title": "WordPress Plugin Boilerplate",
+	"description": "WordPress Plugin Boilerplate by WPBoilerplate.",
 	"homepage": "https://github.com/woocommerce/woocommerce/wiki",
 	"private": true,
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/wpboilerplate/acrossai-abilities-manager.git"
+		"url": "git+https://github.com/wpboilerplate/wordpress-plugin-boilerplate.git"
 	},
 	"author": "WPBoilerplate",
 	"license": "GPL-3.0-or-later",
 	"bugs": {
-		"url": "https://github.com/wpboilerplate/acrossai-abilities-manager/issues"
+		"url": "https://github.com/wpboilerplate/wordpress-plugin-boilerplate/issues"
 	},
 	"scripts": {
 		"build": "wp-scripts build",
@@ -38,7 +38,7 @@
 		"@wordpress/scripts": "latest",
 		"@wordpress/stylelint-config": "latest",
 		"copy-webpack-plugin": "latest",
-		"glob": "^11.1.0",
+		"glob": "^13.0.6",
 		"mini-css-extract-plugin": "latest",
 		"path": "latest",
 		"webpack-remove-empty-scripts": "latest"
@@ -51,6 +51,6 @@
 		"extends": "@wordpress/stylelint-config/scss"
 	},
 	"keywords": [
-		"acrossai-abilities-manager"
+		"wordpress-plugin-boilerplate"
 	]
 }
