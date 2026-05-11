@@ -8,7 +8,8 @@
 	"require": {
 		"php": ">=7.4",
 		"coenjacobs/mozart": "^0.7",
-		"wpboilerplate/wpb-updater-checker-github": "dev-main"
+		"automattic/jetpack-autoloader": "^2",
+		"wpboilerplate/wpb-access-control": "dev-main"
 	},
 	"keywords": [
 		"wordpress",
@@ -36,7 +37,8 @@
 	},
 	"config": {
 		"allow-plugins": {
-			"dealerdirect/phpcodesniffer-composer-installer": true
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"automattic/jetpack-autoloader": true
 		}
 	}
 }

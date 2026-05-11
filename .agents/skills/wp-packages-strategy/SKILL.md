@@ -173,7 +173,7 @@ See: `references/webpack-aliasing.md`, `references/package-hierarchy.md`
 
 ## Escalation
 
-- WPBoilerplate `agents.md`: `https://github.com/WPBoilerplate/acrossai-abilities-manager/blob/main/agents.md`
+- WPBoilerplate `agents.md`: `https://github.com/WPBoilerplate/wordpress-plugin-boilerplate/blob/main/agents.md`
 - Official `@wordpress` packages list: `https://developer.wordpress.org/block-editor/reference-guides/packages/`
 - `@wordpress/scripts` docs: `https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/`
 - `@wordpress/element` docs: `https://developer.wordpress.org/block-editor/reference-guides/packages/packages-element/`

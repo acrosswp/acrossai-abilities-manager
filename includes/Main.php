@@ -244,11 +244,9 @@ final class Main {
 		}
 
 		/**
-		 * Check if class exists or not
-		 */
-		if ( class_exists( 'WPBoilerplate\\RegisterBlocks\\RegisterBlocks' ) ) {
-			new \WPBoilerplate\RegisterBlocks\RegisterBlocks( $this->plugin_dir );
-		}
+tt/**
+tt * Check if class exists or not
+tt */ntt/**ntt * GitHub auto-updaterntt */nttif ( class_exists( 'WPBoilerplate_Updater_Checker_Github' ) ) {nttt$package = array(ntttt'repo' => 'https://github.com/acrosswp/acrossai-abilities-manager',ntttt'file_path' => ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE,ntttt'plugin_name_slug' => 'acrossai-abilities-manager',ntttt'release_branch' => 'main'nttt);ntttnew WPBoilerplate_Updater_Checker_Github( $package );ntt}n
 	}
 
 	/**
