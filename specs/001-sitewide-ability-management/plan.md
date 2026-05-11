@@ -38,8 +38,8 @@ All endpoints are secured with `manage_options` + nonce verification.
 *Gates MUST pass before implementation proceeds. Violations are flagged here.*
 
 ### ✅ PASS — I. Modular Architecture
-Module lives at `includes/modules/sitewide/`, extends `AcrossAI_Module_Base` from `includes/base/`.
-Shared utilities in `includes/utilities/`. No sibling-module dependencies.
+Module lives at `includes/Modules/Sitewide/`, extends `AcrossAI_Module_Base` from `includes/Base/`.
+Shared utilities in `includes/Utilities/`. Admin enqueue + page render in `admin/Partials/SitewideAbilityPage.php`. No sibling-module dependencies.
 
 ### ✅ PASS — II. WordPress Standards Compliance
 PHPCS strict + PHPStan L8 gates enforced in Definition of Done. WP 6.9+ / PHP 7.4+ targeted.
@@ -71,10 +71,14 @@ client centralised in `src/js/sitewide/api/client.js`. Redux store in `src/js/si
 All gates listed in tasks.md. Feature is complete only when all 8 DoD gates pass.
 
 **⚠️ CORRECTED VIOLATIONS in submitted arguments (resolved in this plan)**:
-1. `includes/features/sitewide/` → corrected to `includes/modules/sitewide/` (constitution directory layout)
+1. `includes/features/sitewide/` → corrected to `includes/Modules/Sitewide/` (PSR-4 autoloader casing + constitution directory layout)
 2. `@wordpress/components Modal` for edit form → corrected to slide-in drawer via `createPortal` (FR-021 + constitution)
 3. Store name `acrossai-abilities-sitewide` → corrected to `acrossai-abilities/sitewide` (WP convention: slash-namespaced)
 4. `admin/Partials/Menu.php` must be updated in-place — no new menu class may be created (clarification C5)
+5. `includes/modules/sitewide/` → corrected to `includes/Modules/Sitewide/` (PSR-4 autoloader: lowercase dirs fail on case-sensitive Linux filesystems)
+6. Admin enqueue + page template inside `AcrossAI_Sitewide_Module` → moved to `admin/Partials/SitewideAbilityPage.php` (skill step 3 + constitution admin partials rule)
+7. Webpack entry + `sitewide.asset.php` manifest loading added explicitly (skill step 12 — dependency array and version must never be hardcoded)
+8. `boot()` call from `load_dependencies()` → clarified: `define_admin_hooks()` calls `register_hooks($this->loader)` on each module (skill step 2 + constitution boot flow rule)
 
 ---
 
@@ -98,30 +102,31 @@ specs/001-sitewide-ability-management/
 ### Source Code (repository root)
 
 ```text
+webpack.config.js                          # UPDATE: add entry 'sitewide' → './src/js/sitewide/index.js'
+
 admin/
 └── Partials/
-    └── Menu.php                           # UPDATE IN-PLACE: add icon, position, React root in contents()
+    ├── Menu.php                           # UPDATE IN-PLACE: add icon, position, React root in contents()
+    └── SitewideAbilityPage.php            # CREATE: admin_enqueue_scripts (scoped to plugin page) + render_page(); loads build/js/sitewide.asset.php manifest
 
 includes/
-├── base/
+├── Base/
 │   └── AcrossAI_Module_Base.php           # CREATE: abstract module base class
-├── utilities/
+├── Utilities/
 │   ├── AcrossAI_Sanitizer.php             # CREATE: sanitize_ability_slug(), sanitize_tri_state(), etc.
 │   └── AcrossAI_Ability_Merger.php        # CREATE: static merge(registry, override): array
-├── modules/
-│   └── sitewide/
+├── Modules/
+│   └── Sitewide/
 │       ├── index.php                      # CREATE: directory sentinel
-│       ├── AcrossAI_Sitewide_Module.php   # CREATE: extends Module_Base, boots all hooks
+│       ├── AcrossAI_Sitewide_Module.php   # CREATE: context-neutral; extends Module_Base; register_hooks() wires REST + DB only
 │       ├── AcrossAI_Sitewide_Rest_Controller.php  # CREATE: 7 REST endpoints
-│       ├── database/
-│       │   ├── AcrossAI_Sitewide_Schema.php  # CREATE: BerlinDB Schema (17 columns)
-│       │   ├── AcrossAI_Sitewide_Table.php   # CREATE: BerlinDB Table (maybe_upgrade)
-│       │   ├── AcrossAI_Sitewide_Row.php     # CREATE: BerlinDB Row (typed properties)
-│       │   └── AcrossAI_Sitewide_Query.php   # CREATE: BerlinDB Query (CRUD methods)
-│       └── templates/
-│           └── admin-page.php             # CREATE: renders React root div
+│       └── Database/
+│           ├── AcrossAI_Sitewide_Schema.php  # CREATE: BerlinDB Schema (17 columns)
+│           ├── AcrossAI_Sitewide_Table.php   # CREATE: BerlinDB Table (maybe_upgrade)
+│           ├── AcrossAI_Sitewide_Row.php     # CREATE: BerlinDB Row (typed properties)
+│           └── AcrossAI_Sitewide_Query.php   # CREATE: BerlinDB Query (CRUD methods)
 ├── Activator.php                          # UPDATE: call table->maybe_upgrade() on activate
-└── Main.php                               # UPDATE: instantiate and boot Sitewide_Module
+└── Main.php                               # UPDATE: define_admin_hooks() instantiates SitewideAbilityPage + Sitewide_Module, calls register_hooks($this->loader) on each
 
 src/
 ├── js/
@@ -143,7 +148,8 @@ src/
 
 build/                                     # OUTPUT: compiled by @wordpress/scripts
 ├── js/
-│   └── sitewide.js
+│   ├── sitewide.js
+│   └── sitewide.asset.php                 # AUTO-GENERATED: loaded by SitewideAbilityPage::enqueue_assets()
 └── css/
     └── sitewide.css
 

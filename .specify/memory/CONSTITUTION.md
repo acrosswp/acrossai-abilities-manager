@@ -1,15 +1,15 @@
 <!--
 SYNC IMPACT REPORT
-Version change: template (unset) → 1.0.0
-Modified principles: N/A — initial creation from template placeholders
-Added sections: Core Principles (I–VII), Code Quality & Workflow, Architecture & UI Standards, Governance
-Removed sections: All template placeholder tokens replaced; no prior sections removed
+Version change: 1.1.0 → 1.2.0
+Modified principles: §I (directory casing corrected), §VI (directory casing corrected), Module Contract (method name aligned to skill, casing fixed)
+Added sections: Admin Partials Rule, Boot Flow Rule (Architecture & UI Standards)
+Removed sections: None
 Templates reviewed:
   - .specify/templates/plan-template.md ✅ reviewed — no outdated references
   - .specify/templates/spec-template.md ✅ reviewed — no outdated references
   - .specify/templates/tasks-template.md ✅ reviewed — no outdated references
   - .specify/templates/checklist-template.md ✅ reviewed — no outdated references
-Deferred TODOs: None — all placeholders resolved
+Deferred TODOs: None
 -->
 
 # AcrossAI Abilities Manager Constitution
@@ -19,7 +19,7 @@ Deferred TODOs: None — all placeholders resolved
 ### I. Modular Architecture
 Each feature MUST be implemented as a self-contained module with a clear, singular purpose.
 Modules MUST be independently testable, extensible, and replaceable without affecting sibling modules.
-Shared logic MUST be extracted to `includes/utilities/` or abstract base classes in `includes/base/`.
+Shared logic MUST be extracted to `includes/Utilities/` or abstract base classes in `includes/Base/`.
 No code duplication between modules is permitted under any circumstance.
 
 **Rationale**: Enables parallel development, isolated testing, and safe iteration on any single feature
@@ -78,8 +78,8 @@ process and MUST NOT block admin page rendering.
 without introducing tight coupling between the core plugin and optional dependencies.
 
 ### VI. Reusability & DRY Principle
-All common logic MUST be extracted to shared utilities (`includes/utilities/`) or abstract base
-classes (`includes/base/`) before it is used in a second location.
+All common logic MUST be extracted to shared utilities (`includes/Utilities/`) or abstract base
+classes (`includes/Base/`) before it is used in a second location.
 Reusable components MUST be built and maintained for: form builders, view generators, input
 validation, output sanitization, API response formatters, and permission checks.
 If equivalent functionality already exists anywhere in the codebase, it MUST be reused — never
@@ -127,27 +127,39 @@ enforces consistent, shippable quality at every increment.
 
 **Directory Layout**:
 ```
+admin/
+└── Partials/       # All admin-facing classes: menu, page renderers, asset enqueues
 includes/
-├── base/           # Abstract base classes extended by all feature modules
-├── utilities/      # Shared utility functions, helpers, formatters
-└── modules/        # One subdirectory per feature module (self-contained)
-    ├── sitewide/
-    ├── per-user/
-    ├── mcp-server/
-    ├── custom-ability/
-    └── webmcp/
+├── Base/           # Abstract base classes extended by all feature modules
+├── Utilities/      # Shared utility functions, helpers, formatters
+└── Modules/        # One subdirectory per feature module (self-contained)
+    ├── Sitewide/
+    ├── PerUser/
+    ├── McpServer/
+    ├── CustomAbility/
+    └── Webmcp/
 src/
 ├── js/             # JavaScript/React source files
-└── css/            # Stylesheet source files
+└── scss/           # Stylesheet source files (compiled by @wordpress/scripts)
 tests/
 ├── phpunit/        # PHP unit and integration tests
 └── jest/           # JavaScript unit tests
 ```
 
+**Admin Partials Rule**: Any class that calls `add_menu_page()`, enqueues admin assets via
+`wp_enqueue_style()` / `wp_enqueue_script()`, or renders admin HTML MUST live in `admin/Partials/`
+with namespace `AcrossAI_Abilities_Manager\Admin\Partials`. Classes in `includes/` are
+context-neutral — they MUST NOT contain admin-specific logic.
+
+**Boot Flow Rule**: Feature modules MUST expose a `register_hooks( Loader $loader )` method.
+`includes/Main.php::define_admin_hooks()` or `define_public_hooks()` MUST instantiate each module
+and call `$module->register_hooks( $this->loader )`. Modules MUST NOT call `Loader::instance()`
+themselves. No hook-registering code MAY run inside `load_dependencies()`.
+
 **Module Contract**: Every feature module MUST:
-1. Extend the appropriate abstract base class from `includes/base/`
-2. Register all WordPress hooks in a dedicated `register()` method
-3. Depend only on shared utilities from `includes/utilities/` — never on sibling modules directly
+1. Extend the appropriate abstract base class from `includes/Base/`
+2. Expose a `register_hooks( Loader $loader )` method — never self-register via `Loader::instance()`
+3. Depend only on shared utilities from `includes/Utilities/` — never on sibling modules directly
 4. Expose integration points exclusively via WordPress actions and filters
 
 **UI Contract**:
@@ -187,4 +199,4 @@ constitution. Any implementation that appears to violate a principle MUST either
 include documented justification in the feature plan explaining why a compliant approach was not
 feasible.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-11
+**Version**: 1.2.0 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-11
