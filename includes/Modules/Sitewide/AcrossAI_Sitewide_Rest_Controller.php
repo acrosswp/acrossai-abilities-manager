@@ -185,12 +185,32 @@ class AcrossAI_Sitewide_Rest_Controller {
 							'required'          => true,
 							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_ability_slug' ),
 						),
-						'site_allowed' => array( 'type' => 'boolean' ),
-						'readonly'     => array( 'type' => 'boolean' ),
-						'destructive'  => array( 'type' => 'boolean' ),
-						'idempotent'   => array( 'type' => 'boolean' ),
-						'show_in_rest' => array( 'type' => 'boolean' ),
-						'show_in_mcp'  => array( 'type' => 'boolean' ),
+						// Nullable booleans: JSON null = Inherit (no override), true = Yes, false = No.
+						// 'type' must be an array to accept both boolean and null from the JS client.
+						'site_allowed' => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
+						'readonly'     => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
+						'destructive'  => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
+						'idempotent'   => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
+						'show_in_rest' => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
+						'show_in_mcp'  => array(
+							'type'              => array( 'boolean', 'null' ),
+							'sanitize_callback' => array( 'AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer', 'sanitize_tri_state' ),
+						),
 						'mcp_type'     => array( 'type' => 'string' ),
 						'mcp_servers'  => array( 'type' => 'array' ),
 					),

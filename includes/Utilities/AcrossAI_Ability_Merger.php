@@ -85,9 +85,10 @@ class AcrossAI_Ability_Merger {
 				continue;
 			}
 			$registry_value = isset( $registry[ $field ] ) ? $registry[ $field ] : null;
-			// Loose comparison intentional: DB returns strings, registry may return bools.
-			// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
-			if ( $payload[ $field ] != $registry_value ) {
+			// Strict comparison is REQUIRED here. PHP loose equality treats false == null
+			// as true, which would conflate "explicit No override" (false) with "no override
+			// set/Inherit" (null). That would silently discard a valid admin governance decision.
+			if ( $payload[ $field ] !== $registry_value ) {
 				return false;
 			}
 		}
