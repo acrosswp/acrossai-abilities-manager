@@ -303,6 +303,7 @@ class AcrossAI_Sitewide_Rest_Controller {
 		if ( empty( $registry ) ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
+		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry );
 
 		$override = $this->db_query->get_override_by_slug( $slug );
 		$merged   = AcrossAI_Ability_Merger::merge( $registry, $override );
@@ -328,6 +329,7 @@ class AcrossAI_Sitewide_Rest_Controller {
 		if ( empty( $registry ) ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
+		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry );
 
 		$fields = array(
 			'site_allowed' => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'site_allowed' ) ),
@@ -443,6 +445,7 @@ class AcrossAI_Sitewide_Rest_Controller {
 		if ( empty( $registry ) ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
+		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry );
 
 		$source = AcrossAI_Ability_Source_Detector::detect( $registry );
 		$fields = array(
@@ -523,6 +526,7 @@ class AcrossAI_Sitewide_Rest_Controller {
 					$skipped[] = $slug;
 					continue;
 				}
+				$registry = AcrossAI_Ability_Merger::normalize_registry( $registry );
 			} else {
 				$registry = array( 'slug' => $slug );
 			}

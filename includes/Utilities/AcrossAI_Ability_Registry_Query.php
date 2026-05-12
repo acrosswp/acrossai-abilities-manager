@@ -39,13 +39,13 @@ class AcrossAI_Ability_Registry_Query {
 	 * @return array{abilities: array, total: int, pages: int}
 	 */
 	public static function query( array $params, AcrossAI_Sitewide_Query $db_query ): array {
-		$search      = isset( $params['search'] ) ? (string) $params['search'] : '';
-		$orderby     = isset( $params['orderby'] ) ? (string) $params['orderby'] : 'slug';
-		$order       = isset( $params['order'] ) && 'desc' === strtolower( $params['order'] ) ? 'desc' : 'asc';
-		$source      = isset( $params['source'] ) ? (string) $params['source'] : '';
+		$search       = isset( $params['search'] ) ? (string) $params['search'] : '';
+		$orderby      = isset( $params['orderby'] ) ? (string) $params['orderby'] : 'slug';
+		$order        = isset( $params['order'] ) && 'desc' === strtolower( $params['order'] ) ? 'desc' : 'asc';
+		$source       = isset( $params['source'] ) ? (string) $params['source'] : '';
 		$has_override = isset( $params['has_override'] ) ? $params['has_override'] : null;
-		$page        = isset( $params['page'] ) ? max( 1, (int) $params['page'] ) : 1;
-		$per_page    = isset( $params['per_page'] ) ? min( 100, max( 1, (int) $params['per_page'] ) ) : 20;
+		$page         = isset( $params['page'] ) ? max( 1, (int) $params['page'] ) : 1;
+		$per_page     = isset( $params['per_page'] ) ? min( 100, max( 1, (int) $params['per_page'] ) ) : 20;
 
 		// Fetch all registered abilities from the WordPress registry.
 		$all_abilities = function_exists( 'wp_get_abilities' ) ? wp_get_abilities() : array();
@@ -53,8 +53,12 @@ class AcrossAI_Ability_Registry_Query {
 		$results = array();
 
 		foreach ( $all_abilities as $slug => $ability_data ) {
-			// Ensure slug is set in the data array.
-			if ( ! isset( $ability_data['slug'] ) ) {
+			// Normalize WP_Ability object to array (wp_get_abilities() returns objects in WP 6.9+).
+			$ability_data = AcrossAI_Ability_Merger::normalize_registry( $ability_data );
+
+			// Ensure slug is set — normalize_registry sets it from get_name(),
+			// but fall back to the loop key for any bare array that omits 'slug'.
+			if ( empty( $ability_data['slug'] ) ) {
 				$ability_data['slug'] = $slug;
 			}
 

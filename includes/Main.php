@@ -109,18 +109,8 @@ final class Main {
 
 		$this->define_constants();
 
-		if ( defined( 'ACROSSAI_ABILITIES_MANAGER_VERSION' ) ) {
-			$this->version = ACROSSAI_ABILITIES_MANAGER_VERSION;
-		} else {
-			$this->version = '0.0.1';
-		}
-
 		// Load the autoloader class manually before registering it
-		$plugin_path = ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH;
-
-		require_once $plugin_path . 'includes/Autoloader.php';
-
-		$this->register_autoloader();
+		$this->plugin_dir = ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH;
 
 		$this->load_composer_dependencies();
 
@@ -158,20 +148,7 @@ final class Main {
 		$this->define( 'ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL', plugin_dir_url( \ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE ) );
 		$this->define( 'ACROSSAI_ABILITIES_MANAGER_PLUGIN_NAME_SLUG', $this->plugin_name );
 		$this->define( 'ACROSSAI_ABILITIES_MANAGER_PLUGIN_NAME', 'AcrossAI Abilities Manager' );
-
-		if ( ! function_exists( 'get_plugin_data' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-		$plugin_file = defined( 'ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE' )
-			? \ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE
-			: \ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE;
-		$plugin_data = get_plugin_data( $plugin_file );
-		$version     = $plugin_data['Version'];
-		$this->define( 'ACROSSAI_ABILITIES_MANAGER_VERSION', $version );
-
-		$this->define( 'ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL', $version );
-
-		$this->plugin_dir = ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH;
+		$this->define( 'ACROSSAI_ABILITIES_MANAGER_VERSION', '0.0.1' );
 	}
 
 	/**
@@ -183,26 +160,6 @@ final class Main {
 		if ( ! defined( $name ) ) {
 			define( $name, $value );
 		}
-	}
-
-	/**
-	 * Register the plugin's autoloader.
-	 *
-	 * This autoloader will automatically load classes from the plugin's namespace
-	 * when they are instantiated.
-	 *
-	 * @since    0.0.1
-	 * @access   private
-	 */
-	private function register_autoloader() {
-		// Get the plugin path
-		$plugin_path = ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH;
-
-		// Create autoloader instance
-		$this->autoloader = new Autoloader( 'AcrossAI_Abilities_Manager', $plugin_path );
-
-		// Register the autoloader
-		spl_autoload_register( array( $this->autoloader, 'autoload' ) );
 	}
 
 	/**
@@ -239,21 +196,8 @@ final class Main {
 		 */
 		$plugin_path = ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH;
 
-		if ( file_exists( $plugin_path . 'vendor/autoload.php' ) ) {
-			require_once $plugin_path . 'vendor/autoload.php';
-		}
-
-		/**
-		 * GitHub auto-updater
-		 */
-		if ( class_exists( 'WPBoilerplate_Updater_Checker_Github' ) ) {
-			$package = array(
-				'repo'             => 'https://github.com/acrosswp/acrossai-abilities-manager',
-				'file_path'        => ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE,
-				'plugin_name_slug' => 'acrossai-abilities-manager',
-				'release_branch'   => 'main',
-			);
-			new WPBoilerplate_Updater_Checker_Github( $package );
+		if ( file_exists( $plugin_path . 'vendor/autoload_packages.php' ) ) {
+			require_once $plugin_path . 'vendor/autoload_packages.php';
 		}
 	}
 

@@ -93,4 +93,48 @@ class AcrossAI_Ability_Merger {
 		}
 		return true;
 	}
+
+	/**
+	 * Normalize a WP_Ability object or raw array into a flat array shape.
+	 *
+	 * Uses wp_get_abilities() and wp_get_ability() which return WP_Ability objects (WP 6.9+).
+	 * All internal utilities (Merger, SourceDetector, RegistryQuery) expect a flat
+	 * array. Call this once at the boundary before passing registry data anywhere.
+	 *
+	 * @since  0.1.0
+	 * @param  \WP_Ability|array $ability WP_Ability object or already-normalized array.
+	 * @return array Flat ability array with slug, label, description, category,
+	 *               provider, and all overridable fields defaulted to null.
+	 */
+	public static function normalize_registry( $ability ): array {
+		if ( is_array( $ability ) ) {
+			return $ability;
+		}
+
+		if ( ! ( $ability instanceof \WP_Ability ) ) {
+			return array();
+		}
+
+		$name        = $ability->get_name();
+		$slash_pos   = strpos( $name, '/' );
+		$provider    = false !== $slash_pos ? substr( $name, 0, $slash_pos ) : '';
+		$annotations = $ability->get_meta_item( 'annotations', array() );
+
+		return array(
+			'slug'         => $name,
+			'label'        => $ability->get_label(),
+			'description'  => $ability->get_description(),
+			'category'     => $ability->get_category(),
+			'provider'     => $provider,
+			'show_in_rest' => $ability->get_meta_item( 'show_in_rest', false ),
+			'readonly'     => isset( $annotations['readonly'] ) ? $annotations['readonly'] : null,
+			'destructive'  => isset( $annotations['destructive'] ) ? $annotations['destructive'] : null,
+			'idempotent'   => isset( $annotations['idempotent'] ) ? $annotations['idempotent'] : null,
+			// Fields that only exist in the override table; null = "use registry default".
+			'site_allowed' => null,
+			'show_in_mcp'  => null,
+			'mcp_type'     => null,
+			'mcp_servers'  => null,
+		);
+	}
 }
