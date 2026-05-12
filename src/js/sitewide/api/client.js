@@ -64,7 +64,7 @@ export async function fetchAbilities( params = {} ) {
  */
 export async function fetchAbility( slug ) {
 	return apiFetch( {
-		path: `acrossai-abilities-manager/v1/sitewide/abilities/${ encodeURIComponent( slug ) }`,
+		path: `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
 	} );
 }
 
@@ -77,7 +77,7 @@ export async function fetchAbility( slug ) {
  */
 export async function saveOverride( slug, data ) {
 	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ encodeURIComponent( slug ) }`,
+		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
 		method: 'POST',
 		data,
 	} );
@@ -91,7 +91,7 @@ export async function saveOverride( slug, data ) {
  */
 export async function deleteOverride( slug ) {
 	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ encodeURIComponent( slug ) }`,
+		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
 		method: 'DELETE',
 	} );
 }
@@ -105,7 +105,7 @@ export async function deleteOverride( slug ) {
  */
 export async function toggleAbility( slug, siteAllowed ) {
 	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ encodeURIComponent( slug ) }/toggle`,
+		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }/toggle`,
 		method: 'POST',
 		data:   { site_allowed: siteAllowed },
 	} );
