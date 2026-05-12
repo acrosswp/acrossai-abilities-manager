@@ -10,6 +10,7 @@
 namespace AcrossAI_Abilities_Manager\Includes;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Table;
+use WPBoilerplate\AccessControl\Database\Rule\RuleTable;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -29,12 +30,14 @@ class Activator {
 	/**
 	 * Run activation tasks.
 	 *
-	 * Creates or upgrades the {prefix}acrossai_abilities_overwrite table.
+	 * Creates or upgrades the {prefix}acrossai_abilities_overwrite and
+	 * {prefix}wpb_access_control tables.
 	 *
 	 * @since  0.0.1
 	 * @return void
 	 */
 	public static function activate(): void {
 		( new AcrossAI_Sitewide_Table() )->maybe_upgrade();
+		( new RuleTable() )->maybe_upgrade();
 	}
 }
