@@ -584,10 +584,9 @@ class AcrossAI_Sitewide_Rest_Controller {
 	 * Handle GET /sitewide/mcp-servers.
 	 *
 	 * @since  0.1.0
-	 * @param  \WP_REST_Request $request REST request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public function get_mcp_servers( \WP_REST_Request $request ) {
+	public function get_mcp_servers() { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		if ( ! class_exists( 'WP\\MCP\\Core\\McpAdapter' ) ) {
 			return rest_ensure_response( array() );
 		}
