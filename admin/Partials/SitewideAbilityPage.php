@@ -27,16 +27,6 @@ class SitewideAbilityPage {
 	private $page_slug = 'acrossai-abilities-manager';
 
 	/**
-	 * Register the admin_enqueue_scripts hook.
-	 *
-	 * @since  0.1.0
-	 * @return void
-	 */
-	public function enqueue_assets(): void {
-		add_action( 'admin_enqueue_scripts', array( $this, 'do_enqueue_assets' ) );
-	}
-
-	/**
 	 * Enqueue JavaScript and CSS assets for the sitewide ability manager page.
 	 *
 	 * @since  0.1.0
@@ -100,7 +90,9 @@ class SitewideAbilityPage {
 	 */
 	public function render_page(): void {
 		?>
-		<div id="acrossai-abilities-manager-root"></div>
+		<div class="wrap acrossai-abilities-manager-wrap">
+			<div id="acrossai-abilities-manager-root"></div>
+		</div>
 		<?php
 	}
 }

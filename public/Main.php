@@ -84,19 +84,7 @@ class Main {
 	 * @since    0.0.1
 	 */
 	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in AcrossAI_Abilities_Manager_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The AcrossAI_Abilities_Manager_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-		wp_enqueue_style( $this->plugin_name, \ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/frontend.css', $this->css_asset_file['dependencies'], $this->css_asset_file['version'], 'all' );
+		// No frontend styles for this plugin.
 	}
 
 	/**
@@ -105,19 +93,6 @@ class Main {
 	 * @since    0.0.1
 	 */
 	public function enqueue_scripts() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in AcrossAI_Abilities_Manager_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The AcrossAI_Abilities_Manager_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
-		wp_enqueue_script( $this->plugin_name, \ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/frontend.js', $this->js_asset_file['dependencies'], $this->js_asset_file['version'], false );
+		// No frontend scripts for this plugin.
 	}
 }

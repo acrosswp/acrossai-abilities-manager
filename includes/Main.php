@@ -261,10 +261,6 @@ final class Main {
 		$this->loader->add_action( 'admin_menu', $main_menu, 'main_menu' );
 		$this->loader->add_action( 'plugin_action_links', $main_menu, 'plugin_action_links', 1000, 2 );
 
-		// Sitewide Ability Manager — enqueue assets.
-		$sitewide_page = new \AcrossAI_Abilities_Manager\Admin\Partials\SitewideAbilityPage();
-		$sitewide_page->enqueue_assets();
-
 		// Sitewide Ability Manager — register REST routes and module hooks.
 		$sitewide_module = new \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Module();
 		$sitewide_module->register_hooks( $this->loader );

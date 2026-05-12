@@ -29,7 +29,7 @@ const DEFAULT_VIEW = {
 	perPage: 20,
 	sort:    { field: 'slug', direction: 'asc' },
 	filters: [],
-	fields:  [ 'slug', 'provider', 'source', 'status', 'updated_at' ],
+	fields:  [ 'slug', 'provider', 'source', 'status', 'show_in_rest', 'show_in_mcp', 'mcp_type', 'mcp_servers', 'destructive', 'updated_at' ],
 };
 
 function loadView() {
