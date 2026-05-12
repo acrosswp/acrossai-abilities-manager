@@ -76,22 +76,31 @@ class AcrossAI_Sitewide_Query extends Query {
 	 * @return bool
 	 */
 	public function save_override( string $slug, array $fields ): bool {
+		// JSON-encode mcp_servers before passing to BerlinDB — the column is longtext and
+		// BerlinDB does NOT auto-encode PHP arrays. Without this the DB receives "[Array]"
+		// instead of valid JSON, and mcp_servers would be lost on read.
+		if ( isset( $fields['mcp_servers'] ) && is_array( $fields['mcp_servers'] ) ) {
+			$fields['mcp_servers'] = wp_json_encode( $fields['mcp_servers'] );
+		}
+
 		$existing = $this->get_override_by_slug( $slug );
 		$now      = current_time( 'mysql', true );
 		$user_id  = get_current_user_id();
 
 		if ( null === $existing ) {
-			// INSERT.
+			// INSERT path — add_item() returns the new integer ID on success or false.
 			$fields['ability_slug'] = $slug;
 			$fields['created_at']   = $now;
 			$fields['created_by']   = $user_id;
 			$fields['updated_at']   = $now;
 
 			$result = $this->add_item( $fields );
-			return false !== $result && null !== $result;
+			// Check: false = failure, 0 = invalid ID, positive int = success.
+			return false !== $result && (int) $result > 0;
 		}
 
-		// UPDATE — only update audit fields for the current edit.
+		// UPDATE path — update_item() returns the updated item object or false.
+		// First arg MUST be the integer primary key, NOT the slug string.
 		$fields['updated_at'] = $now;
 		$fields['updated_by'] = $user_id;
 

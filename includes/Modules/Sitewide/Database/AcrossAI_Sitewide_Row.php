@@ -169,6 +169,14 @@ class AcrossAI_Sitewide_Row extends Row {
 			$this->{$field} = AcrossAI_Sanitizer::cast_tri_state( $this->{$field} );
 		}
 
+		// JSON-decode mcp_servers — stored as JSON longtext, must return as PHP array.
+		// Without this, the REST response would return a raw JSON string instead of an array,
+		// breaking the JS client which expects string[].
+		if ( null !== $this->mcp_servers ) {
+			$decoded           = json_decode( $this->mcp_servers, true );
+			$this->mcp_servers = is_array( $decoded ) ? $decoded : null;
+		}
+
 		// Cast integer fields.
 		$this->id         = (int) $this->id;
 		$this->created_by = null !== $this->created_by ? (int) $this->created_by : null;
