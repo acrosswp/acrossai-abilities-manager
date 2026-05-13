@@ -14,6 +14,7 @@
  */
 import { RadioControl, SelectControl, CheckboxControl, Notice } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
+import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { STORE_NAME } from '../store/index';
 
@@ -64,9 +65,21 @@ function toRadioOption( showInMcp, mcpServers ) {
 export default function McpVisibilityControl( { showInMcp, mcpType, mcpServers, onChange } ) {
 	const availableServers = useSelect( ( select ) => select( STORE_NAME ).getMcpServers(), [] );
 
-	const radioValue = toRadioOption( showInMcp, mcpServers );
+	// T030 FIX: Use useState to maintain stable radio selection state.
+	// Prevents radio from snapping back when user selects "Allow in specific MCP servers"
+	// because onChange sends null for mcp_servers initially (no servers chosen yet).
+	const [ radioSelection, setRadioSelection ] = useState( () => toRadioOption( showInMcp, mcpServers ) );
+
+	// T030 FIX: useEffect watches for external changes (when panel opens for different ability)
+	// and re-syncs radioSelection to match the new ability's values.
+	useEffect( () => {
+		setRadioSelection( toRadioOption( showInMcp, mcpServers ) );
+	}, [ showInMcp, mcpServers ] );
 
 	function handleRadioChange( newOption ) {
+		// T030 FIX: Update local state BEFORE calling onChange so the radio doesn't snap back.
+		setRadioSelection( newOption );
+
 		switch ( newOption ) {
 			case RADIO_OPTION_DEFAULT:
 				onChange( { show_in_mcp: null, mcp_type: null, mcp_servers: null } );
@@ -90,13 +103,14 @@ export default function McpVisibilityControl( { showInMcp, mcpType, mcpServers, 
 	}
 
 	const showTypeAndServers = true === showInMcp;
-	const showSpecificServers = RADIO_OPTION_SPECIFIC === radioValue;
+	// T030 FIX: Use radioSelection (local state) instead of derived radioValue to prevent snap-back.
+	const showSpecificServers = RADIO_OPTION_SPECIFIC === radioSelection;
 
 	return (
 		<div className="acrossai-mcp-visibility">
 			<RadioControl
 				label={ __( 'MCP Visibility', 'acrossai-abilities-manager' ) }
-				selected={ radioValue }
+				selected={ radioSelection }
 				options={ RADIO_OPTIONS }
 				onChange={ handleRadioChange }
 			/>
