@@ -81,20 +81,25 @@ function TriStateControl( { label, value, registryValue, onChange } ) {
 // ---------------------------------------------------------------------------
 
 function buildGeneralDraft( src ) {
+	// Use _override (raw DB row values) NOT the merged effective values.
+	// Merged values substitute registry defaults for null fields, which would
+	// cause a field with no DB entry to show "Yes"/"No" instead of "Inherit".
+	const ov = src?._override ?? {};
 	return {
-		site_allowed: src?.site_allowed ?? null,
-		readonly:     src?.readonly     ?? null,
-		destructive:  src?.destructive  ?? null,
-		idempotent:   src?.idempotent   ?? null,
-		show_in_rest: src?.show_in_rest ?? null,
+		site_allowed: ov.site_allowed ?? null,
+		readonly:     ov.readonly     ?? null,
+		destructive:  ov.destructive  ?? null,
+		idempotent:   ov.idempotent   ?? null,
+		show_in_rest: ov.show_in_rest ?? null,
 	};
 }
 
 function buildMcpDraft( src ) {
+	const ov = src?._override ?? {};
 	return {
-		show_in_mcp: src?.show_in_mcp ?? null,
-		mcp_type:    src?.mcp_type    ?? null,
-		mcp_servers: src?.mcp_servers ?? null,
+		show_in_mcp: ov.show_in_mcp ?? null,
+		mcp_type:    ov.mcp_type    ?? null,
+		mcp_servers: ov.mcp_servers ?? null,
 	};
 }
 
@@ -170,13 +175,17 @@ export default function AbilityEditPanel( { slug, ability, registry, onClose } )
 	const [ mcpSaving, setMcpSaving ] = useState( false );
 	const [ mcpNotice, setMcpNotice ] = useState( null );
 
-	// Re-seed both tabs when ability prop changes (external update).
+	// Re-seed both tabs only when the panel opens for a new ability (slug changes).
+	// Do NOT depend on `ability` reference — the store dispatches UPDATE_ABILITY after
+	// every save, which changes the `ability` reference and would re-seed the draft,
+	// silently overwriting the user's confirmed selection back to "Inherit" if the
+	// fresh _override value arrives null before the component re-reads it.
 	useEffect( () => {
 		setGeneralDraft( buildGeneralDraft( ability ) );
 		setGeneralSaved( buildGeneralDraft( ability ) );
 		setMcpDraft( buildMcpDraft( ability ) );
 		setMcpSaved( buildMcpDraft( ability ) );
-	}, [ ability ] ); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [ slug ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Unsaved check
 	const hasUnsaved = ! draftsEqual( generalDraft, generalSaved ) || ! draftsEqual( mcpDraft, mcpSaved );

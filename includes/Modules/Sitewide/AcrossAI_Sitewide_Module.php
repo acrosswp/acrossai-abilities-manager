@@ -13,7 +13,6 @@ use AcrossAI_Abilities_Manager\Includes\Base\AcrossAI_Module_Base;
 use AcrossAI_Abilities_Manager\Includes\Loader;
 use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Query;
 use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Table;
-use AcrossAI_Abilities_Manager\Admin\Partials\SitewideAbilityPage;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -45,12 +44,7 @@ class AcrossAI_Sitewide_Module extends AcrossAI_Module_Base {
 	public function register_hooks( Loader $loader ): void {
 		// Instantiate on every request so BerlinDB registers $wpdb->acrossai_abilities_overwrite
 		// and hooks maybe_upgrade() to admin_init (creates/upgrades the table).
-		// Instantiate BerlinDB table on every request to register $wpdb property and maybe_upgrade hook.
 		new AcrossAI_Sitewide_Table();
-
-		// Enqueue admin assets for the sitewide ability page via the Loader.
-		$admin_page = new SitewideAbilityPage();
-		$loader->add_action( 'admin_enqueue_scripts', $admin_page, 'do_enqueue_assets' );
 
 		$controller = new AcrossAI_Sitewide_Rest_Controller( new AcrossAI_Sitewide_Query() );
 		$loader->add_action( 'rest_api_init', $controller, 'register_routes' );

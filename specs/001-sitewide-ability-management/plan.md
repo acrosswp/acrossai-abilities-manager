@@ -39,7 +39,7 @@ All endpoints are secured with `manage_options` + nonce verification.
 
 ### ✅ PASS — I. Modular Architecture
 Module lives at `includes/Modules/Sitewide/`, extends `AcrossAI_Module_Base` from `includes/Base/`.
-Shared utilities in `includes/Utilities/`. Admin enqueue + page render in `admin/Partials/SitewideAbilityPage.php`. No sibling-module dependencies.
+Shared utilities in `includes/Utilities/`. Admin enqueue in `admin/Main.php`; page render (`contents()`) in `admin/Partials/Menu.php`. No separate `SitewideAbilityPage` class. No sibling-module dependencies.
 
 ### ✅ PASS — II. WordPress Standards Compliance
 PHPCS strict + PHPStan L8 gates enforced in Definition of Done. WP 6.9+ / PHP 7.4+ targeted.
@@ -76,9 +76,13 @@ All gates listed in tasks.md. Feature is complete only when all 8 DoD gates pass
 3. Store name `acrossai-abilities-sitewide` → corrected to `acrossai-abilities/sitewide` (WP convention: slash-namespaced)
 4. `admin/Partials/Menu.php` must be updated in-place — no new menu class may be created (clarification C5)
 5. `includes/modules/sitewide/` → corrected to `includes/Modules/Sitewide/` (PSR-4 autoloader: lowercase dirs fail on case-sensitive Linux filesystems)
-6. Admin enqueue + page template inside `AcrossAI_Sitewide_Module` → moved to `admin/Partials/SitewideAbilityPage.php` (skill step 3 + constitution admin partials rule)
+6. Admin enqueue + page template inside `AcrossAI_Sitewide_Module` → enqueue moved to `admin/Main.php::enqueue_styles()/enqueue_scripts()` (skill step 3–4: manifest loaded in constructor, scoped enqueue in the two methods); render moved to `admin/Partials/Menu.php::contents()` (the `add_menu_page` callback); `admin/Partials/SitewideAbilityPage.php` was created and then deleted — its responsibilities are split between `Admin\Main` and `Menu`
 7. Webpack entry + `sitewide.asset.php` manifest loading added explicitly (skill step 12 — dependency array and version must never be hardcoded)
 8. `boot()` call from `load_dependencies()` → clarified: `define_admin_hooks()` calls `register_hooks($this->loader)` on each module (skill step 2 + constitution boot flow rule)
+9. **PHP bool-to-int cast in `save_override()`** — PHP `false` is not detected as an integer by `$wpdb` format auto-detection (`is_int(false) === false`), so `$wpdb` assigns `%s`, which produces `''` on `sprintf`. MySQL 8+ strict mode rejects `''` for a `tinyint` column silently. Fix: cast all PHP boolean tri-state values to `(int)` before passing to BerlinDB — `true → 1`, `false → 0`, `null` left as null. Applied in `AcrossAI_Sitewide_Query::save_override()`.
+10. **Partial-field save via `has_param()` in REST controller** — the per-tab save architecture (General tab / MCP tab each save independently) requires the PHP handler to only write fields that were explicitly sent. `$request->get_param()` returns `null` for absent optional params, so unconditional collection of all 8 fields overwrites the other tab's DB values with NULL silently. Fix: use `$request->has_param($field)` to gate collection; `has_param()` returns `true` even when the field is explicitly sent as `null` (user intends to clear it). Applied in `AcrossAI_Sitewide_Rest_Controller::save_override()`. Also: `is_all_default()` + I3 auto-delete MUST NOT apply to partial-tab saves — full-row cleanup belongs to the DELETE endpoint only.
+11. **`useEffect([slug])` dep in `AbilityEditPanel`** — using `[ability]` as the `useEffect` dep re-seeds the draft on every `UPDATE_ABILITY` dispatch (which fires after every save). Any timing gap where `ability._override` arrives as `null` before the component re-reads it silently resets the user's selection back to "Inherit". Fix: use `[slug]` as the dep so the draft only re-seeds when the panel opens for a different ability. Individual save handlers (`saveGeneral`, `saveMcp`) own updating `savedDraft` state via `setGeneralSaved({...generalDraft})` / `setMcpSaved({...mcpDraft})`.
+12. **`_override: nullOverride` in `deleteOverride` optimistic dispatch** — the `UPDATE_ABILITY` reducer does a shallow spread (`{ ...ability, ...action.ability }`). Without explicitly setting `_override` in the dispatch payload, the old stale `_override` survives in the store. When the edit panel opens (slug-change `useEffect`), it seeds draft state from the stale `_override` and shows Yes/No instead of Inherit after Reset Override. Fix: include `_override: { site_allowed: null, readonly: null, ... }` (all 8 fields null) in the `deleteOverride` optimistic dispatch.
 
 ---
 
@@ -105,9 +109,9 @@ specs/001-sitewide-ability-management/
 webpack.config.js                          # UPDATE: add entry 'sitewide' → './src/js/sitewide/index.js'
 
 admin/
+├── Main.php                               # UPDATE: constructor loads sitewide.asset.php; enqueue_styles()/enqueue_scripts() scoped to plugin page via $hook_suffix guard; wp_add_inline_script sets window.acrossaiAbilitiesSitewide
 └── Partials/
-    ├── Menu.php                           # UPDATE IN-PLACE: add icon, position, React root in contents()
-    └── SitewideAbilityPage.php            # CREATE: admin_enqueue_scripts (scoped to plugin page) + render_page(); loads build/js/sitewide.asset.php manifest
+    └── Menu.php                           # UPDATE IN-PLACE: add icon, position; contents() renders React root directly
 
 includes/
 ├── Base/
@@ -126,7 +130,7 @@ includes/
 │           ├── AcrossAI_Sitewide_Row.php     # CREATE: BerlinDB Row (typed properties)
 │           └── AcrossAI_Sitewide_Query.php   # CREATE: BerlinDB Query (CRUD methods)
 ├── Activator.php                          # UPDATE: call table->maybe_upgrade() on activate
-└── Main.php                               # UPDATE: define_admin_hooks() instantiates SitewideAbilityPage + Sitewide_Module, calls register_hooks($this->loader) on each
+└── Main.php                               # UPDATE: define_admin_hooks() wires Admin\Main enqueue_styles/enqueue_scripts + Menu (render) + AcrossAI_Sitewide_Module::register_hooks()
 
 src/
 ├── js/
@@ -138,10 +142,13 @@ src/
 │       │   └── index.js                   # CREATE: createReduxStore('acrossai-abilities/sitewide')
 │       └── components/
 │           ├── AbilityManager.jsx         # CREATE: page root, view state, localStorage
-│           ├── AbilityTable.jsx           # CREATE: @wordpress/dataviews DataViews table
-│           ├── AbilityEditPanel.jsx       # CREATE: slide-in drawer via createPortal + DataForms
+│           ├── AbilityTable.jsx           # CREATE: @wordpress/dataviews DataViews table (13 fields)
+│           ├── AbilityEditPanel.jsx       # CREATE: slide-in drawer via createPortal; per-tab save; useEffect([slug]) dep
 │           ├── McpVisibilityControl.jsx   # CREATE: MCP radio group + conditional server multi-select
-│           └── BulkActionToolbar.jsx      # CREATE: bulk allow/disallow/reset toolbar
+│           ├── BulkActionToolbar.jsx      # CREATE: bulk allow/disallow/reset toolbar
+│           └── cells/
+│               ├── TriStateBadgeCell.jsx  # CREATE: Yes/No/— badge with (Default) suffix
+│               └── McpServersCell.jsx     # CREATE: All / truncated server list / — renderer
 └── scss/
     └── sitewide/
         └── admin.scss                     # CREATE: drawer animation, status badges, WPDS tokens
@@ -149,7 +156,7 @@ src/
 build/                                     # OUTPUT: compiled by @wordpress/scripts
 ├── js/
 │   ├── sitewide.js
-│   └── sitewide.asset.php                 # AUTO-GENERATED: loaded by SitewideAbilityPage::enqueue_assets()
+│   └── sitewide.asset.php                 # AUTO-GENERATED: loaded in Admin\Main::__construct(); consumed by enqueue_styles()/enqueue_scripts()
 └── css/
     └── sitewide.css
 

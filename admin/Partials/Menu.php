@@ -74,8 +74,11 @@ class Menu {
 	 * About us for the plugins
 	 */
 	public function contents() {
-		$page = new \AcrossAI_Abilities_Manager\Admin\Partials\SitewideAbilityPage();
-		$page->render_page();
+		?>
+		<div class="wrap acrossai-abilities-manager-wrap">
+			<div id="acrossai-abilities-manager-root"></div>
+		</div>
+		<?php
 	}
 
 	/**

@@ -65,6 +65,15 @@ class AcrossAI_Ability_Merger {
 		$result['updated_by']   = $has_override ? $override->updated_by : null;
 		$result['_registry']    = $registry;
 
+		// Raw per-field override values (null = not set in DB / no row).
+		// The JS edit panel uses this — NOT the merged values above — to seed
+		// radio controls so fields without an explicit DB value show "Inherit".
+		$override_raw = array();
+		foreach ( self::$overridable_fields as $field ) {
+			$override_raw[ $field ] = $has_override ? $override->{$field} : null;
+		}
+		$result['_override'] = $override_raw;
+
 		return $result;
 	}
 

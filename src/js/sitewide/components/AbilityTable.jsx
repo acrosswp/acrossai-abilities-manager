@@ -192,21 +192,27 @@ export default function AbilityTable( {
 			enableSorting: false,
 			enableHiding:  true,
 		},
+		{
+			id:           'allow_toggle',
+			label:        __( 'Allow / Disallow', 'acrossai-abilities-manager' ),
+			render:       ( { item } ) => (
+				<Button
+					variant="secondary"
+					size="small"
+					onClick={ () => dispatch.toggleAllowed( item.slug, item.site_allowed === false ) }
+				>
+					{ item.site_allowed !== false
+						? __( 'Disallow', 'acrossai-abilities-manager' )
+						: __( 'Allow', 'acrossai-abilities-manager' )
+					}
+				</Button>
+			),
+			enableSorting: false,
+			enableHiding:  false,
+		},
 	];
 
 	const actions = [
-		{
-			id:    'toggle',
-			label: ( item ) => item.site_allowed !== false
-				? __( 'Disallow', 'acrossai-abilities-manager' )
-				: __( 'Allow', 'acrossai-abilities-manager' ),
-			callback: ( items ) => {
-				const item = Array.isArray( items ) ? items[ 0 ] : items;
-				dispatch.toggleAllowed( item.slug, item.site_allowed === false );
-			},
-			icon:      'toggle-off',
-			isPrimary: true,
-		},
 		{
 			id:    'edit',
 			label: __( 'Edit', 'acrossai-abilities-manager' ),

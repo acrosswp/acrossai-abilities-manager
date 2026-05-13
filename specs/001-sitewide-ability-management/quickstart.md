@@ -62,7 +62,7 @@ npm run build
 
 Built assets output to:
 - `build/js/sitewide.js`
-- `build/js/sitewide.asset.php` ← loaded by `SitewideAbilityPage::enqueue_assets()`; never hardcode deps or version
+- `build/js/sitewide.asset.php` ← loaded by `Admin\Main::__construct()`; consumed by `enqueue_styles()` / `enqueue_scripts()`; never hardcode deps or version
 - `build/css/sitewide.css`
 
 The webpack entry point is `src/js/sitewide/index.js`.
@@ -175,12 +175,14 @@ wp db query "SELECT ability_slug, site_allowed, show_in_mcp FROM {prefix}acrossa
 | `includes/Modules/Sitewide/AcrossAI_Sitewide_Rest_Controller.php` | 7 REST endpoints |
 | `includes/Modules/Sitewide/Database/AcrossAI_Sitewide_Query.php` | BerlinDB Query (CRUD) |
 | `includes/Utilities/AcrossAI_Ability_Merger.php` | Registry + override merge logic |
-| `admin/Partials/Menu.php` | Admin menu registration (`add_menu_page`) |
-| `admin/Partials/SitewideAbilityPage.php` | Admin asset enqueue (scoped) + page render |
+| `admin/Main.php` | Asset enqueue (scoped via `$hook_suffix` guard; manifest loaded in constructor) |
+| `admin/Partials/Menu.php` | Menu registration (`add_menu_page`) + page render (`contents()` outputs React root) |
 | `src/js/sitewide/index.js` | React entry — `createRoot`, apiFetch setup |
 | `src/js/sitewide/store/index.js` | Redux store (`acrossai-abilities/sitewide`) |
-| `src/js/sitewide/components/AbilityTable.jsx` | DataViews table |
-| `src/js/sitewide/components/AbilityEditPanel.jsx` | Slide-in drawer + DataForms |
+| `src/js/sitewide/components/AbilityTable.jsx` | DataViews table (13 fields, deduped row actions) |
+| `src/js/sitewide/components/AbilityEditPanel.jsx` | Slide-in drawer — per-tab save, `useEffect([slug])` dep |
+| `src/js/sitewide/components/cells/TriStateBadgeCell.jsx` | Tri-state badge renderer (Yes/No/Inherit + Default suffix) |
+| `src/js/sitewide/components/cells/McpServersCell.jsx` | MCP servers list renderer (All / truncated list / —) |
 | `specs/001-sitewide-ability-management/plan.md` | This feature's implementation plan |
 | `specs/001-sitewide-ability-management/data-model.md` | DB schema, entities, state shape |
 | `specs/001-sitewide-ability-management/contracts/rest-api.md` | REST API contracts |

@@ -83,6 +83,20 @@ class AcrossAI_Sitewide_Query extends Query {
 			$fields['mcp_servers'] = wp_json_encode( $fields['mcp_servers'] );
 		}
 
+		// Cast PHP booleans to integers for all tinyint tri-state columns.
+		// $wpdb->insert/update auto-detects format: is_int() → %d, otherwise → %s.
+		// PHP false is not an int, so without this cast it gets format %s → '' (empty
+		// string). MySQL strict mode (default in MySQL 8 / MariaDB 10.2+) rejects '' for
+		// a tinyint column with "Incorrect integer value", silently aborting the INSERT.
+		// Casting false → 0 and true → 1 forces %d and stores the correct value.
+		// null is intentionally left as null (SQL NULL = Inherit state).
+		$tri_state_columns = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		foreach ( $tri_state_columns as $col ) {
+			if ( array_key_exists( $col, $fields ) && is_bool( $fields[ $col ] ) ) {
+				$fields[ $col ] = (int) $fields[ $col ]; // true → 1, false → 0
+			}
+		}
+
 		$existing = $this->get_override_by_slug( $slug );
 		$now      = current_time( 'mysql', true );
 		$user_id  = get_current_user_id();

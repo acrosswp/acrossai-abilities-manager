@@ -69,13 +69,33 @@ bypass CSP headers, and cannot be conditionally dequeued.
 
 ## How to add new admin assets
 
-Add an entry to `webpack.config.js`, then enqueue it in `Admin\Main` (or a new class) using
-the sibling `*.asset.php` manifest. Never hardcode version strings.
+Add an entry to `webpack.config.js`, then enqueue it in **`Admin\Main`** — always. Never put
+`wp_enqueue_script()` / `wp_enqueue_style()` calls inside a `Partials\*` page class or a module.
 
-See `build-system.md` for the full 5-step workflow with diffs.
+**The required pattern (see `build-system.md` Steps 3–4):**
+
+1. Load the manifest in `Admin\Main::__construct()`:
+   ```php
+   $this->my_feature_asset = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/my-feature.asset.php';
+   ```
+2. Enqueue in `enqueue_styles()` / `enqueue_scripts()` with a `$hook_suffix` guard:
+   ```php
+   public function enqueue_scripts( string $hook_suffix ) {
+       if ( false === strpos( $hook_suffix, 'my-page-slug' ) ) {
+           return;
+       }
+       wp_enqueue_script( 'my-feature', PLUGIN_URL . 'build/js/my-feature.js',
+           $this->my_feature_asset['dependencies'], $this->my_feature_asset['version'], true );
+   }
+   ```
+
+`Partials\*` classes own **only** `render_page()` (HTML output) and `add_menu()` (menu registration).
+They MUST NOT call `wp_enqueue_script()`, `wp_enqueue_style()`, or `wp_add_inline_script()`.
 
 ⚠️ **PHP fatal if build not run:** `Admin\Main::__construct()` `include`s the manifest files
 directly. Missing `build/` artifacts cause a PHP fatal on every admin page load, not a 404.
+
+See `build-system.md` for the full 5-step workflow with diffs.
 
 ## Conditional per-screen enqueuing
 

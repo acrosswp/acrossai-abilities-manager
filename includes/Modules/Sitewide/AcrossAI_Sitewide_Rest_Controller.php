@@ -367,27 +367,33 @@ class AcrossAI_Sitewide_Rest_Controller {
 		}
 		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry );
 
-		$fields = array(
-			'site_allowed' => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'site_allowed' ) ),
-			'readonly'     => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'readonly' ) ),
-			'destructive'  => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'destructive' ) ),
-			'idempotent'   => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'idempotent' ) ),
-			'show_in_rest' => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'show_in_rest' ) ),
-			'show_in_mcp'  => AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( 'show_in_mcp' ) ),
-			'mcp_type'     => AcrossAI_Sanitizer::sanitize_mcp_type( $request->get_param( 'mcp_type' ) ),
-			'mcp_servers'  => AcrossAI_Sanitizer::sanitize_mcp_servers_array( $request->get_param( 'mcp_servers' ) ),
-		);
+		// Only collect fields that were explicitly sent in the request body.
+		// Per-tab save: General tab sends 5 fields; MCP tab sends 3 fields.
+		// Collecting absent fields via get_param() returns null and would
+		// overwrite the other tab's saved DB values with NULL on UPDATE.
+		// has_param() is true even when the field is explicitly null in the body
+		// (intentional "clear this field"), so only truly absent fields are skipped.
+		$fields      = array();
+		$tri_state   = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		foreach ( $tri_state as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$fields[ $field ] = AcrossAI_Sanitizer::sanitize_tri_state( $request->get_param( $field ) );
+			}
+		}
+		if ( $request->has_param( 'mcp_type' ) ) {
+			$fields['mcp_type'] = AcrossAI_Sanitizer::sanitize_mcp_type( $request->get_param( 'mcp_type' ) );
+		}
+		if ( $request->has_param( 'mcp_servers' ) ) {
+			$fields['mcp_servers'] = AcrossAI_Sanitizer::sanitize_mcp_servers_array( $request->get_param( 'mcp_servers' ) );
+		}
 
 		// Detect and set source (RF-04).
 		$fields['source'] = AcrossAI_Ability_Source_Detector::detect( $registry );
 
-		// Check if payload differs from registry defaults.
+		// If every submitted field is already at its registry default, nothing to write.
+		// Do NOT auto-delete the override row for partial submits — the other tab may
+		// still hold meaningful overrides. Full-row cleanup belongs to the DELETE endpoint.
 		if ( AcrossAI_Ability_Merger::is_all_default( $fields, $registry ) ) {
-			// I3: Delete stale override if one exists.
-			$existing = $this->db_query->get_override_by_slug( $slug );
-			if ( null !== $existing ) {
-				$this->db_query->delete_override_by_slug( $slug );
-			}
 			return rest_ensure_response( array( 'unchanged' => true ) );
 		}
 

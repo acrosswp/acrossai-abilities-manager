@@ -194,7 +194,20 @@ const actions = {
 	deleteOverride: ( slug ) => async ( { dispatch, select } ) => {
 		const prev = select.getAbilities().find( ( a ) => a.slug === slug );
 
-		// Optimistic update — clear override fields.
+		// Optimistic update — clear all override fields and _override map to null.
+		// _override MUST be explicitly cleared here; without it the spread in
+		// UPDATE_ABILITY keeps the old _override values, so the edit panel seeds
+		// from stale Yes/No data after the user reopens it post-reset.
+		const nullOverride = {
+			site_allowed: null,
+			readonly:     null,
+			destructive:  null,
+			idempotent:   null,
+			show_in_rest: null,
+			show_in_mcp:  null,
+			mcp_type:     null,
+			mcp_servers:  null,
+		};
 		dispatch( {
 			type:    UPDATE_ABILITY,
 			ability: {
@@ -208,6 +221,7 @@ const actions = {
 				show_in_mcp:   prev ? prev._registry?.show_in_mcp ?? null : null,
 				mcp_type:      prev ? prev._registry?.mcp_type ?? null : null,
 				mcp_servers:   prev ? prev._registry?.mcp_servers ?? null : null,
+				_override:     nullOverride,
 			},
 		} );
 
