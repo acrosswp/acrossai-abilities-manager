@@ -86,6 +86,8 @@ Every sub-controller route uses:
 
 No abstract base class. No permission code duplication. Constitution §VI satisfied.
 
+> **Architecture note (2026-05-16)**: The Constitution Boot Flow Rule ("resolve singleton to named variable before `add_action`") governs `$this->loader->add_action()` calls only. The inline `::instance()` inside a `register_rest_route` `permission_callback` array is a deliberate documented pattern for this module — it is not a Boot Flow Rule violation. `AcrossAI_Sitewide_Override_Controller` uses a `$permission` local variable solely for DRY (3 routes share the same callback); the other controllers use inline because each has only one route.
+
 ### Sub-controller responsibility map
 
 | File | Routes | Handlers |

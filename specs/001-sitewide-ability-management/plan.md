@@ -46,12 +46,16 @@ Shared utilities in `includes/Utilities/`. Admin enqueue in `admin/Main.php`; pa
 PHPCS strict + PHPStan L8 gates enforced in Definition of Done. WP 6.9+ / PHP 7.4+ targeted.
 No deprecated WP functions used.
 
-### ✅ PASS — III. User-Centric Design (NON-NEGOTIABLE)
-DataViews (`@wordpress/dataviews`) used for the ability table (search, sort, pagination, filter, column visibility).
-DataForms (`@wordpress/dataforms`) used for edit panel field rendering and submission state.
+### ⚠️ DEVIATION — III. User-Centric Design (NON-NEGOTIABLE)
+DataViews (`@wordpress/dataviews`) used for the ability table ✅
+DataForms (`@wordpress/dataforms`) **required** for edit panel field rendering and submission state.
 **Constitution override applied**: The user arguments suggested `@wordpress/components Modal`. This is
 **prohibited** by spec FR-021 (slide-in drawer, non-blocking) and constitution Principle III (DataForms
 for forms, not Modal). The edit panel MUST use `ReactDOM.createPortal` slide-in drawer pattern.
+> **⚠️ Implementation deviation (2026-05-16)**: `AbilityEditPanel.jsx` was implemented using bare
+> `RadioControl` from `@wordpress/components` instead of `@wordpress/dataforms`. This violates the
+> NON-NEGOTIABLE requirement. Remediation tracked as **RT-01** in `tasks.md` Phase 9. RT-01 MUST
+> complete before any new plugin-authored admin form UI is introduced.
 
 ### ✅ PASS — IV. Security First (NON-NEGOTIABLE)
 Nonces on all mutating endpoints. `manage_options` in every `permission_callback` AND handler.

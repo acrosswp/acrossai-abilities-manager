@@ -107,3 +107,11 @@ T003: webpack alias                  T004: JSX tab integration
 **Estimated file touches**: 3 files, ~10 lines of code total across all changes.
 
 **Rollback**: All changes are additive. Removing the two lines from `Main.php`, the `resolve` block from `webpack.config.js`, and the import + tab code from `AbilityEditPanel.jsx` fully reverts the feature with no data loss (vendor table exists independently).
+
+---
+
+## Phase 5: Follow-up
+
+*Tracked from architecture review 2026-05-16.*
+
+- [ ] CUP-01 **[LOW] Codify vendor-delegation carve-out in Constitution Principle III** — The vendor `AccessControl` component exemption is documented in this feature's `plan.md` Constitution Check row, but `.specify/memory/constitution.md` does not yet carry the general rule. Proposed addition to §III: *"Vendor-owned components that manage their own form UI are exempt from the DataForms requirement provided the deviation is documented in the relevant feature's `plan.md` Constitution Check table."* Run `/speckit.architecture-guard.init` to re-validate the Constitution after the amendment. Documentation-only change — no PHP or JS files modified.
