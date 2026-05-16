@@ -152,33 +152,16 @@ AcrossAI_Ability_Override_Processor::bust_cache();
 
 `save_override()` and `toggle_ability()` in `AcrossAI_Sitewide_Override_Controller` and save in
 `AcrossAI_Sitewide_Bulk_Controller` already fire `acrossai_abilities_sitewide_after_save` — wire
-`bust_cache()` to that action in `Main.php`:
+`bust_cache_hook()` to that action in `Main.php` via the singleton instance (Boot Flow Rule):
 
 ```php
-$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', $override_processor, 'bust_cache' );
+// In Main.php::define_public_hooks() — resolved pattern after SEC-PLAN-002 amendment:
+$override_processor = AcrossAI_Ability_Override_Processor::instance();
+$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', $override_processor, 'bust_cache_hook' );
 ```
 
-Where `$override_processor` is resolved from the class name string:
-```php
-$override_processor = array( 'AcrossAI_Ability_Override_Processor', 'bust_cache' );
-```
-
-Wait — since `bust_cache()` is a public static method, we need to confirm the correct wiring pattern.
-Static method as a hook callback: WordPress accepts `array( 'ClassName', 'method_name' )` for static
-methods. So the wiring is:
-```php
-$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', array( AcrossAI_Ability_Override_Processor::class, 'bust_cache' ) );
-```
-But this requires passing an array as the `$callback` argument to the Loader. Looking at how Loader
-works: `$loader->add_action($hook, $component, $callback)`. The component is an object or class
-string; the callback is the method name. For a static class:
-
-```php
-// Correct Loader pattern for a static-method callback:
-$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', 'AcrossAI_Ability_Override_Processor', 'bust_cache' );
-```
-
-This passes `array( 'AcrossAI_Ability_Override_Processor', 'bust_cache' )` to `add_action()` internally.
+`bust_cache_hook()` is the public instance wrapper that delegates to the static `bust_cache()` method.
+Direct calls to `AcrossAI_Ability_Override_Processor::bust_cache()` from REST controllers remain valid.
 
 ### W-002 (NOTE): `get_all_overrides()` missing from `AcrossAI_Sitewide_Query`
 
