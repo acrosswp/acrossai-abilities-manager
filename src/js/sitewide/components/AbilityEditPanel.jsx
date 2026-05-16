@@ -15,7 +15,7 @@
  *
  * @since 0.1.0
  */
-import { useState, useEffect, useCallback } from '@wordpress/element';
+import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { createPortal } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TabPanel, RadioControl, Notice } from '@wordpress/components';

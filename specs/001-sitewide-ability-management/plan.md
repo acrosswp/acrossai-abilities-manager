@@ -56,6 +56,7 @@ for forms, not Modal). The edit panel MUST use `ReactDOM.createPortal` slide-in 
 > General tab migrated to `DataForm` from `@wordpress/dataviews` with `TriStateEditField` custom `Edit`
 > adapter. `McpVisibilityControl.jsx` is a **justified exception**: its 4-state compound control encodes
 > 3 interdependent fields with complex conditional rendering that cannot map to independent DataForm fields.
+> **Hotfix (2026-05-16)**: `useMemo` was missing from the `@wordpress/element` import — added and rebuilt.
 
 ### ✅ PASS — IV. Security First (NON-NEGOTIABLE)
 Nonces on all mutating endpoints. `manage_options` in every `permission_callback` AND handler.
