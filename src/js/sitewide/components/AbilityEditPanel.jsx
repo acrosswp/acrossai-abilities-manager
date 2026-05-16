@@ -23,6 +23,7 @@ import { __ } from '@wordpress/i18n';
 import { STORE_NAME } from '../store/index';
 import McpVisibilityControl from './McpVisibilityControl';
 import { AccessControl } from '@wpb/access-control';
+import { DataForm } from '@wordpress/dataviews';
 
 // ---------------------------------------------------------------------------
 // Tri-state helpers — strict, no Boolean() / !!
@@ -107,6 +108,30 @@ function buildMcpDraft(src) {
 function draftsEqual(a, b) {
 	return JSON.stringify(a) === JSON.stringify(b);
 }
+
+// ---------------------------------------------------------------------------
+// DataForm field adapter for tri-state nullable boolean fields.
+// Receives { data, field, onChange } from DataForm where:
+//   data           — current generalDraft object
+//   field          — normalized field (carries our custom .registryValue)
+//   onChange       — must receive the full updated data object
+// ---------------------------------------------------------------------------
+
+function TriStateEditField( { data, field, onChange } ) {
+	return (
+		<TriStateControl
+			label={ field.label }
+			value={ data[ field.id ] }
+			registryValue={ field.registryValue }
+			onChange={ ( newValue ) => onChange( { ...data, [ field.id ]: newValue } ) }
+		/>
+	);
+}
+
+const GENERAL_FORM = {
+	type: 'regular',
+	fields: [ 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest' ],
+};
 
 // ---------------------------------------------------------------------------
 // TabFooter — Save + Reset buttons with inline notice
@@ -247,27 +272,29 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 
 	const regVal = (field) => registry?.[field] ?? null;
 
+	// Field definitions for the General tab DataForm.
+	// Defined inside the component so registry values are captured when registry changes.
+	// TriStateEditField is module-level (stable ref) so DataForm does not remount controls.
+	const generalFields = useMemo( () => [
+		{ id: 'site_allowed', label: __( 'Site Allowed',  'acrossai-abilities-manager' ), registryValue: regVal( 'site_allowed' ), Edit: TriStateEditField },
+		{ id: 'readonly',     label: __( 'Read Only',     'acrossai-abilities-manager' ), registryValue: regVal( 'readonly' ),     Edit: TriStateEditField },
+		{ id: 'destructive',  label: __( 'Destructive',   'acrossai-abilities-manager' ), registryValue: regVal( 'destructive' ),  Edit: TriStateEditField },
+		{ id: 'idempotent',   label: __( 'Idempotent',    'acrossai-abilities-manager' ), registryValue: regVal( 'idempotent' ),   Edit: TriStateEditField },
+		{ id: 'show_in_rest', label: __( 'Show in REST',  'acrossai-abilities-manager' ), registryValue: regVal( 'show_in_rest' ), Edit: TriStateEditField },
+	], [ registry ] ); // eslint-disable-line react-hooks/exhaustive-deps
+
 	// ---------------------------------------------------------------------------
 	// Tab content
 	// ---------------------------------------------------------------------------
 
 	const generalTab = (
 		<div className="acrossai-ability-edit-panel__tab-content">
-			<TriStateControl label={__('Site Allowed', 'acrossai-abilities-manager')}
-				value={generalDraft.site_allowed} registryValue={regVal('site_allowed')}
-				onChange={(v) => setGeneralDraft((p) => ({ ...p, site_allowed: v }))} />
-			<TriStateControl label={__('Read Only', 'acrossai-abilities-manager')}
-				value={generalDraft.readonly} registryValue={regVal('readonly')}
-				onChange={(v) => setGeneralDraft((p) => ({ ...p, readonly: v }))} />
-			<TriStateControl label={__('Destructive', 'acrossai-abilities-manager')}
-				value={generalDraft.destructive} registryValue={regVal('destructive')}
-				onChange={(v) => setGeneralDraft((p) => ({ ...p, destructive: v }))} />
-			<TriStateControl label={__('Idempotent', 'acrossai-abilities-manager')}
-				value={generalDraft.idempotent} registryValue={regVal('idempotent')}
-				onChange={(v) => setGeneralDraft((p) => ({ ...p, idempotent: v }))} />
-			<TriStateControl label={__('Show in REST', 'acrossai-abilities-manager')}
-				value={generalDraft.show_in_rest} registryValue={regVal('show_in_rest')}
-				onChange={(v) => setGeneralDraft((p) => ({ ...p, show_in_rest: v }))} />
+			<DataForm
+				data={ generalDraft }
+				fields={ generalFields }
+				form={ GENERAL_FORM }
+				onChange={ setGeneralDraft }
+			/>
 
 			<TabFooter
 				draft={generalDraft}

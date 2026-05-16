@@ -46,16 +46,16 @@ Shared utilities in `includes/Utilities/`. Admin enqueue in `admin/Main.php`; pa
 PHPCS strict + PHPStan L8 gates enforced in Definition of Done. WP 6.9+ / PHP 7.4+ targeted.
 No deprecated WP functions used.
 
-### ⚠️ DEVIATION — III. User-Centric Design (NON-NEGOTIABLE)
+### ✅ PASS — III. User-Centric Design (NON-NEGOTIABLE)
 DataViews (`@wordpress/dataviews`) used for the ability table ✅
-DataForms (`@wordpress/dataforms`) **required** for edit panel field rendering and submission state.
+DataForms: `DataForm` from `@wordpress/dataviews` used for General tab field rendering ✅
 **Constitution override applied**: The user arguments suggested `@wordpress/components Modal`. This is
 **prohibited** by spec FR-021 (slide-in drawer, non-blocking) and constitution Principle III (DataForms
 for forms, not Modal). The edit panel MUST use `ReactDOM.createPortal` slide-in drawer pattern.
-> **⚠️ Implementation deviation (2026-05-16)**: `AbilityEditPanel.jsx` was implemented using bare
-> `RadioControl` from `@wordpress/components` instead of `@wordpress/dataforms`. This violates the
-> NON-NEGOTIABLE requirement. Remediation tracked as **RT-01** in `tasks.md` Phase 9. RT-01 MUST
-> complete before any new plugin-authored admin form UI is introduced.
+> **Note (2026-05-16)**: Initial implementation used bare `RadioControl`. **RT-01 remediated (2026-05-16)**:
+> General tab migrated to `DataForm` from `@wordpress/dataviews` with `TriStateEditField` custom `Edit`
+> adapter. `McpVisibilityControl.jsx` is a **justified exception**: its 4-state compound control encodes
+> 3 interdependent fields with complex conditional rendering that cannot map to independent DataForm fields.
 
 ### ✅ PASS — IV. Security First (NON-NEGOTIABLE)
 Nonces on all mutating endpoints. `manage_options` in every `permission_callback` AND handler.
