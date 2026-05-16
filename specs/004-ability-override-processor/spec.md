@@ -79,7 +79,7 @@ When an admin saves or resets an ability override through the Manager, the runti
 - What happens when the WP Abilities API (`wp_abilities_api_init`) is absent (older WP version)? — Override hooks are registered but never fire; no error is thrown.
 - What happens when a `wp_unregister_ability()` call is issued for a slug that does not exist in the registry? — WP core handles the graceful no-op; the processor does not check for existence first.
 - What happens if `$_SERVER['REQUEST_URI']` is missing (CLI context)? — `is_manager_rest_request()` checks for `WP_CLI` first; CLI always returns false before inspecting `$_SERVER`.
-- What happens when `mcp_servers` is stored as a JSON string in the DB? — `AcrossAI_Sitewide_Row::__construct()` decodes the JSON string to `array|null` on construction; by the time `inject_override_args()` reads `$row->mcp_servers`, it is already an array or null. The processor guards with `is_array()` and never calls `json_decode()`.
+- What happens when `mcp_servers` is stored as a JSON string in the DB? — `AcrossAI_Sitewide_Row::__construct()` decodes the JSON string to `array|null` on construction; by the time `inject_override_args()` reads `$row->mcp_servers`, it is already an array or null. The processor guards with `is_array()`, never calls `json_decode()`, and writes to `$args['meta']['mcp']['servers']`.
 - What happens if the transient is corrupted or contains unexpected data? — The cache is rebuilt from DB; corrupted transients are treated as a cache miss.
 
 ---
@@ -96,7 +96,21 @@ When an admin saves or resets an ability override through the Manager, the runti
 - **FR-006**: A null DB override value MUST never overwrite a registration-time argument (Inherit semantics).
 - **FR-007**: The processor MUST NOT write to the database directly; all DB access MUST go through `AcrossAI_Sitewide_Query`.
 - **FR-008**: The Manager REST detection MUST NOT be used as an access control mechanism; it is a performance/registration optimisation only.
-- **FR-009**: The `mcp_servers` field is decoded from JSON to `array|null` by `AcrossAI_Sitewide_Row::__construct()` at construction time. The processor MUST guard with `is_array()` before assigning to ability arguments; it MUST NOT call `json_decode()` on the field.
+- **FR-009**: `inject_override_args()` MUST write DB override values to the following `$args` paths (null values MUST be skipped per FR-006):
+
+  | DB field | `$args` path | Notes |
+  |---|---|---|
+  | `site_allowed` | `$args['site_allowed']` | Top-level WP Abilities API field |
+  | `readonly` | `$args['meta']['annotations']['readonly']` | WP core annotation |
+  | `destructive` | `$args['meta']['annotations']['destructive']` | WP core annotation |
+  | `idempotent` | `$args['meta']['annotations']['idempotent']` | WP core annotation |
+  | `show_in_rest` | `$args['meta']['show_in_rest']` | WP core meta field |
+  | `show_in_mcp` | `$args['meta']['mcp']['public']` | Plugin-specific MCP block |
+  | `mcp_type` | `$args['meta']['mcp']['type']` | Plugin-specific MCP block |
+  | `mcp_servers` | `$args['meta']['mcp']['servers']` | Plugin-specific MCP block; already decoded to `array\|null` by `AcrossAI_Sitewide_Row::__construct()` — guard with `is_array()`, never call `json_decode()` |
+  | `permission_callback` | `$args['permission_callback']` | Runtime AC enforcement; injected only when `RuleQuery::get_rule('acrossai-abilities', $slug)` returns a non-empty key — checked independently of the override row. Closure calls `AcrossAI_Sitewide_Access_Control::instance()->get_manager()->user_has_access(get_current_user_id(), 'acrossai-abilities', $slug)`. Fail-open (returns `true`) when `get_manager()` returns `null`. |
+
+  `$args['meta']['mcp']` is **not** a WordPress core Abilities API field. It is a plugin-specific block consumed exclusively by this plugin's MCP integration layer. Override injection into this block only takes effect if the MCP integration reads `$args['meta']['mcp']` at runtime.
 - **FR-010**: The processor MUST be bootable from a single static `boot()` call at `plugins_loaded` priority 20.
 
 ### Key Entities
@@ -134,6 +148,7 @@ When an admin saves or resets an ability override through the Manager, the runti
 - The existing `_registry` / `_override` / merged three-layer REST response shape produced by the Manager is correct and must not be altered by this feature.
 - Multisite support: the override table is per-site (uses `$wpdb->prefix`); no cross-site override bleeding.
 - The transient cache key `acrossai_ability_overrides_cache` is unique to this plugin and will not conflict with other plugins.
+- `$args['meta']['mcp']` is a plugin-specific block within the WP Abilities API `$args` structure, not a WordPress core field. Override injection into this block (keys `public`, `type`, `servers`) only takes effect if the MCP integration layer of this plugin reads `$args['meta']['mcp']` at runtime. This assumption MUST be revisited if the MCP integration changes its read path.
 - The 12-hour transient TTL is a hardcoded safe default. No filter is provided because `bust_cache()` fires on every Manager save and reset, making the TTL relevant only for cold starts and transient evictions — scenarios where a stale window of up to 12 hours is acceptable.
 ---
 

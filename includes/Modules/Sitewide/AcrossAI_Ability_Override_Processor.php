@@ -222,8 +222,22 @@ final class AcrossAI_Ability_Override_Processor {
 	 * Registered at wp_register_ability_args P10 on PATH B only. Null DB values are skipped —
 	 * null means "Inherit" and the registration-time default is preserved (FR-006).
 	 *
-	 * Note: AcrossAI_Sitewide_Row::__construct() already JSON-decodes mcp_servers to array|null.
-	 * The processor checks is_array() — not is_string() — before assigning to $args.
+	 * Field path map (FR-009):
+	 *   site_allowed              → $args['site_allowed']  (top-level WP Abilities API field)
+	 *   readonly/destructive/
+	 *     idempotent              → $args['meta']['annotations']['<key>']
+	 *   show_in_rest              → $args['meta']['show_in_rest']
+	 *   show_in_mcp               → $args['meta']['mcp']['public']   (plugin-specific)
+	 *   mcp_type                  → $args['meta']['mcp']['type']     (plugin-specific)
+	 *   mcp_servers               → $args['meta']['mcp']['servers']  (plugin-specific; already
+	 *                               decoded to array|null by AcrossAI_Sitewide_Row::__construct())
+	 *   permission_callback       → $args['permission_callback']     (runtime AC enforcement;
+	 *                               injected only when an access-control rule is stored in
+	 *                               RuleQuery for this slug — checked independently of the
+	 *                               override row)
+	 *
+	 * meta['mcp'] is not a WP core Abilities API field. It is consumed by the MCP integration
+	 * layer of this plugin only. See FR-009 and the Constraints Assumption in spec.md.
 	 *
 	 * @since  0.1.0
 	 * @param  array  $args Ability registration args.
@@ -233,31 +247,77 @@ final class AcrossAI_Ability_Override_Processor {
 	public static function inject_override_args( array $args, string $slug ): array {
 		self::load_overrides_cache();
 
-		if ( ! isset( self::$_overrides_cache[ $slug ] ) ) {
-			return $args;
-		}
+		// Inject DB override fields when a record exists for this slug.
+		if ( isset( self::$_overrides_cache[ $slug ] ) ) {
+			$row = self::$_overrides_cache[ $slug ];
 
-		$row = self::$_overrides_cache[ $slug ];
+			// Top-level field — skip null to preserve Inherit semantics (FR-006).
+			if ( null !== $row->site_allowed ) {
+				$args['site_allowed'] = $row->site_allowed;
+			}
 
-		// Inject scalar override fields — skip null values to preserve Inherit semantics (FR-006).
-		if ( null !== $row->site_allowed ) {
-			$args['site_allowed'] = $row->site_allowed;
-		}
+			// Initialize meta array once if any nested override is present.
+			$needs_meta = null !== $row->readonly || null !== $row->destructive || null !== $row->idempotent
+				|| null !== $row->show_in_rest || null !== $row->show_in_mcp || null !== $row->mcp_type
+				|| is_array( $row->mcp_servers );
 
-		if ( null !== $row->readonly ) {
-			$args['readonly'] = $row->readonly;
-		}
-
-		if ( null !== $row->show_in_mcp ) {
-			$args['show_in_mcp'] = $row->show_in_mcp;
-		}
-
-		// Inject mcp_servers. Row::__construct() decodes JSON to array|null (FR-009).
-		if ( is_array( $row->mcp_servers ) ) {
-			if ( ! isset( $args['meta'] ) || ! is_array( $args['meta'] ) ) {
+			if ( $needs_meta && ( ! isset( $args['meta'] ) || ! is_array( $args['meta'] ) ) ) {
 				$args['meta'] = array();
 			}
-			$args['meta']['mcp_servers'] = $row->mcp_servers;
+
+			// Annotations → $args['meta']['annotations']['<key>'].
+			if ( null !== $row->readonly || null !== $row->destructive || null !== $row->idempotent ) {
+				if ( ! isset( $args['meta']['annotations'] ) || ! is_array( $args['meta']['annotations'] ) ) {
+					$args['meta']['annotations'] = array();
+				}
+				if ( null !== $row->readonly ) {
+					$args['meta']['annotations']['readonly'] = $row->readonly;
+				}
+				if ( null !== $row->destructive ) {
+					$args['meta']['annotations']['destructive'] = $row->destructive;
+				}
+				if ( null !== $row->idempotent ) {
+					$args['meta']['annotations']['idempotent'] = $row->idempotent;
+				}
+			}
+
+			// show_in_rest → $args['meta']['show_in_rest'].
+			if ( null !== $row->show_in_rest ) {
+				$args['meta']['show_in_rest'] = $row->show_in_rest;
+			}
+
+			// MCP block → $args['meta']['mcp']['<key>'] (plugin-specific; not WP core).
+			if ( null !== $row->show_in_mcp || null !== $row->mcp_type || is_array( $row->mcp_servers ) ) {
+				if ( ! isset( $args['meta']['mcp'] ) || ! is_array( $args['meta']['mcp'] ) ) {
+					$args['meta']['mcp'] = array();
+				}
+				if ( null !== $row->show_in_mcp ) {
+					$args['meta']['mcp']['public'] = $row->show_in_mcp;
+				}
+				if ( null !== $row->mcp_type ) {
+					$args['meta']['mcp']['type'] = $row->mcp_type;
+				}
+				// mcp_servers: already decoded to array|null by AcrossAI_Sitewide_Row::__construct().
+				if ( is_array( $row->mcp_servers ) ) {
+					$args['meta']['mcp']['servers'] = $row->mcp_servers;
+				}
+			}
+		}
+
+		// permission_callback: inject runtime access-control enforcement when a rule is
+		// saved for this slug from the Access Control tab (FR-009).
+		$ac_manager = AcrossAI_Sitewide_Access_Control::instance()->get_manager();
+		if ( null !== $ac_manager ) {
+			$rule = $ac_manager->get_query()->get_rule( 'acrossai-abilities', $slug );
+			if ( '' !== $rule['key'] ) {
+				$args['permission_callback'] = static function () use ( $slug ) {
+					$manager = AcrossAI_Sitewide_Access_Control::instance()->get_manager();
+					if ( null === $manager ) {
+						return true; // Fail-open: library unavailable.
+					}
+					return $manager->user_has_access( get_current_user_id(), 'acrossai-abilities', $slug );
+				};
+			}
 		}
 
 		return $args;

@@ -169,6 +169,18 @@ Direct calls to `AcrossAI_Ability_Override_Processor::bust_cache()` from REST co
 `delete_override_by_slug()`. The processor needs `get_all_overrides()` to load the full table in one
 query, which it then indexes by slug in memory. This must be added to `AcrossAI_Sitewide_Query`.
 
+### ARCH-ADV-001 (ADVISORY): `boot()` registers hooks via direct `add_filter()`/`add_action()`
+
+`boot()` registers `wp_register_ability_args` (P10) and `wp_abilities_api_init` (P100001) via direct
+WordPress API calls rather than through the Loader. This is an **accepted deviation from the Boot
+Flow Rule** necessitated by PATH A/B conditional wiring: the Loader always registers hooks, but these
+hooks must be skipped entirely on Manager REST requests. Conditional hook registration cannot be
+expressed through the Loader's `add_action`/`add_filter` API.
+
+**Impact**: Only `plugins_loaded P20` (boot_hook) and `acrossai_abilities_sitewide_after_save`
+(bust_cache_hook) run through the Loader. All downstream hooks are registered conditionally inside
+`boot()`. This is correct and intentional.
+
 ---
 
 ## Implementation Phases
@@ -187,6 +199,13 @@ Transient key: `acrossai_ability_overrides_cache`. WordPress transients are per-
 TTL: `12 * HOUR_IN_SECONDS`. This matches the spec requirement.
 
 **Decision 3: `$_SERVER` detection safety (amended — SEC-PLAN-001)**
+
+> **SUPERSEDED** — `acrossai-abilities/` prefix check was replaced by exact namespace match using
+> `ACROSSAI_MANAGER_REST_NAMESPACE` constant (default `'acrossai-abilities-manager/v1'`), filterable
+> via `acrossai_manager_rest_namespace` filter. `strpos($uri, '/' . rest_get_url_prefix() . '/' .
+> $namespace . '/')` prevents false-positives from third-party plugins with similar namespace prefixes.
+> The CLI/cron/AJAX short-circuits remain unchanged.
+
 `is_manager_rest_request()` checks in order:
 1. `defined('WP_CLI') && WP_CLI` → `false` immediately (CLI has no `$_SERVER` request context)
 2. `wp_doing_cron()` → `false` immediately
@@ -204,6 +223,12 @@ Uses `isset()` guard before accessing `$_SERVER['REQUEST_URI']`. No sanitization
 result only — URI string is consumed by `strpos()` and never echoed or used in SQL).
 
 **Decision 4: `mcp_servers` JSON decode in `inject_override_args()`**
+
+> **SUPERSEDED** — `AcrossAI_Sitewide_Row::__construct()` (lines 175–177) already calls
+> `json_decode()` on `mcp_servers` at Row construction time, yielding `array|null`. The processor
+> MUST guard with `is_array()` only — never call `json_decode()` again. Correct write path is
+> `$args['meta']['mcp']['servers']` (not `$args['meta']['mcp_servers']` as below).
+
 DB stores `mcp_servers` as JSON string (`wp_json_encode()` in `save_override()`). The processor reads
 the raw row value (string) and must `json_decode()` before writing to `$args['meta']['mcp_servers']`.
 Pattern:
