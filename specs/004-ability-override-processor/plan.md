@@ -44,7 +44,7 @@ override save or reset.
 *GATE: Must pass before Phase 0 research. Re-checked against Constitution v1.4.1.*
 
 ### ✅ PASS — I. Modular Architecture
-Class lives at `includes/Modules/Sitewide/class-acrossai-ability-override-processor.php`, scoped to the
+Class lives at `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php`, scoped to the
 Sitewide module — the feature it serves. No abstract base class. No `register_hooks()` delegation.
 All WordPress hooks wired by `includes/Main.php::define_public_hooks()` via the Loader.
 No dependencies on sibling modules; reads only from shared DB layer (`AcrossAI_Sitewide_Query`) and
@@ -232,7 +232,7 @@ read individual ability args directly) AND the ability is unregistered at P10000
 
 ```
 AcrossAI_Ability_Override_Processor         (new)
-  File: includes/Modules/Sitewide/class-acrossai-ability-override-processor.php
+  File: includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php
   
   Static properties:
     protected static $_overrides_cache = null;   // null = not loaded; array = loaded (may be empty)
@@ -358,7 +358,7 @@ includes/
 ├── Main.php                                                          # UPDATE: add 2 hook wires in define_public_hooks()
 └── Modules/
     └── Sitewide/
-        ├── class-acrossai-ability-override-processor.php             # CREATE: stateless processor class
+        ├── AcrossAI_Ability_Override_Processor.php             # CREATE: stateless processor class
         ├── Database/
         │   └── AcrossAI_Sitewide_Query.php                          # UPDATE: add get_all_overrides() method
         └── Rest/

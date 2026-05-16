@@ -39,7 +39,7 @@
 
 ## Conflicts
 
-None. This feature adds a new class and minimal targeted changes to existing controllers + query layer. No Constitution violations (static-only deviation is documented and justified).
+None. This feature adds a new class and minimal targeted changes to existing controllers + query layer. Constitution §I is fully satisfied — singleton+instance wrapper pattern applied per SEC-PLAN-002 amendment.
 
 ---
 
