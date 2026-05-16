@@ -273,6 +273,10 @@ final class Main {
 		// Collect MCP servers at priority 20, after McpAdapter initialises at priority 15.
 		$mcp_servers_list = \WPBoilerplate\McpServersList\McpServersList::instance();
 		$this->loader->add_action( 'rest_api_init', $mcp_servers_list, 'collect', 20 );
+
+		// Register Access Control REST routes.
+		$sitewide_ac = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Access_Control::instance();
+		$this->loader->add_action( 'rest_api_init', $sitewide_ac, 'register_rest_api' );
 	}
 
 	/**

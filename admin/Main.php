@@ -134,7 +134,7 @@ class Main {
 			'window.acrossaiAbilitiesSitewide = ' . wp_json_encode(
 				array(
 					'nonce'           => wp_create_nonce( 'wp_rest' ),
-					'rest_url'        => get_rest_url(),
+					'rest_url'        => untrailingslashit( rest_url() ),
 					'current_user_id' => get_current_user_id(),
 				)
 			) . ';',
