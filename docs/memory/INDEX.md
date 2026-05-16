@@ -7,6 +7,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 |---|---|---|---|---|---|
 | DEC-PERM-CB | AC rule-gated permission_callback injection | Sitewide/Override | access-control, ability-args, fail-open | Active | DECISIONS.md |
 | ARCH-ADV-001 | boot() conditional hook deviation from Boot Flow Rule | Sitewide/Override | hooks, loader, PATH-A/B | Active | DECISIONS.md |
+| DEC-FAIL-OPEN-NOTICE | Fail-open library absence must pair with manage_options admin notice | Plugin-wide | fail-open, admin-notice, library | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -22,6 +23,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 |---|---|---|---|---|
 | BUG-BERLINDB-UNLIMITED | `number => -1` → absint → LIMIT 1 | BerlinDB queries | berlinddb, unlimited, number | BUGS.md |
 | BUG-FLAT-ARGS-PATH | inject_override_args writing top-level $args keys | Ability registration | args-path, merger, annotations | BUGS.md |
+| BUG-PARTIAL-HOOK-FIELDS | Partial-save paths fire after_save with incomplete $fields | Sitewide REST | hooks, after_save, partial-save | BUGS.md |
+| BUG-UNIMPLEMENTED-HOOK | apply_filters() declared in plan but missing from implementation | Sitewide REST | filter, apply_filters, extensibility | BUGS.md |
 
 ## Accepted Deviations
 | ID | Deviation | Scope | Expiry/Review | Source |

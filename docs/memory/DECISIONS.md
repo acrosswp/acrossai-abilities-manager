@@ -88,6 +88,34 @@ Do not move `wp_register_ability_args` or `wp_abilities_api_init` registration i
 `specs/004-ability-override-processor/plan.md` (ARCH-ADV-001 note).
 
 
+### 2026-05-17 — Fail-open library absence must be paired with an admin notice (DEC-FAIL-OPEN-NOTICE)
+
+**Status**: Active
+
+**Why this is durable**
+Any future optional-library integration that fails open (passes permission checks when the library is absent) would silently invalidate rules admins have saved in the Manager UI. The pattern of pairing fail-open with a visible admin warning prevents this from being a recurring blind spot.
+
+**Decision**
+Any behavior that fails open when an optional library is absent MUST be paired with an `admin_notices` hook wired via the Loader that shows a `wp_admin_notice()` warning. The notice MUST be gated by `current_user_can('manage_options')` and a library availability check (e.g., `$this->is_available()`). The notice MUST clearly state: which library is absent, what enforcement is currently inactive, and what the admin needs to do to restore enforcement.
+
+**Tradeoffs**
+Fail-open preserves site functionality when a library is unavailable, which is the right default. The notice ensures that unavailability is not invisible to admins who have already configured rules that depend on the library.
+
+**Future mistake prevented**
+Do not add a new optional-library integration that fails open without also adding a companion `maybe_show_*_notice()` method wired to `admin_notices`. The notice is part of the feature contract, not optional polish.
+
+**Evidence**
+`AcrossAI_Sitewide_Access_Control::maybe_show_library_notice()` added in commit `946fec1`. Wired to `admin_notices` via `$this->loader->add_action('admin_notices', $sitewide_ac, 'maybe_show_library_notice')` in `includes/Main.php::define_admin_hooks()`. Uses `wp_admin_notice()` (WP 6.4+ helper). Gated by `current_user_can('manage_options')` and `$this->is_available()`.
+
+**Where to look next**
+`includes/Modules/Sitewide/AcrossAI_Sitewide_Access_Control.php` (maybe_show_library_notice, is_available),
+`includes/Main.php` (define_admin_hooks — admin_notices wiring),
+`specs/003-ability-access-control-tab/spec.md` (fail-open rationale),
+`specs/004-ability-override-processor/spec.md` (DEC-PERM-CB — the fail-open decision this notice complements).
+
+---
+
+
 ## Template
 
 ### YYYY-MM-DD - Decision title
