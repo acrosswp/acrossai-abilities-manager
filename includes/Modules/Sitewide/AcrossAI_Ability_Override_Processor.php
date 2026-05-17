@@ -121,8 +121,8 @@ final class AcrossAI_Ability_Override_Processor {
 	 *
 	 * On PATH A (Manager REST requests) returns immediately without registering any
 	 * hooks — Manager UI always sees pure WP registry values for the _registry layer.
-	 * On PATH B registers the per-ability args filter and the post-registration
-	 * unregistration action.
+	 * On PATH B registers the per-ability args filter, the post-registration
+	 * unregistration action, and the MCP adapter server-allowlist filter.
 	 *
 	 * @since  0.1.0
 	 * @return void
@@ -136,6 +136,9 @@ final class AcrossAI_Ability_Override_Processor {
 		// PATH B: wire override injection into the WP Abilities API boot sequence.
 		add_filter( 'wp_register_ability_args', array( __CLASS__, 'inject_override_args' ), 10, 2 );
 		add_action( 'wp_abilities_api_init', array( __CLASS__, 'unregister_blocked_abilities' ), 100001 );
+		// T016: enforce the mcp_servers allowlist at MCP adapter registration time.
+		// accepted_args = 3 captures the optional $server_id passed by the MCP adapter.
+		add_filter( 'mcp_adapter_expose_ability', array( __CLASS__, 'filter_mcp_adapter_expose_ability' ), 10, 3 );
 	}
 
 	/**
@@ -341,6 +344,58 @@ final class AcrossAI_Ability_Override_Processor {
 				wp_unregister_ability( $slug );
 			}
 		}
+	}
+
+	/**
+	 * Filter callback: enforce the mcp_servers allowlist at MCP adapter registration time.
+	 *
+	 * Fires on PATH B only (registered inside boot()). Reads the servers allowlist from
+	 * $args['meta']['mcp']['servers'] already injected into the ability object by
+	 * inject_override_args() at wp_register_ability_args P10.
+	 *
+	 * When no servers override is present ($servers is null, empty, or not an array)
+	 * $expose is returned unchanged — no restriction applies (Inherit semantics, FR-006).
+	 *
+	 * When a non-empty servers allowlist is present and $server_id is provided,
+	 * returns false for any MCP server identifier not in the allowlist. When $server_id
+	 * is empty (MCP adapter passes fewer than 3 args) the method degrades gracefully by
+	 * returning $expose unchanged.
+	 *
+	 * @since  0.1.0
+	 * @param  bool   $expose    Whether to expose this ability to MCP.
+	 * @param  mixed  $ability   The WP Ability object being evaluated.
+	 * @param  string $server_id The MCP server identifier requesting exposure.
+	 * @return bool
+	 */
+	public static function filter_mcp_adapter_expose_ability( bool $expose, $ability, string $server_id = '' ): bool {
+		// Warm the static cache for sibling callbacks sharing this request lifecycle.
+		// This method reads overrides from the already-injected $ability object, not the cache directly.
+		self::load_overrides_cache();
+
+		$mcp_meta = ( is_object( $ability ) && method_exists( $ability, 'get_meta' ) )
+			? $ability->get_meta( 'mcp' )
+			: null;
+
+		$servers = ( is_array( $mcp_meta ) && isset( $mcp_meta['servers'] ) )
+			? $mcp_meta['servers']
+			: null;
+
+		// No servers override — pass through unchanged.
+		if ( ! is_array( $servers ) || empty( $servers ) ) {
+			return $expose;
+		}
+
+		// Server ID not available — degrade gracefully rather than block everything.
+		if ( '' === $server_id ) {
+			return $expose;
+		}
+
+		// Non-empty allowlist: block servers not in the list; preserve $expose for allowed ones.
+		if ( ! in_array( $server_id, $servers, true ) ) {
+			return false;
+		}
+
+		return $expose;
 	}
 
 	/**
