@@ -134,11 +134,11 @@ final class AcrossAI_Ability_Override_Processor {
 		}
 
 		// PATH B: wire override injection into the WP Abilities API boot sequence.
-		add_filter( 'wp_register_ability_args', array( __CLASS__, 'inject_override_args' ), 10, 2 );
+		add_filter( 'wp_register_ability_args', array( __CLASS__, 'inject_override_args' ), 100000, 2 );
 		add_action( 'wp_abilities_api_init', array( __CLASS__, 'unregister_blocked_abilities' ), 100001 );
 		// T016: enforce the mcp_servers allowlist at MCP adapter registration time.
 		// accepted_args = 3 captures the optional $server_id passed by the MCP adapter.
-		add_filter( 'mcp_adapter_expose_ability', array( __CLASS__, 'filter_mcp_adapter_expose_ability' ), 10, 3 );
+		add_filter( 'mcp_adapter_expose_ability', array( __CLASS__, 'filter_mcp_adapter_expose_ability' ), 100001, 3 );
 	}
 
 	/**
@@ -291,6 +291,7 @@ final class AcrossAI_Ability_Override_Processor {
 
 			// MCP block → $args['meta']['mcp']['<key>'] (plugin-specific; not WP core).
 			if ( null !== $row->show_in_mcp || null !== $row->mcp_type || is_array( $row->mcp_servers ) ) {
+
 				if ( ! isset( $args['meta']['mcp'] ) || ! is_array( $args['meta']['mcp'] ) ) {
 					$args['meta']['mcp'] = array();
 				}
@@ -300,7 +301,24 @@ final class AcrossAI_Ability_Override_Processor {
 				if ( null !== $row->mcp_type ) {
 					$args['meta']['mcp']['type'] = $row->mcp_type;
 				}
-				// mcp_servers: already decoded to array|null by AcrossAI_Sitewide_Row::__construct().
+
+				/*
+				 * mcp_servers — two-step enforcement pattern.
+				 *
+				 * Step 1 (here): AcrossAI_Sitewide_Row::__construct() already decodes
+				 * the JSON string from DB to array|null — no json_decode() needed.
+				 * We inject the array into $args['meta']['mcp']['servers'] so the value
+				 * travels on the WP_Ability object after registration.
+				 *
+				 * null  → not injected → key absent in meta → ability visible to all servers (inherit).
+				 * []    → injected as empty array → in_array() returns false → visible to no servers.
+				 * [...] → injected as allowlist → in_array() membership check per server ID.
+				 *
+				 * Step 2 (mcp_adapter_expose_ability filter in boot()):
+				 * Reads $ability->get_meta('mcp')['servers'] and returns false when the
+				 * current server ID is not in the allowlist. No second DB lookup needed —
+				 * the value is already on the ability object from Step 1.
+				 */
 				if ( is_array( $row->mcp_servers ) ) {
 					$args['meta']['mcp']['servers'] = $row->mcp_servers;
 				}
@@ -340,8 +358,8 @@ final class AcrossAI_Ability_Override_Processor {
 		self::load_overrides_cache();
 
 		foreach ( self::$_overrides_cache as $slug => $row ) {
-			if ( false === $row->site_allowed ) {
-				wp_unregister_ability( $slug );
+			if ( \wp_has_ability( $slug ) && false === $row->site_allowed ) {
+				\wp_unregister_ability( $slug );
 			}
 		}
 	}
@@ -353,7 +371,8 @@ final class AcrossAI_Ability_Override_Processor {
 	 * $args['meta']['mcp']['servers'] already injected into the ability object by
 	 * inject_override_args() at wp_register_ability_args P10.
 	 *
-	 * When no servers override is present ($servers is null, empty, or not an array)
+	 * When no servers override
+	 * is present ($servers is null, empty, or not an array)
 	 * $expose is returned unchanged — no restriction applies (Inherit semantics, FR-006).
 	 *
 	 * When a non-empty servers allowlist is present and $server_id is provided,
@@ -371,7 +390,6 @@ final class AcrossAI_Ability_Override_Processor {
 		// Warm the static cache for sibling callbacks sharing this request lifecycle.
 		// This method reads overrides from the already-injected $ability object, not the cache directly.
 		self::load_overrides_cache();
-
 		$mcp_meta = ( is_object( $ability ) && method_exists( $ability, 'get_meta' ) )
 			? $ability->get_meta( 'mcp' )
 			: null;
