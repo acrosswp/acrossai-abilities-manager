@@ -158,3 +158,29 @@ As a developer, I need to identify which ability executions are slow so I can op
 
 **Dependency**: Action Scheduler is installed via Composer dependency (`composer require woocommerce/action-scheduler`); available globally and not dependent on WooCommerce plugin being active.
 
+
+## Clarifications
+
+### Session 2026-05-19
+
+**Ambiguity Assessment**: ✅ All critical areas clear — no formal clarification questions required.
+
+**Coverage Validation**:
+- Functional Scope & Behavior: ✅ Clear (4 user stories, independently testable, scope bounded)
+- Domain & Data Model: ✅ Clear (ExecutionLog entity fully specified, relationships defined)
+- Interaction & UX Flow: ✅ Clear (user journey defined, UI integration specified)
+- Non-Functional Quality Attributes: ✅ Clear (6 measurable success criteria, performance targets)
+- Integration & External Dependencies: ✅ Clear (Action Scheduler, BerlinDB, @wordpress/*)
+- Edge Cases & Failure Handling: ✅ Clear (6 edge cases identified and resolved)
+- Constraints & Tradeoffs: ✅ Clear (8 assumptions, technical constraints documented)
+- Terminology & Consistency: ✅ Clear (canonical terms, no ambiguous synonyms)
+- Completion Signals: ✅ Clear (acceptance criteria testable, Definition of Done metrics)
+
+**Resolved Items**:
+- Q1: Slow execution highlighting — Answer C: No visual highlighting; sort/filter sufficient
+- Q2: Input/output truncation — Answer B: 65535 bytes (64KB) per field
+- Q3: Log retention policy — Answer B: Auto-prune logs older than 30 days (configurable via filter)
+- Q4: Scheduler strategy — Answer Updated: Use Action Scheduler via Composer dependency (not WP-Cron)
+
+**Decision**: ✅ Specification is **ready for planning**. No clarifications needed.
+
