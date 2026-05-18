@@ -76,7 +76,13 @@ class Menu {
 	public function contents() {
 		?>
 		<div class="wrap acrossai-abilities-manager-wrap">
+			<!-- Main Abilities Manager React app -->
 			<div id="acrossai-abilities-manager-root"></div>
+
+			<!-- Logs tab mount point (T014: added for logger feature) -->
+			<div id="acrossai-logs-tab-panel" style="display:none;">
+				<div id="acrossai-logs-container"></div>
+			</div>
 		</div>
 		<?php
 	}

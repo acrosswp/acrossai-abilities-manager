@@ -90,6 +90,8 @@ module.exports = {
 			'src/scss/sitewide',
 			'admin.scss'
 		),
+		'js/index': path.resolve( process.cwd(), 'src/js', 'index.js' ),
+		'css/index': path.resolve( process.cwd(), 'src/scss', 'logs-table.scss' ),
 	},
 	output: {
 		...defaultConfig.output,

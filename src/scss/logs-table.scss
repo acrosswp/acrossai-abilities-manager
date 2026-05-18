@@ -1,0 +1,106 @@
+/**
+ * AcrossAI Logger - Logs Table Styles
+ *
+ * Minimal styling for logs table container and columns.
+ * Most styles inherited from WordPress DataViews component.
+ *
+ * @package AcrossAI\Abilities\Admin
+ * @since   1.0.0
+ */
+
+.acrossai-logs-container {
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	margin-top: 1rem;
+
+	// DataViews table styling
+	.dataviews-wrapper {
+		width: 100%;
+	}
+
+	// Column widths
+	[data-field="ability_slug"] {
+		width: 30%;
+	}
+
+	[data-field="source"] {
+		width: 12%;
+		text-align: center;
+	}
+
+	[data-field="status"] {
+		width: 15%;
+		text-align: center;
+	}
+
+	[data-field="duration_ms"] {
+		width: 12%;
+		text-align: right;
+	}
+
+	[data-field="created_at"] {
+		width: 20%;
+	}
+
+	[data-field="user_id"] {
+		width: 11%;
+		text-align: center;
+	}
+
+	// Responsive adjustments for small screens
+	@media (max-width: 768px) {
+		[data-field="ability_slug"] {
+			width: 40%;
+		}
+
+		[data-field="source"],
+		[data-field="status"],
+		[data-field="duration_ms"],
+		[data-field="user_id"] {
+			width: auto;
+		}
+
+		[data-field="created_at"] {
+			width: auto;
+		}
+	}
+
+	// Error state
+	.acrossai-logs-error {
+		padding: 20px;
+		background: #fee;
+		border: 1px solid #fcc;
+		border-radius: 4px;
+		color: #c00;
+
+		p {
+			margin: 0 0 10px;
+		}
+
+		button {
+			padding: 8px 16px;
+			background: #0073aa;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+
+			&:hover {
+				background: #005a87;
+			}
+		}
+	}
+
+	// Empty state
+	.acrossai-logs-empty {
+		padding: 20px;
+		text-align: center;
+		color: #666;
+		font-size: 14px;
+
+		p {
+			margin: 0;
+		}
+	}
+}

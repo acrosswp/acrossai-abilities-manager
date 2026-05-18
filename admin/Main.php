@@ -73,6 +73,15 @@ class Main {
 	private $sitewide_asset_file;
 
 	/**
+	 * Asset manifest for the logger JS/CSS bundle.
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 * @var      array|null
+	 */
+	private $logger_asset_file;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    0.0.1
@@ -87,6 +96,12 @@ class Main {
 		$this->js_asset_file       = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/backend.asset.php';
 		$this->css_asset_file      = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/css/backend.asset.php';
 		$this->sitewide_asset_file = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/sitewide.asset.php';
+
+		// Load logger asset file if it exists (built by @wordpress/scripts build)
+		$logger_asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/index.asset.php';
+		if ( file_exists( $logger_asset_path ) ) {
+			$this->logger_asset_file = include $logger_asset_path;
+		}
 	}
 
 	/**
@@ -107,6 +122,17 @@ class Main {
 			$this->sitewide_asset_file['version']
 		);
 		wp_enqueue_style( 'acrossai-abilities-sitewide' );
+
+		// Enqueue logger styles (T015: feature 006)
+		if ( $this->logger_asset_file ) {
+			wp_register_style(
+				'acrossai-abilities-logger',
+				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/index.css',
+				array(),
+				$this->logger_asset_file['version']
+			);
+			wp_enqueue_style( 'acrossai-abilities-logger' );
+		}
 	}
 
 	/**
@@ -140,5 +166,28 @@ class Main {
 			) . ';',
 			'before'
 		);
+
+		// Enqueue logger scripts (T015: feature 006)
+		if ( $this->logger_asset_file ) {
+			wp_register_script(
+				'acrossai-abilities-logger',
+				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/index.js',
+				$this->logger_asset_file['dependencies'],
+				$this->logger_asset_file['version'],
+				true
+			);
+			wp_enqueue_script( 'acrossai-abilities-logger' );
+
+			wp_add_inline_script(
+				'acrossai-abilities-logger',
+				'window.acrossaiAbilitiesLogger = ' . wp_json_encode(
+					array(
+						'restEndpoint' => untrailingslashit( rest_url( 'acrossai-abilities/v1/logger/logs' ) ),
+						'nonce'        => wp_create_nonce( 'wp_rest' ),
+					)
+				) . ';',
+				'before'
+			);
+		}
 	}
 }
