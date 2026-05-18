@@ -153,6 +153,16 @@ tests/
 └── jest/           # JavaScript unit tests
 ```
 
+**PHP Namespace Rule**: Every PHP class MUST use a namespace that mirrors its directory path under the plugin root, using `AcrossAI_Abilities_Manager` as the root and `\` as the separator. Examples:
+- `includes/Main.php` → `AcrossAI_Abilities_Manager\Includes`
+- `includes/Modules/Logger/AcrossAI_Ability_Logger.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger`
+- `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Query.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database`
+- `includes/Modules/Logger/Rest/AcrossAI_Logger_Controller.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest`
+- `includes/Modules/Sitewide/AcrossAI_Sitewide_Rest_Controller.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Sitewide`
+- `includes/Utilities/AcrossAI_Logger_Formatter.php` → `AcrossAI_Abilities_Manager\Includes\Utilities`
+- `admin/Partials/Menu.php` → `AcrossAI_Abilities_Manager\Admin\Partials`
+Never invent short namespaces like `AcrossAI\Abilities\Logger` — always derive from the full path.
+
 **Admin Partials Rule**: Any class that calls `add_menu_page()`, enqueues admin assets via
 `wp_enqueue_style()` / `wp_enqueue_script()`, or renders admin HTML MUST live in `admin/Partials/`
 with namespace `AcrossAI_Abilities_Manager\Admin\Partials`. Classes in `includes/` are
