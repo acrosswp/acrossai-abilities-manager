@@ -14,6 +14,7 @@ use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitew
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Merger;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Registry_Query;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Protected_Abilities;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -178,6 +179,11 @@ class AcrossAI_Sitewide_Abilities_Controller {
 	 */
 	public function get_ability( \WP_REST_Request $request ) {
 		$slug = AcrossAI_Sanitizer::sanitize_ability_slug( (string) $request->get_param( 'slug' ) );
+
+		// Protected abilities cannot be accessed via REST endpoints.
+		if ( AcrossAI_Protected_Abilities::is_protected( $slug ) ) {
+			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
+		}
 
 		if ( ! function_exists( 'wp_get_ability' ) ) {
 			return new \WP_Error( 'rest_not_supported', __( 'Abilities API not available.', 'acrossai-abilities-manager' ), array( 'status' => 501 ) );

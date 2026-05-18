@@ -11,6 +11,8 @@ namespace AcrossAI_Abilities_Manager\Includes\Utilities;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Query;
 
+// Self-import: AcrossAI_Protected_Abilities is in the same namespace.
+
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
@@ -60,6 +62,11 @@ class AcrossAI_Ability_Registry_Query {
 			// but fall back to the loop key for any bare array that omits 'slug'.
 			if ( empty( $ability_data['slug'] ) ) {
 				$ability_data['slug'] = $slug;
+			}
+
+			// Skip protected system abilities (hidden from REST endpoints and UI).
+			if ( AcrossAI_Protected_Abilities::is_protected( $slug ) ) {
+				continue;
 			}
 
 			// Retrieve any stored override for this ability.
