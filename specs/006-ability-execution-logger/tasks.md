@@ -493,7 +493,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T016 – Schedule Daily Log Cleanup Job
 
-- [ ] T016 Create and schedule cleanup job in `includes/Modules/Logger/AcrossAI_Ability_Logger.php::boot()`
+- [x] T016 Create and schedule cleanup job in `includes/Modules/Logger/AcrossAI_Ability_Logger.php::boot()`
 
 **Description**: Schedule a daily Action Scheduler job to prune logs older than 30 days (configurable via filter).
 
@@ -521,7 +521,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T017 – Create Delete Logs Before Date Query
 
-- [ ] T017 Create `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Query.php::delete_logs_before_date()` method
+- [x] T017 Create `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Query.php::delete_logs_before_date()` method
 
 **Description**: Low-level query method that deletes log entries before a specified date.
 
@@ -547,7 +547,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T018 – Wire Logger to Main.php Hooks
 
-- [ ] T018 Modify `includes/Main.php::define_public_hooks()` to wire logger and REST controller
+- [x] T018 Modify `includes/Main.php::define_public_hooks()` to wire logger and REST controller
 
 **Description**: Register logger singleton and REST controller with the Loader hook system.
 
@@ -604,7 +604,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T020 – Run PHPCS Validation
 
-- [ ] T020 Run PHPCS validation on all PHP code
+- [x] T020 Run PHPCS validation on all PHP code
 
 **Description**: Run WordPress Coding Standards (PHPCS) validation. Zero errors required.
 
@@ -624,7 +624,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T021 – Run PHPStan Level 8 Static Analysis
 
-- [ ] T021 Run PHPStan level 8 static analysis
+- [x] T021 Run PHPStan level 8 static analysis
 
 **Description**: Run PHPStan static analysis at level 8. Zero errors required.
 

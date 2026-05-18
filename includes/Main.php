@@ -308,6 +308,15 @@ final class Main {
 		$override_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Ability_Override_Processor::instance();
 		$this->loader->add_action( 'plugins_loaded', $override_processor, 'boot_hook', 20 );
 		$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', $override_processor, 'bust_cache_hook' );
+
+		// Ability Execution Logger — create DB table, boot logger at P20, register REST routes.
+		\AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Table::instance();
+
+		$logger = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Ability_Logger::instance();
+		$this->loader->add_action( 'plugins_loaded', $logger, 'boot', 20 );
+
+		$logger_rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest\AcrossAI_Logger_Controller::instance();
+		$this->loader->add_action( 'rest_api_init', $logger_rest_controller, 'register_routes' );
 	}
 
 	/**
