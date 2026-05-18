@@ -266,3 +266,107 @@ Diff, tests, review, incident, or repeated implementation evidence.
 
 **Where to look next**
 Files, modules, or specs future maintainers should inspect.
+
+### 2026-05-19 — Project namespace convention: underscore-based, not PSR-4 backslash (DEC-NAMESPACE-CONVENTION)
+
+**Status**: Active
+
+**Why this is durable**
+Any new file added to the plugin must follow the same namespace convention. Mixing PSR-4 backslash-based namespaces (e.g., `AcrossAI\Abilities\Logger`) with underscore conventions (e.g., `AcrossAI_Abilities_Manager\Includes\Logger`) causes "Class not found" runtime errors at integration time.
+
+**Decision**
+All PHP files in the plugin use underscore-based namespace pattern: `AcrossAI_Abilities_Manager\Includes\<Category>\<Submodule>`. Never use PSR-4 backslash-only style (e.g., `AcrossAI\Abilities\*`). This applies to all files: utilities, modules, database layers, REST controllers, everything.
+
+Pattern examples:
+- Utilities: `AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter`
+- Module core: `AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Ability_Logger`
+- Database: `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query`
+
+**Tradeoffs**
+Underscore convention is more verbose than PSR-4 backslash style, but it matches WordPress plugin naming conventions and provides one single standard. Accepted because it eliminates namespace conflicts and is consistent across the entire plugin.
+
+**Future mistake prevented**
+Do not import from `AcrossAI\Abilities\*` namespaces — they do not exist in this project. Do not create new files with PSR-4 backslash namespaces. At PR review, check all namespace declarations match the pattern above.
+
+**Evidence**
+Fixed in Feature 006 (2026-05-19): `AcrossAI_Logger_Source_Detector.php`, `AcrossAI_Logger_Formatter.php`, and `AcrossAI_Ability_Logger.php` all rewritten with correct underscore namespace. Use statements in logger updated to `AcrossAI_Abilities_Manager\Includes\*` pattern. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+Reference file: `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (demonstrates correct pattern),
+Feature 006 files: `includes/Modules/Logger/AcrossAI_*`, `includes/Utilities/AcrossAI_Logger_Formatter.php`,
+`specs/006-ability-execution-logger/plan.md` (namespace fix tasks).
+
+---
+
+### 2026-05-19 — Utility classes are pure static, not singletons (DEC-UTILITY-STATIC-ONLY)
+
+**Status**: Active
+
+**Why this is durable**
+The plugin uses two patterns: stateless utilities (pure static methods) and stateful orchestrators (singletons). Distinguishing between them prevents accidental singleton bloat in the utility layer.
+
+**Decision**
+Utility classes that have no mutable state and perform functional transformations MUST be 100% static. Never add `$_instance`, `instance()`, or `private __construct()` to utility classes. Only stateful components (Logger, Query, Table, REST controllers) use the singleton pattern.
+
+Examples:
+- **Pure utilities (static only)**: `AcrossAI_Logger_Formatter` (formatting logic), `AcrossAI_Logger_Source_Detector` (context checks), `AcrossAI_Protected_Abilities` (exclusion list)
+- **Stateful singletons**: `AcrossAI_Ability_Logger` (manages pending_entries stack), `AcrossAI_Ability_Logs_Query` (BerlinDB wrapper), `AcrossAI_Sitewide_Table` (database registration)
+
+**Tradeoffs**
+Utilities are slightly less flexible than singletons (cannot hold request-scoped state), but simplicity is gained. Acceptable because utilities should be deterministic and state-free.
+
+**Future mistake prevented**
+Do not convert a pure utility to a singleton just to avoid passing state around — if you need state, reconsider whether it belongs in the utility layer or a higher-level orchestrator.
+
+**Evidence**
+Feature 006 cleanup (2026-05-19): `AcrossAI_Logger_Formatter.php` removed 50+ lines of singleton boilerplate (`$_instance`, `instance()`, `__construct()`). File is now 215 lines of pure static methods. `AcrossAI_Logger_Source_Detector.php` is pure static utility (only private static properties for MCP context stashing, which is necessary for cross-hook communication).
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Logger_Formatter.php` (pure utility example),
+`includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (pure utility with private state),
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php` (stateful singleton example),
+`specs/006-ability-execution-logger/plan.md` (B-phase logger tasks).
+
+---
+
+### 2026-05-19 — Use statement namespace must match project underscore convention; catch at PR review (DEC-USE-STATEMENT-CONSISTENCY)
+
+**Status**: Active
+
+**Why this is durable**
+Import path errors cause "Class not found" failures at runtime, often caught late (during integration testing). Early detection at PR review prevents this class of error.
+
+**Decision**
+All `use` statements must follow the project underscore namespace convention. Before merge, verify every `use` statement imports from `AcrossAI_Abilities_Manager\Includes\*` namespaces, never from `AcrossAI\Abilities\*` or other non-standard paths. Lint rule: `grep -n '^use AcrossAI\\\\' src_file.php` should return zero results.
+
+Correct pattern:
+```php
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+```
+
+Incorrect pattern (never use):
+```php
+use AcrossAI\Abilities\Utilities\AcrossAI_Logger_Formatter;  // ❌ Wrong namespace
+use AcrossAI\Abilities\Logger\AcrossAI_Ability_Logger;        // ❌ Wrong namespace
+```
+
+**Tradeoffs**
+Requires manual review discipline. Acceptable because `use` statements are static and centralized at the top of every file.
+
+**Future mistake prevented**
+Do not approve a PR with `use AcrossAI\Abilities\*` imports — request the developer rewrite them using the underscore convention before merge.
+
+**Evidence**
+Feature 006 fix (2026-05-19): `AcrossAI_Ability_Logger.php` had two incorrect `use` statements pointing to `AcrossAI\Abilities\*`. Rewritten to:
+```php
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+```
+All three logger files verified at merge (2026-05-19). grep confirmed zero backslash-only uses.
+
+**Where to look next**
+Feature 006 files: `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (lines 14–15, use statements),
+`includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (no use statements needed — same namespace as caller),
+Feature 004 reference: `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (correct use statements),
+PR review checklist: grep all changed .php files before approval.

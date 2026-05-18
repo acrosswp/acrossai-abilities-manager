@@ -136,3 +136,42 @@ if ( AcrossAI_SingleSourceTruth::is_member( $slug ) ) { ... }
 - stale diagrams without current boundaries
 
 Update the review date when boundaries, ownership, or integrations materially change.
+
+## AC-FILE-HEADER-PATTERN
+
+All PHP files must follow a standardized file header pattern. This ensures consistency across the codebase and enables automated tooling.
+
+**Exact pattern**:
+```php
+<?php
+/**
+ * Brief description (one line).
+ *
+ * Longer description (optional, 1-2 sentences).
+ *
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Logger
+ * @since      0.1.0
+ */
+
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
+```
+
+**Key rules**:
+- `@package`: Always `AcrossAI_Abilities_Manager` (underscores, not backslashes)
+- `@subpackage`: Full PSR-4 path starting with `AcrossAI_Abilities_Manager`, e.g., `AcrossAI_Abilities_Manager/includes/Modules/Logger`
+- `@since`: Always `0.1.0` (not `1.0.0`; 0.1.0 represents initial plugin release)
+- ABSPATH check: Use `defined( 'ABSPATH' ) || exit;` format (modern guard, single line with `||`)
+- Namespace: Matches @subpackage with backslashes and follows underscore convention
+
+**Reference file**:
+`includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` demonstrates the correct pattern.
+
+**Evidence**:
+Feature 006 (2026-05-19): Fixed file headers in 3 logger files to match this pattern. All changed from old-style `if ( ! defined( 'ABSPATH' ) ) { exit; }` to modern guard. All changed from `@package AcrossAI\Abilities\Logger` to `@package AcrossAI_Abilities_Manager`. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Why this is durable**:
+New developers copy-paste headers from existing files. If all files follow one pattern, copy-paste stays consistent. If files vary, inconsistency spreads. This constraint prevents drift.

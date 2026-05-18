@@ -5,27 +5,29 @@
  * High-level query builder with filtering, sorting, pagination, and search.
  * All filtering/sorting logic is in this layer (AC-QUERY-LAYER-FILTERING).
  *
- * @package AcrossAI\Abilities\Logger
- * @since   1.0.0
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Logger
+ * @since      0.1.0
  */
 
-namespace AcrossAI\Abilities\Logger;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Row;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Query builder for logs with all filtering/sorting logic
  *
- * @since 1.0.0
+ * @since 0.1.0
  */
 class AcrossAI_Logger_Query {
 
 	/**
 	 * Singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @var AcrossAI_Logger_Query|null
 	 */
@@ -34,7 +36,7 @@ class AcrossAI_Logger_Query {
 	/**
 	 * Get singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @return AcrossAI_Logger_Query
 	 */
@@ -48,7 +50,7 @@ class AcrossAI_Logger_Query {
 	/**
 	 * Private constructor for singleton
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 */
 	private function __construct() {}
 
@@ -58,24 +60,24 @@ class AcrossAI_Logger_Query {
 	 * All filtering/sorting happens in this method (AC-QUERY-LAYER-FILTERING).
 	 * REST controller only extracts params and calls this method.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @param array $args Query arguments:
-	 *   - search (string): Filter by ability_slug partial match
-	 *   - source (string|array): Filter by source (comma-separated or array)
-	 *   - status (string|array): Filter by status (comma-separated or array)
-	 *   - ability_slug (string): Filter by exact slug
-	 *   - user_id (int): Filter by user_id
-	 *   - orderby (string): Column to sort by (default: 'created_at')
-	 *   - order (string): Sort direction 'ASC' or 'DESC' (default: 'DESC')
-	 *   - page (int): Page number (default: 1)
-	 *   - per_page (int): Records per page (default: 20)
+	 *   - search (string): Filter by ability_slug partial match.
+	 *   - source (string|array): Filter by source (comma-separated or array).
+	 *   - status (string|array): Filter by status (comma-separated or array).
+	 *   - ability_slug (string): Filter by exact slug.
+	 *   - user_id (int): Filter by user_id.
+	 *   - orderby (string): Column to sort by (default: 'created_at').
+	 *   - order (string): Sort direction 'ASC' or 'DESC' (default: 'DESC').
+	 *   - page (int): Page number (default: 1).
+	 *   - per_page (int): Records per page (default: 20).
 	 * @return array Result array with keys: 'logs', 'total', 'pages'
 	 */
 	public static function get_logs( $args = array() ) {
 		global $wpdb;
 
-		// Parse arguments
+		// Parse arguments.
 		$defaults = array(
 			'search'       => '',
 			'source'       => '',
@@ -90,7 +92,7 @@ class AcrossAI_Logger_Query {
 
 		$args = wp_parse_args( $args, $defaults );
 
-		// Validate and sanitize pagination
+		// Validate and sanitize pagination.
 		$page     = absint( $args['page'] );
 		$per_page = absint( $args['per_page'] );
 
@@ -101,30 +103,30 @@ class AcrossAI_Logger_Query {
 			$per_page = 20;
 		}
 		if ( $per_page > 100 ) {
-			$per_page = 100; // Cap per_page to prevent DoS
+			$per_page = 100; // Cap per_page to prevent abuse.
 		}
 
-		// Calculate LIMIT and OFFSET
+		// Calculate LIMIT and OFFSET.
 		$offset = ( $page - 1 ) * $per_page;
 
-		// Build WHERE clauses (filtering logic)
+		// Build WHERE clauses (filtering logic).
 		$where_clauses = array();
 		$where_values  = array();
 
-		// Search by ability_slug (partial match)
+		// Search by ability_slug (partial match).
 		if ( ! empty( $args['search'] ) ) {
 			$where_clauses[] = 'ability_slug LIKE %s';
 			$where_values[]  = '%' . $wpdb->esc_like( sanitize_text_field( $args['search'] ) ) . '%';
 		}
 
-		// Filter by source (comma-separated or array)
+		// Filter by source (comma-separated or array).
 		if ( ! empty( $args['source'] ) ) {
 			$sources = is_array( $args['source'] ) ? $args['source'] : explode( ',', $args['source'] );
 			$sources = array_map( 'sanitize_text_field', $sources );
 			$sources = array_map( 'trim', $sources );
 			$sources = array_filter( $sources );
 
-			// Validate all sources (SEC-04: strict comparison)
+			// Validate all sources (SEC-04: strict comparison).
 			$valid_sources = array( 'mcp', 'rest', 'cli', 'cron', 'ajax', 'direct' );
 			$sources       = array_filter(
 				$sources,
@@ -140,14 +142,14 @@ class AcrossAI_Logger_Query {
 			}
 		}
 
-		// Filter by status (comma-separated or array)
+		// Filter by status (comma-separated or array).
 		if ( ! empty( $args['status'] ) ) {
 			$statuses = is_array( $args['status'] ) ? $args['status'] : explode( ',', $args['status'] );
 			$statuses = array_map( 'sanitize_text_field', $statuses );
 			$statuses = array_map( 'trim', $statuses );
 			$statuses = array_filter( $statuses );
 
-			// Validate all statuses (SEC-04: strict comparison)
+			// Validate all statuses (SEC-04: strict comparison).
 			$valid_statuses = array( 'success', 'error', 'permission_denied' );
 			$statuses       = array_filter(
 				$statuses,
@@ -163,74 +165,70 @@ class AcrossAI_Logger_Query {
 			}
 		}
 
-		// Filter by exact ability_slug
+		// Filter by exact ability_slug.
 		if ( ! empty( $args['ability_slug'] ) ) {
 			$where_clauses[] = 'ability_slug = %s';
 			$where_values[]  = sanitize_text_field( $args['ability_slug'] );
 		}
 
-		// Filter by user_id
+		// Filter by user_id.
 		if ( ! empty( $args['user_id'] ) ) {
 			$where_clauses[] = 'user_id = %d';
 			$where_values[]  = (int) $args['user_id'];
 		}
 
-		// Build WHERE clause
+		// Build WHERE clause.
 		$where_clause = '';
 		if ( ! empty( $where_clauses ) ) {
 			$where_clause = 'WHERE ' . implode( ' AND ', $where_clauses );
 		}
 
-		// Validate and sanitize orderby (whitelist)
+		// Validate and sanitize orderby (whitelist).
 		$valid_orderbys = array( 'ability_slug', 'source', 'user_id', 'status', 'duration_ms', 'created_at' );
 		$orderby        = sanitize_key( $args['orderby'] );
 		if ( ! in_array( $orderby, $valid_orderbys, true ) ) {
 			$orderby = 'created_at';
 		}
 
-		// Validate order (must be ASC or DESC)
+		// Validate order (must be ASC or DESC).
 		$order = strtoupper( sanitize_key( $args['order'] ) );
 		if ( 'ASC' !== $order && 'DESC' !== $order ) {
 			$order = 'DESC';
 		}
 
-		// Build query parts
+		// Build query parts.
 		$table = $wpdb->base_prefix . 'acrossai_ability_logs';
 
-		// Count total after filtering (for pagination header)
-		$count_query = "SELECT COUNT(*) FROM {$table} {$where_clause}";
-		$total       = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				$count_query,
-				$where_values
-			)
+		// Count total after filtering (for pagination header).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total = (int) $wpdb->get_var(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_clause}", $where_values )
 		);
 
-		// Get paginated results
-		$query = "SELECT * FROM {$table} {$where_clause} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
+		// Build paginated SELECT query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$select_sql = "SELECT * FROM `{$table}` {$where_clause} ORDER BY `{$orderby}` {$order} LIMIT %d OFFSET %d";
 
-		// Add pagination params to values
+		// Add pagination params to values.
 		$final_values = array_merge( $where_values, array( $per_page, $offset ) );
 
-		// Prepare final query
-		$final_query = $wpdb->prepare(
-			$query,
-			$final_values
+		// Execute paginated query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$results = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->prepare( $select_sql, $final_values )
 		);
 
-		// Execute query
-		$results = $wpdb->get_results( $final_query );
-
-		// Map results to Row objects
+		// Map results to Row objects.
 		$logs = array();
 		if ( ! empty( $results ) ) {
-			$row_class = 'AcrossAI\Abilities\Logger\AcrossAI_Ability_Logs_Row';
 			foreach ( $results as $result ) {
-				$logs[] = new $row_class( $result );
+				$logs[] = new AcrossAI_Ability_Logs_Row( $result );
 			}
 		}
 
-		// Calculate pages count
+		// Calculate pages count.
 		$pages = (int) ceil( $total / $per_page );
 
 		return array(

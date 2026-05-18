@@ -1,20 +1,22 @@
 <?php
 /**
- * AcrossAI Ability Logger Singleton
+ * Core logger singleton for ability execution logging.
  *
- * Core logger class managing pending log entries and executing logging hooks.
+ * Manages pending log entries, registers WordPress hooks,
+ * and writes completed entries to database.
  *
- * @package AcrossAI\Abilities\Logger
- * @since   1.0.0
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Logger
+ * @since      0.1.0
  */
 
-namespace AcrossAI\Abilities\Logger;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
 
-use AcrossAI\Abilities\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Ability logger singleton
@@ -22,14 +24,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Manages pending log entries stack, registers WordPress hooks,
  * and writes completed entries to database.
  *
- * @since 1.0.0
+ * @since 0.1.0
  */
 class AcrossAI_Ability_Logger {
 
 	/**
 	 * Singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @var AcrossAI_Ability_Logger|null
 	 */
@@ -41,7 +43,7 @@ class AcrossAI_Ability_Logger {
 	 * Stack of incomplete log entries currently being processed.
 	 * Supports concurrent/nested ability executions (EC-002).
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @var array
 	 */
 	protected $pending_entries = array();
@@ -52,7 +54,7 @@ class AcrossAI_Ability_Logger {
 	 * Stashed during mcp_adapter_pre_tool_call hook (P5).
 	 * Used in start_pending_entry to populate mcp_server_id field.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @var string|null
 	 */
 	protected $mcp_server_id = null;
@@ -60,7 +62,7 @@ class AcrossAI_Ability_Logger {
 	/**
 	 * Get singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @return AcrossAI_Ability_Logger
 	 */
@@ -74,7 +76,7 @@ class AcrossAI_Ability_Logger {
 	/**
 	 * Private constructor for singleton pattern
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 */
 	private function __construct() {
 		$this->pending_entries = array();
@@ -91,27 +93,27 @@ class AcrossAI_Ability_Logger {
 	 * **ARCH-ADV-001 Exception**: Hooks are registered directly via add_filter/add_action
 	 * (not via Loader) because they depend on other processors' registration state.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function boot() {
-		// Register logging hooks
-		// P5: Capture MCP context before any execution
+		// Register logging hooks.
+		// P5: Capture MCP context before any execution.
 		add_filter( 'mcp_adapter_pre_tool_call', array( $this, 'capture_mcp_server_id' ), 5, 3 );
 
-		// P10: Start recording pending entry
+		// P10: Start recording pending entry.
 		add_action( 'wp_before_execute_ability', array( $this, 'start_pending_entry' ), 10, 2 );
 
-		// P10: Finish recording and write to database
+		// P10: Finish recording and write to database.
 		add_action( 'wp_after_execute_ability', array( $this, 'finish_pending_entry' ), 10, 3 );
 
-		// P100001: Wrap permission callback to log permission denials
+		// P100001: Wrap permission callback to log permission denials.
 		add_filter( 'wp_register_ability_args', array( $this, 'wrap_permission_callback' ), 100001, 2 );
 
-		// Register cleanup hook
+		// Register cleanup hook.
 		add_action( 'acrossai_ability_logger_cleanup', array( $this, 'cleanup_old_logs' ), 10 );
 
-		// Schedule cleanup job (T016)
+		// Schedule cleanup job (T016).
 		$this->schedule_cleanup();
 	}
 
@@ -121,17 +123,17 @@ class AcrossAI_Ability_Logger {
 	 * Called on mcp_adapter_pre_tool_call hook P5 (before execution).
 	 * Stashes server_id for use in start_pending_entry.
 	 *
-	 * @since 1.0.0
-	 * @param string      $tool_name Tool name being called
-	 * @param string|null $server_id MCP server ID
-	 * @param array       $args Tool arguments
+	 * @since 0.1.0
+	 * @param string      $tool_name Tool name being called.
+	 * @param string|null $server_id MCP server ID.
+	 * @param array       $args Tool arguments.
 	 * @return array Unmodified $args (pass-through hook)
 	 */
 	public function capture_mcp_server_id( $tool_name, $server_id, $args ) {
-		// Stash server ID for use in pending entry
+		// Stash server ID for use in pending entry.
 		$this->mcp_server_id = $server_id;
 
-		// Also set context in source detector for detection logic
+		// Also set context in source detector for detection logic.
 		AcrossAI_Logger_Source_Detector::set_mcp_context( $server_id );
 
 		return $args;
@@ -143,22 +145,22 @@ class AcrossAI_Ability_Logger {
 	 * Called on wp_before_execute_ability hook P10.
 	 * Initializes pending entry with execution metadata and starts timer.
 	 *
-	 * @since 1.0.0
-	 * @param string $ability_slug Ability slug being executed
-	 * @param array  $args Ability execution arguments
+	 * @since 0.1.0
+	 * @param string $ability_slug Ability slug being executed.
+	 * @param array  $args Ability execution arguments.
 	 * @return void
 	 */
 	public function start_pending_entry( $ability_slug, $args ) {
-		// Record start time with microsecond precision
+		// Record start time with microsecond precision.
 		$start_time = microtime( true );
 
-		// Detect source (uses context checks)
+		// Detect source (uses context checks).
 		$source = AcrossAI_Logger_Source_Detector::detect_source();
 
-		// Get user ID (may be 0 for non-user contexts — EC-003)
+		// Get user ID (may be 0 for non-user contexts — EC-003).
 		$user_id = get_current_user_id();
 
-		// Build pending entry
+		// Build pending entry.
 		$pending = array(
 			'ability_slug'  => $ability_slug,
 			'source'        => $source,
@@ -168,7 +170,7 @@ class AcrossAI_Ability_Logger {
 			'start_time'    => $start_time,
 		);
 
-		// Push onto stack (supports concurrent executions — EC-002)
+		// Push onto stack (supports concurrent executions — EC-002).
 		array_push( $this->pending_entries, $pending );
 	}
 
@@ -178,23 +180,24 @@ class AcrossAI_Ability_Logger {
 	 * Called on wp_after_execute_ability hook P10.
 	 * Pops pending entry from stack, records result, and inserts to database.
 	 *
-	 * @since 1.0.0
-	 * @param string     $ability_slug Ability slug executed
-	 * @param mixed      $result Result from ability execution
-	 * @param int|float  $execution_time_ms Execution time in milliseconds
+	 * @since 0.1.0
+	 * @param string    $ability_slug Ability slug executed.
+	 * @param mixed     $result Result from ability execution.
+	 * @param int|float $execution_time_ms Execution time in milliseconds.
 	 * @return void
 	 */
 	public function finish_pending_entry( $ability_slug, $result, $execution_time_ms ) {
-		// Pop pending entry from stack
+		// Pop pending entry from stack.
 		$pending = array_pop( $this->pending_entries );
 
-		// Handle case where stack is empty (defensive)
+		// Handle case where stack is empty (defensive).
 		if ( null === $pending ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: attempted to finish pending entry but stack is empty' );
 			return;
 		}
 
-		// Detect result status
+		// Detect result status.
 		$status = 'success';
 		$output = $result;
 
@@ -209,12 +212,11 @@ class AcrossAI_Ability_Logger {
 			$output = 'Execution returned false or null';
 		}
 
-		// Format input and output (truncation at 65535 bytes — EC-005)
-		$formatter = AcrossAI_Logger_Formatter::instance();
-		$input     = $formatter->format_value( $pending['input'] );
-		$output    = $formatter->format_value( $output );
+		// Format input and output (truncation at 65535 bytes — EC-005).
+		$input  = AcrossAI_Logger_Formatter::format_value( $pending['input'] );
+		$output = AcrossAI_Logger_Formatter::format_value( $output );
 
-		// Build complete entry (10 fields)
+		// Build complete entry (10 fields).
 		$entry = array(
 			'ability_slug'  => $ability_slug,
 			'source'        => $pending['source'],
@@ -227,24 +229,26 @@ class AcrossAI_Ability_Logger {
 			'created_at'    => current_time( 'mysql' ),
 		);
 
-		// Apply extensibility filter (Phase 1 spec)
+		// Apply extensibility filter (Phase 1 spec).
 		$entry = apply_filters( 'acrossai_ability_log_entry', $entry, $ability_slug, $pending['source'] );
 
-		// Validate entry
-		if ( ! $formatter->validate_entry( $entry ) ) {
+		// Validate entry.
+		if ( ! AcrossAI_Logger_Formatter::validate_entry( $entry ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: entry validation failed' );
 			return;
 		}
 
-		// Insert to database
+		// Insert to database.
 		$query  = AcrossAI_Ability_Logs_Query::instance();
-		$result = $query->insert( $entry );
+		$result = $query->insert_log( $entry );
 
 		if ( ! $result ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: failed to insert log entry to database' );
 		}
 
-		// Clear MCP context after execution
+		// Clear MCP context after execution.
 		AcrossAI_Logger_Source_Detector::clear_mcp_context();
 	}
 
@@ -254,27 +258,26 @@ class AcrossAI_Ability_Logger {
 	 * Called on wp_register_ability_args hook P100001 (maximum priority).
 	 * Intercepts permission callback to detect and log permission denials.
 	 *
-	 * @since 1.0.0
-	 * @param array  $args Ability registration arguments
-	 * @param string $ability_slug Ability slug
+	 * @since 0.1.0
+	 * @param array  $args Ability registration arguments.
+	 * @param string $ability_slug Ability slug.
 	 * @return array Modified $args with wrapped permission callback
 	 */
 	public function wrap_permission_callback( $args, $ability_slug ) {
-		// Skip if no permission callback defined
+		// Skip if no permission callback defined.
 		if ( ! isset( $args['permission_callback'] ) || ! is_callable( $args['permission_callback'] ) ) {
 			return $args;
 		}
 
 		$original_callback = $args['permission_callback'];
 
-		// Wrap callback to intercept permission denials
+		// Wrap callback to intercept permission denials.
 		$args['permission_callback'] = function () use ( $original_callback, $ability_slug ) {
 			$result = call_user_func( $original_callback );
 
-			// Log permission denials
+			// Log permission denials.
 			if ( ! $result || is_wp_error( $result ) ) {
-				// Create permission denial log entry
-				$formatter = AcrossAI_Logger_Formatter::instance();
+				// Create permission denial log entry.
 				$source    = AcrossAI_Logger_Source_Detector::detect_source();
 				$user_id   = get_current_user_id();
 				$error_msg = is_wp_error( $result ) ? $result->get_error_message() : 'Permission denied';
@@ -291,13 +294,13 @@ class AcrossAI_Ability_Logger {
 					'created_at'    => current_time( 'mysql' ),
 				);
 
-				// Apply filter
+				// Apply filter.
 				$entry = apply_filters( 'acrossai_ability_log_entry', $entry, $ability_slug, $source );
 
-				// Validate and insert
-				if ( $formatter->validate_entry( $entry ) ) {
+				// Validate and insert.
+				if ( AcrossAI_Logger_Formatter::validate_entry( $entry ) ) {
 					$query = AcrossAI_Ability_Logs_Query::instance();
-					$query->insert( $entry );
+					$query->insert_log( $entry );
 				}
 			}
 
@@ -313,17 +316,18 @@ class AcrossAI_Ability_Logger {
 	 * Called during boot to schedule a recurring Action Scheduler job for log retention.
 	 * This method is idempotent: safe to call multiple times.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function schedule_cleanup() {
-		// Only schedule if Action Scheduler is available
+		// Only schedule if Action Scheduler is available.
 		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: Action Scheduler not available, skipping cleanup scheduling' );
 			return;
 		}
 
-		// Check if already scheduled (idempotent)
+		// Check if already scheduled (idempotent).
 		$next_run = as_next_scheduled_action(
 			'acrossai_ability_logger_cleanup',
 			array(),
@@ -331,14 +335,14 @@ class AcrossAI_Ability_Logger {
 		);
 
 		if ( false !== $next_run ) {
-			// Already scheduled
+			// Already scheduled.
 			return;
 		}
 
-		// Schedule cleanup at 1 hour from now for first run
+		// Schedule cleanup at 1 hour from now for first run.
 		$first_run = time() + HOUR_IN_SECONDS;
 
-		// Schedule recurring daily action
+		// Schedule recurring daily action.
 		as_schedule_recurring_action(
 			$first_run,
 			DAY_IN_SECONDS,
@@ -354,26 +358,28 @@ class AcrossAI_Ability_Logger {
 	 * Called by Action Scheduler at the scheduled time.
 	 * Deletes logs older than the configured retention period (T016, T017).
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function cleanup_old_logs() {
-		// Get retention days from filter (default: 30 days)
+		// Get retention days from filter (default: 30 days).
 		$retention_days = (int) apply_filters( 'acrossai_ability_log_retention_days', 30 );
 
 		if ( $retention_days < 1 ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: Invalid retention days, skipping cleanup' );
 			return;
 		}
 
-		// Calculate date cutoff (30 days ago)
-		$cutoff_date = date( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
+		// Calculate date cutoff (30 days ago).
+		$cutoff_date = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
 
-		// Delete old logs (T017: uses delete_logs_before_date method)
+		// Delete old logs (T017: uses delete_logs_before_date method).
 		$query  = AcrossAI_Ability_Logs_Query::instance();
 		$result = $query->delete_logs_before_date( $cutoff_date );
 
-		// Log result
+		// Log result.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		error_log( "Logger: Deleted {$result} log entries older than {$cutoff_date}" );
 	}
 
@@ -383,17 +389,17 @@ class AcrossAI_Ability_Logger {
 	 * Called during plugin deactivation.
 	 * Removes all scheduled cleanup actions.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @return void
 	 */
 	public static function unschedule_cleanup() {
-		// Check if Action Scheduler is available
+		// Check if Action Scheduler is available.
 		if ( ! function_exists( 'as_unschedule_all_actions' ) ) {
 			return;
 		}
 
-		// Unschedule all cleanup jobs
+		// Unschedule all cleanup jobs.
 		as_unschedule_all_actions( 'acrossai_ability_logger_cleanup', array(), 'acrossai-abilities-logger' );
 	}
 
@@ -402,7 +408,7 @@ class AcrossAI_Ability_Logger {
 	 *
 	 * Used for testing concurrent execution handling.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return int Count of pending entries on stack
 	 */
 	public function get_pending_count() {

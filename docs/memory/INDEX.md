@@ -50,3 +50,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 
 ## Security Constraints
 | ID | Constraint | Scope | Tags | Source |
+| DEC-NAMESPACE-CONVENTION | Project uses AcrossAI_Abilities_Manager\Includes\* underscore convention, never PSR-4 backslash (AcrossAI\Abilities\*) | Plugin-wide | namespace, PSR-4, pattern | Active | DECISIONS.md |
+| DEC-UTILITY-STATIC-ONLY | Utility classes are 100% static; only orchestrators (Logger, Query, Table) use singleton | Plugin-wide | utilities, singleton, stateless | Active | DECISIONS.md |
+| DEC-USE-STATEMENT-CONSISTENCY | All use statements must match underscore convention; grep catches `use AcrossAI\\` before PR merge | Plugin-wide | imports, namespace, pr-review | Active | DECISIONS.md |
+| AC-FILE-HEADER-PATTERN | @package AcrossAI_Abilities_Manager, @subpackage full/path, @since 0.1.0, guard: defined('ABSPATH')\|\|exit; | Plugin-wide | headers, phpcs, standards | ARCHITECTURE.md |

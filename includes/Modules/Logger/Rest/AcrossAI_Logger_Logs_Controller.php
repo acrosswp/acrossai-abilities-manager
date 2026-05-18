@@ -5,32 +5,32 @@
  * REST controller for read-only logs endpoint with filtering, sorting, and pagination.
  * All filtering logic happens in query builder (AC-QUERY-LAYER-FILTERING).
  *
- * @package AcrossAI\Abilities\Logger
- * @since   1.0.0
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Logger/Rest
+ * @since      0.1.0
  */
 
-namespace AcrossAI\Abilities\Logger\Rest;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest;
 
 use WP_REST_Controller;
 use WP_REST_Response;
 use WP_REST_Request;
-use AcrossAI\Abilities\Logger\AcrossAI_Logger_Query;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Logger_Query;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * REST logs endpoint controller
  *
- * @since 1.0.0
+ * @since 0.1.0
  */
 class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 
 	/**
 	 * REST namespace
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @var string
 	 */
 	protected $namespace = 'acrossai-abilities/v1';
@@ -38,7 +38,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	/**
 	 * REST resource
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @var string
 	 */
 	protected $resource = 'logger/logs';
@@ -46,7 +46,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	/**
 	 * Singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @var AcrossAI_Logger_Logs_Controller|null
 	 */
@@ -55,7 +55,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	/**
 	 * Get singleton instance
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
 	 * @return AcrossAI_Logger_Logs_Controller
 	 */
@@ -69,7 +69,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	/**
 	 * Private constructor for singleton
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 */
 	private function __construct() {}
 
@@ -78,7 +78,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	 *
 	 * Registers GET /acrossai-abilities/v1/logger/logs endpoint.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function register_routes() {
@@ -156,12 +156,12 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	 * Extracts and sanitizes request params, calls query builder,
 	 * and returns paginated results with headers.
 	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request object
+	 * @since 0.1.0
+	 * @param WP_REST_Request $request REST request object.
 	 * @return WP_REST_Response Response with logs array and pagination headers
 	 */
 	public function get_logs( $request ) {
-		// Extract and sanitize parameters
+		// Extract and sanitize parameters.
 		$search       = $request->get_param( 'search' );
 		$orderby      = $request->get_param( 'orderby' );
 		$order        = $request->get_param( 'order' );
@@ -172,7 +172,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 		$page         = $request->get_param( 'page' );
 		$per_page     = $request->get_param( 'per_page' );
 
-		// Build query arguments
+		// Build query arguments.
 		$args = array(
 			'search'       => $search ? sanitize_text_field( $search ) : '',
 			'orderby'      => $orderby ? sanitize_key( $orderby ) : 'created_at',
@@ -185,13 +185,13 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 			'per_page'     => $per_page ? absint( $per_page ) : 20,
 		);
 
-		// Call query builder (all filtering happens here — AC-QUERY-LAYER-FILTERING)
+		// Call query builder (all filtering happens here — AC-QUERY-LAYER-FILTERING).
 		$query_result = AcrossAI_Logger_Query::get_logs( $args );
 
-		// Build response data
+		// Build response data.
 		$logs_data = array();
 		foreach ( $query_result['logs'] as $log ) {
-			$logs_data[] = $log->to_array();
+			$logs_data[] = get_object_vars( $log );
 		}
 
 		$response_data = array(
@@ -200,10 +200,10 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 			'pages' => $query_result['pages'],
 		);
 
-		// Build response
+		// Build response.
 		$response = new WP_REST_Response( $response_data, 200 );
 
-		// Add pagination headers (X-WP-Total reflects filtered results — AC-QUERY-LAYER-FILTERING)
+		// Add pagination headers (X-WP-Total reflects filtered results — AC-QUERY-LAYER-FILTERING).
 		$response->header( 'X-WP-Total', (int) $query_result['total'] );
 		$response->header( 'X-WP-TotalPages', (int) $query_result['pages'] );
 
@@ -213,7 +213,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 	/**
 	 * Get item schema for documentation
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @return array Schema definition
 	 */
 	public function get_item_schema() {

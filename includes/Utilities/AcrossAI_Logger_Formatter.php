@@ -1,70 +1,41 @@
 <?php
 /**
- * AcrossAI Logger Entry Formatter Utility
+ * Logger entry formatter utility.
  *
- * Static utility for log entry formatting, JSON encoding, input/output truncation, and error handling.
+ * Static utility for log entry formatting, JSON encoding, input/output truncation,
+ * and error handling.
  *
- * @package AcrossAI\Abilities\Utilities
- * @since   1.0.0
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Utilities
+ * @since      0.1.0
  */
 
-namespace AcrossAI\Abilities\Utilities;
+namespace AcrossAI_Abilities_Manager\Includes\Utilities;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Log entry formatter utility
  *
  * Handles JSON encoding, truncation, error message formatting, and type casting.
  *
- * @since 1.0.0
+ * @since 0.1.0
  */
 class AcrossAI_Logger_Formatter {
-
-	/**
-	 * Singleton instance
-	 *
-	 * @since 1.0.0
-	 * @static
-	 * @var AcrossAI_Logger_Formatter|null
-	 */
-	protected static $_instance = null;
-
-	/**
-	 * Get singleton instance
-	 *
-	 * @since 1.0.0
-	 * @static
-	 * @return AcrossAI_Logger_Formatter
-	 */
-	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
-		}
-		return self::$_instance;
-	}
-
-	/**
-	 * Private constructor for singleton pattern
-	 *
-	 * @since 1.0.0
-	 */
-	private function __construct() {}
 
 	/**
 	 * Format log entry with validation and sanitization
 	 *
 	 * Returns well-formed 10-field log entry array ready for database insertion.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
-	 * @param array $entry Raw entry data to format
+	 * @param array $entry Raw entry data to format.
 	 * @return array Formatted 10-field log entry
 	 */
 	public static function format_log_entry( $entry = array() ) {
-		// Validate all required fields are present
+		// Validate all required fields are present.
 		$required_fields = array(
 			'ability_slug',
 			'source',
@@ -75,30 +46,33 @@ class AcrossAI_Logger_Formatter {
 
 		foreach ( $required_fields as $field ) {
 			if ( ! isset( $entry[ $field ] ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( "Logger: missing required field '{$field}'" );
 				return array();
 			}
 		}
 
-		// Validate source is valid (SEC-04: strict comparison)
+		// Validate source is valid (SEC-04: strict comparison).
 		$valid_sources = array( 'mcp', 'rest', 'cli', 'cron', 'ajax', 'direct' );
 		if ( ! in_array( $entry['source'], $valid_sources, true ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: invalid source value' );
-			$entry['source'] = 'direct'; // Fallback
+			$entry['source'] = 'direct'; // Fallback.
 		}
 
-		// Validate status is valid (SEC-04: strict comparison)
+		// Validate status is valid (SEC-04: strict comparison).
 		$valid_statuses = array( 'success', 'error', 'permission_denied' );
 		if ( ! in_array( $entry['status'], $valid_statuses, true ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Logger: invalid status value' );
-			$entry['status'] = 'error'; // Fallback
+			$entry['status'] = 'error'; // Fallback.
 		}
 
-		// Format input and output (truncate and JSON encode)
+		// Format input and output (truncate and JSON encode).
 		$input  = isset( $entry['input'] ) ? self::format_value( $entry['input'] ) : null;
 		$output = isset( $entry['output'] ) ? self::format_value( $entry['output'] ) : null;
 
-		// Extract error message if result is WP_Error or Exception
+		// Extract error message if result is WP_Error or Exception.
 		if ( isset( $entry['result'] ) ) {
 			if ( is_wp_error( $entry['result'] ) ) {
 				$output = self::format_value( $entry['result']->get_error_message() );
@@ -109,7 +83,7 @@ class AcrossAI_Logger_Formatter {
 			}
 		}
 
-		// Build formatted entry
+		// Build formatted entry.
 		$formatted_entry = array(
 			'ability_slug'  => (string) $entry['ability_slug'],
 			'source'        => (string) $entry['source'],
@@ -130,9 +104,9 @@ class AcrossAI_Logger_Formatter {
 	 *
 	 * Handles JSON encoding, truncation to 65535 bytes (EC-005), and UTF-8 safety.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
-	 * @param mixed $value Value to format
+	 * @param mixed $value Value to format.
 	 * @return string|null Formatted string or null
 	 */
 	public static function format_value( $value = null ) {
@@ -141,12 +115,12 @@ class AcrossAI_Logger_Formatter {
 		}
 
 		if ( is_string( $value ) ) {
-			// Already string, just truncate
+			// Already string, just truncate.
 			return self::truncate_string( $value, 65535 );
 		}
 
 		if ( is_array( $value ) || is_object( $value ) ) {
-			// JSON encode complex types
+			// JSON encode complex types.
 			$json = self::json_encode_safe( $value );
 			return self::truncate_string( $json, 65535 );
 		}
@@ -159,30 +133,32 @@ class AcrossAI_Logger_Formatter {
 			return (string) $value;
 		}
 
-		// Fallback for other types
+		// Fallback for other types.
 		return (string) $value;
 	}
 
 	/**
 	 * Truncate string to maximum length (with UTF-8 safety)
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
-	 * @param string $string String to truncate
-	 * @param int    $max_length Maximum length in bytes
+	 * @param string $str        String to truncate.
+	 * @param int    $max_length Maximum length in bytes.
 	 * @return string Truncated string
 	 */
-	public static function truncate_string( $string = '', $max_length = 65535 ) {
-		if ( empty( $string ) || strlen( $string ) <= $max_length ) {
-			return $string;
+	public static function truncate_string( $str = '', $max_length = 65535 ) {
+		if ( empty( $str ) || strlen( $str ) <= $max_length ) {
+			return $str;
 		}
 
-		// Truncate to max length, handling UTF-8 safely
-		$truncated = substr( $string, 0, $max_length );
+		// Truncate to max length, handling UTF-8 safely.
+		$truncated = substr( $str, 0, $max_length );
 
-		// Ensure we didn't cut in the middle of a UTF-8 character
-		while ( strlen( $truncated ) > 0 && ord( $truncated[ strlen( $truncated ) - 1 ] ) >= 0x80 ) {
+		// Trim back past any incomplete multi-byte UTF-8 sequence.
+		$len = strlen( $truncated );
+		while ( $len > 0 && ord( $truncated[ $len - 1 ] ) >= 0x80 ) {
 			$truncated = substr( $truncated, 0, -1 );
+			--$len;
 		}
 
 		return $truncated;
@@ -191,9 +167,9 @@ class AcrossAI_Logger_Formatter {
 	/**
 	 * JSON encode safely with error handling
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
-	 * @param mixed $value Value to encode
+	 * @param mixed $value Value to encode.
 	 * @return string JSON-encoded string or error message
 	 */
 	public static function json_encode_safe( $value ) {
@@ -212,9 +188,9 @@ class AcrossAI_Logger_Formatter {
 	 *
 	 * Ensures all 10 fields are present and of correct types.
 	 *
-	 * @since 1.0.0
+	 * @since 0.1.0
 	 * @static
-	 * @param array $entry Entry to validate
+	 * @param array $entry Entry to validate.
 	 * @return bool True if valid
 	 */
 	public static function validate_entry( $entry = array() ) {

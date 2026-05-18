@@ -161,7 +161,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T005 – Create Source Detection Utility
 
-- [ ] T005 Create `includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` static utility class
+- [x] T005 Create `includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` static utility class
 
 **Description**: Extract source detection logic into a reusable utility class. Provides static methods to detect execution source (mcp, rest, cli, cron, ajax, direct) based on request context.
 
@@ -198,7 +198,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T006 – Create Ability Logger Singleton (Core)
 
-- [ ] T006 Create `includes/Modules/Logger/AcrossAI_Ability_Logger.php` logger singleton class
+- [x] T006 Create `includes/Modules/Logger/AcrossAI_Ability_Logger.php` logger singleton class
 
 **Description**: Core logger class that manages pending log entries, registers hooks at boot, and writes completed entries to database. This is the central orchestrator for all logging operations.
 
@@ -238,7 +238,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T007 – Create Log Entry Formatter Utility
 
-- [ ] T007 Create `includes/Utilities/AcrossAI_Logger_Formatter.php` log entry formatter utility
+- [x] T007 Create `includes/Utilities/AcrossAI_Logger_Formatter.php` log entry formatter utility
 
 **Description**: Extract log entry formatting logic into a reusable utility. Handles JSON encoding, input/output truncation, error message formatting, and type casting.
 
@@ -278,7 +278,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T008 – Create Query Builder with Filtering & Sorting
 
-- [ ] T008 Create `includes/Modules/Logger/AcrossAI_Logger_Query.php` query builder with filtering, sorting, pagination
+- [x] T008 Create `includes/Modules/Logger/AcrossAI_Logger_Query.php` query builder with filtering, sorting, pagination
 
 **Description**: High-level query builder that applies all filtering, sorting, pagination, and search logic. This layer is consumed by the REST controller (Phase D).
 
@@ -315,7 +315,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T009 – Create REST Logger Orchestrator Controller
 
-- [ ] T009 Create `includes/Modules/Logger/Rest/AcrossAI_Logger_Controller.php` REST orchestrator
+- [x] T009 Create `includes/Modules/Logger/Rest/AcrossAI_Logger_Controller.php` REST orchestrator
 
 **Description**: REST orchestrator class that manages namespace, delegates route registration to sub-controllers, and provides shared permission checks.
 
@@ -342,7 +342,7 @@ This artifact decomposes Feature 006's plan.md into 24 granular implementation t
 
 ### T010 – Create REST Logs Read-Only Endpoint
 
-- [ ] T010 Create `includes/Modules/Logger/Rest/AcrossAI_Logger_Logs_Controller.php` REST logs read-only endpoint
+- [x] T010 Create `includes/Modules/Logger/Rest/AcrossAI_Logger_Logs_Controller.php` REST logs read-only endpoint
 
 **Description**: REST controller for the logs read-only endpoint. Exposes filtered, sorted, paginated logs as JSON via GET /wp-json/acrossai-abilities/v1/logger/logs.
 
