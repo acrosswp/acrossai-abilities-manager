@@ -113,16 +113,16 @@ class AcrossAI_Ability_Logs_Row extends Row {
 	 */
 	public function to_array(): array {
 		return array(
-			'id'              => (int) $this->id,
-			'ability_slug'    => (string) $this->ability_slug,
-			'source'          => (string) $this->source,
-			'mcp_server_id'   => $this->mcp_server_id ? (string) $this->mcp_server_id : null,
-			'user_id'         => $this->user_id ? (int) $this->user_id : null,
-			'input'           => $this->input ? (string) $this->input : null,
-			'output'          => $this->output ? (string) $this->output : null,
-			'status'          => (string) $this->status,
-			'duration_ms'     => (int) $this->duration_ms,
-			'created_at'      => (string) $this->created_at,
+			'id'            => (int) $this->id,
+			'ability_slug'  => (string) $this->ability_slug,
+			'source'        => (string) $this->source,
+			'mcp_server_id' => $this->mcp_server_id ? (string) $this->mcp_server_id : null,
+			'user_id'       => $this->user_id ? (int) $this->user_id : null,
+			'input'         => $this->input ? (string) $this->input : null,
+			'output'        => $this->output ? (string) $this->output : null,
+			'status'        => (string) $this->status,
+			'duration_ms'   => (int) $this->duration_ms,
+			'created_at'    => (string) $this->created_at,
 		);
 	}
 

@@ -57,11 +57,11 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 
 		// Execution source (mcp, rest, cli, cron, ajax, direct).
 		array(
-			'name'       => 'source',
-			'type'       => 'varchar',
-			'length'     => '20',
-			'null'       => false,
-			'sortable'   => true,
+			'name'     => 'source',
+			'type'     => 'varchar',
+			'length'   => '20',
+			'null'     => false,
+			'sortable' => true,
 		),
 
 		// MCP server ID (nullable, only set for MCP executions).
@@ -103,29 +103,29 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 
 		// Execution status (success, error, permission_denied).
 		array(
-			'name'       => 'status',
-			'type'       => 'varchar',
-			'length'     => '20',
-			'null'       => false,
-			'sortable'   => true,
+			'name'     => 'status',
+			'type'     => 'varchar',
+			'length'   => '20',
+			'null'     => false,
+			'sortable' => true,
 		),
 
 		// Execution duration in milliseconds.
 		array(
-			'name'       => 'duration_ms',
-			'type'       => 'int',
-			'length'     => '11',
-			'unsigned'   => false,
-			'default'    => 0,
-			'sortable'   => true,
+			'name'     => 'duration_ms',
+			'type'     => 'int',
+			'length'   => '11',
+			'unsigned' => false,
+			'default'  => 0,
+			'sortable' => true,
 		),
 
 		// Timestamp when execution was logged.
 		array(
-			'name'       => 'created_at',
-			'type'       => 'datetime',
-			'null'       => false,
-			'sortable'   => true,
+			'name'     => 'created_at',
+			'type'     => 'datetime',
+			'null'     => false,
+			'sortable' => true,
 		),
 	);
 
