@@ -84,20 +84,4 @@ class Menu {
 		</div>
 		<?php
 	}
-
-	/**
-	 * Add Settings link to plugins area
-	 *
-	 * @since 0.0.1
-	 * @param array  $links Links array in which we would prepend our link.
-	 * @param string $file  Current plugin basename.
-	 * @return array
-	 */
-	public function plugin_action_links( $links, $file ) {
-		if ( 'acrossai-abilities-manager/acrossai-abilities-manager.php' === $file ) {
-			$settings_link = '<a href="' . esc_url( admin_url( 'admin.php?page=acrossai-abilities-manager' ) ) . '">' . esc_html__( 'Settings', 'acrossai-abilities-manager' ) . '</a>';
-			array_unshift( $links, $settings_link );
-		}
-		return $links;
-	}
 }

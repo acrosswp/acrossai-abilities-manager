@@ -263,12 +263,12 @@ final class Main {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+		$this->loader->add_action( 'plugin_action_links', $plugin_admin, 'plugin_action_links', 1000, 2 );
 		/**
 		 * Add the Plugin Main Menu
 		 */
 		$main_menu = new \AcrossAI_Abilities_Manager\Admin\Partials\Menu( $this->get_plugin_name(), $this->get_version() );
 		$this->loader->add_action( 'admin_menu', $main_menu, 'main_menu' );
-		$this->loader->add_action( 'plugin_action_links', $main_menu, 'plugin_action_links', 1000, 2 );
 
 		// Execution Logs submenu page (Feature 006: T014)
 		$logs_menu = \AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu::instance();

@@ -100,7 +100,7 @@ class Main {
 		$this->sitewide_asset_file = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/sitewide.asset.php';
 
 		// Load logger asset file if it exists (built by @wordpress/scripts build)
-		$logger_asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/index.asset.php';
+		$logger_asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/logger.asset.php';
 		if ( file_exists( $logger_asset_path ) ) {
 			$this->logger_asset_file = include $logger_asset_path;
 		}
@@ -113,7 +113,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_styles( string $hook_suffix ) {
-		if ( false === strpos( $hook_suffix, 'acrossai-abilities-manager' ) ) {
+		$on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' );
+		$on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );
+		if ( ! $on_abilities && ! $on_logs ) {
 			return;
 		}
 
@@ -129,7 +131,7 @@ class Main {
 		if ( $this->logger_asset_file && $this->is_logs_page( $hook_suffix ) ) {
 			wp_register_style(
 				'acrossai-abilities-logger',
-				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/index.css',
+				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/logger.css',
 				array(),
 				$this->logger_asset_file['version']
 			);
@@ -144,7 +146,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_scripts( string $hook_suffix ) {
-		if ( false === strpos( $hook_suffix, 'acrossai-abilities-manager' ) ) {
+		$on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' );
+		$on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );
+		if ( ! $on_abilities && ! $on_logs ) {
 			return;
 		}
 
@@ -173,7 +177,7 @@ class Main {
 		if ( $this->logger_asset_file && $this->is_logs_page( $hook_suffix ) ) {
 			wp_register_script(
 				'acrossai-abilities-logger',
-				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/index.js',
+				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/logger.js',
 				$this->logger_asset_file['dependencies'],
 				$this->logger_asset_file['version'],
 				true
@@ -203,5 +207,22 @@ class Main {
 	private function is_logs_page( string $hook_suffix ): bool {
 		$logs_menu = LogsMenu::instance();
 		return $hook_suffix === $logs_menu->get_hook_suffix();
+	}
+
+	/**
+	 * Add Settings link to plugins area
+	 *
+	 * @since 0.0.1
+	 * @param array  $links Links array in which we would prepend our link.
+	 * @param string $file  Current plugin basename.
+	 * @return array
+	 */
+	public function plugin_action_links( $links, $file ) {
+		if ( 'acrossai-abilities-manager/acrossai-abilities-manager.php' === $file ) {
+			$settings_link = '<a href="' . esc_url( admin_url( 'admin.php?page=acrossai-abilities-manager' ) ) . '">' . esc_html__( 'Settings', 'acrossai-abilities-manager' ) . '</a>';
+			$logs_link = '<a href="' . esc_url( admin_url( 'admin.php?page=acrossai-abilities-logs' ) ) . '">' . esc_html__( 'Logs', 'acrossai-abilities-manager' ) . '</a>';
+			array_unshift( $links, $settings_link, $logs_link );
+		}
+		return $links;
 	}
 }

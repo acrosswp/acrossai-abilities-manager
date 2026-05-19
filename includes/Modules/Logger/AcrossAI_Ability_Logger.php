@@ -99,7 +99,7 @@ class AcrossAI_Ability_Logger {
 	public function boot() {
 		// Register logging hooks.
 		// P5: Capture MCP context before any execution.
-		add_filter( 'mcp_adapter_pre_tool_call', array( $this, 'capture_mcp_server_id' ), 5, 3 );
+		add_filter( 'mcp_adapter_pre_tool_call', array( $this, 'capture_mcp_server_id' ), 5, 4 );
 
 		// P10: Start recording pending entry.
 		add_action( 'wp_before_execute_ability', array( $this, 'start_pending_entry' ), 10, 2 );
@@ -118,22 +118,25 @@ class AcrossAI_Ability_Logger {
 	}
 
 	/**
-	 * Capture MCP server ID from execution context
+	 * Capture MCP server ID from execution context.
 	 *
 	 * Called on mcp_adapter_pre_tool_call hook P5 (before execution).
-	 * Stashes server_id for use in start_pending_entry.
+	 * Hook signature: apply_filters( 'mcp_adapter_pre_tool_call', $args, $tool_name, $mcp_tool, $server )
 	 *
 	 * @since 0.1.0
-	 * @param string      $tool_name Tool name being called.
-	 * @param string|null $server_id MCP server ID.
-	 * @param array       $args Tool arguments.
-	 * @return array Unmodified $args (pass-through hook)
+	 * @param array  $args      Tool arguments (filterable value — must be returned unchanged).
+	 * @param string $tool_name Tool name being called.
+	 * @param mixed  $mcp_tool  McpTool instance.
+	 * @param mixed  $server    McpServer instance.
+	 * @return array Unmodified $args (pass-through filter)
 	 */
-	public function capture_mcp_server_id( $tool_name, $server_id, $args ) {
-		// Stash server ID for use in pending entry.
-		$this->mcp_server_id = $server_id;
+	public function capture_mcp_server_id( $args, $tool_name, $mcp_tool, $server ) {
+		$server_id = null;
+		if ( is_object( $server ) && method_exists( $server, 'get_server_id' ) ) {
+			$server_id = $server->get_server_id();
+		}
 
-		// Also set context in source detector for detection logic.
+		$this->mcp_server_id = $server_id;
 		AcrossAI_Logger_Source_Detector::set_mcp_context( $server_id );
 
 		return $args;
@@ -175,18 +178,19 @@ class AcrossAI_Ability_Logger {
 	}
 
 	/**
-	 * Finish recording and write pending entry to database
+	 * Finish recording and write pending entry to database.
 	 *
 	 * Called on wp_after_execute_ability hook P10.
-	 * Pops pending entry from stack, records result, and inserts to database.
+	 * Hook signature: do_action( 'wp_after_execute_ability', $name, $input, $result )
+	 * Duration is calculated from $pending['start_time'] — WP core does not pass execution time.
 	 *
 	 * @since 0.1.0
-	 * @param string    $ability_slug Ability slug executed.
-	 * @param mixed     $result Result from ability execution.
-	 * @param int|float $execution_time_ms Execution time in milliseconds.
+	 * @param string $ability_slug Ability slug executed.
+	 * @param mixed  $input        Input data passed to the ability (may be null for no-arg abilities).
+	 * @param mixed  $result       Result from ability execution.
 	 * @return void
 	 */
-	public function finish_pending_entry( $ability_slug, $result, $execution_time_ms ) {
+	public function finish_pending_entry( $ability_slug, $input, $result ) {
 		// Pop pending entry from stack.
 		$pending = array_pop( $this->pending_entries );
 
@@ -197,24 +201,30 @@ class AcrossAI_Ability_Logger {
 			return;
 		}
 
+		// Calculate duration from start_time (WP core does not pass execution time).
+		$duration_ms = isset( $pending['start_time'] )
+			? (int) round( ( microtime( true ) - $pending['start_time'] ) * 1000 )
+			: 0;
+
 		// Detect result status.
-		$status = 'success';
-		$output = $result;
+		$status         = 'success';
+		$output_value   = $result;
 
 		if ( is_wp_error( $result ) ) {
-			$status = 'error';
-			$output = $result->get_error_message();
+			$status       = 'error';
+			$output_value = $result->get_error_message();
 		} elseif ( $result instanceof \Exception ) {
-			$status = 'error';
-			$output = $result->getMessage();
+			$status       = 'error';
+			$output_value = $result->getMessage();
 		} elseif ( false === $result || null === $result ) {
-			$status = 'error';
-			$output = 'Execution returned false or null';
+			$status       = 'error';
+			$output_value = 'Execution returned false or null';
 		}
 
 		// Format input and output (truncation at 65535 bytes — EC-005).
-		$input  = AcrossAI_Logger_Formatter::format_value( $pending['input'] );
-		$output = AcrossAI_Logger_Formatter::format_value( $output );
+		// Use $input from hook (same as $pending['input']) for the stored input field.
+		$formatted_input  = AcrossAI_Logger_Formatter::format_value( $input );
+		$formatted_output = AcrossAI_Logger_Formatter::format_value( $output_value );
 
 		// Build complete entry (10 fields).
 		$entry = array(
@@ -222,10 +232,10 @@ class AcrossAI_Ability_Logger {
 			'source'        => $pending['source'],
 			'mcp_server_id' => $pending['mcp_server_id'],
 			'user_id'       => $pending['user_id'],
-			'input'         => $input,
-			'output'        => $output,
+			'input'         => $formatted_input,
+			'output'        => $formatted_output,
 			'status'        => $status,
-			'duration_ms'   => (int) $execution_time_ms,
+			'duration_ms'   => $duration_ms,
 			'created_at'    => current_time( 'mysql' ),
 		);
 
@@ -272,8 +282,9 @@ class AcrossAI_Ability_Logger {
 		$original_callback = $args['permission_callback'];
 
 		// Wrap callback to intercept permission denials.
-		$args['permission_callback'] = function () use ( $original_callback, $ability_slug ) {
-			$result = call_user_func( $original_callback );
+		// Use variadic args so any parameters the ability system passes (e.g. $input) are forwarded.
+		$args['permission_callback'] = function ( ...$cb_args ) use ( $original_callback, $ability_slug ) {
+			$result = call_user_func_array( $original_callback, $cb_args );
 
 			// Log permission denials.
 			if ( ! $result || is_wp_error( $result ) ) {
@@ -322,8 +333,6 @@ class AcrossAI_Ability_Logger {
 	public function schedule_cleanup() {
 		// Only schedule if Action Scheduler is available.
 		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: Action Scheduler not available, skipping cleanup scheduling' );
 			return;
 		}
 

@@ -9,9 +9,71 @@
  */
 
 import { DataViews } from '@wordpress/dataviews';
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Spinner } from '@wordpress/components';
+
+const DEFAULT_VIEW = {
+	type: 'table',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 20,
+	sort: { field: 'created_at', direction: 'desc' },
+	fields: [ 'ability_slug', 'source', 'status', 'duration_ms', 'user_id', 'created_at' ],
+};
+
+const FIELDS = [
+	{
+		id: 'ability_slug',
+		label: 'Ability',
+		enableSorting: true,
+		enableGlobalSearch: true,
+	},
+	{
+		id: 'source',
+		label: 'Source',
+		enableSorting: true,
+		elements: [
+			{ value: 'mcp', label: 'MCP' },
+			{ value: 'rest', label: 'REST' },
+			{ value: 'cli', label: 'CLI' },
+			{ value: 'cron', label: 'Cron' },
+			{ value: 'ajax', label: 'AJAX' },
+			{ value: 'direct', label: 'Direct' },
+		],
+		filterBy: { operators: [ 'is' ] },
+	},
+	{
+		id: 'status',
+		label: 'Status',
+		enableSorting: true,
+		elements: [
+			{ value: 'success', label: 'Success' },
+			{ value: 'error', label: 'Error' },
+			{ value: 'permission_denied', label: 'Permission Denied' },
+		],
+		filterBy: { operators: [ 'is' ] },
+	},
+	{
+		id: 'duration_ms',
+		label: 'Duration (ms)',
+		enableSorting: true,
+		render: ( { item } ) => `${ item.duration_ms } ms`,
+	},
+	{
+		id: 'user_id',
+		label: 'User ID',
+		enableSorting: true,
+		render: ( { item } ) => item.user_id || '—',
+	},
+	{
+		id: 'created_at',
+		label: 'Created',
+		enableSorting: true,
+		render: ( { item } ) => new Date( item.created_at ).toLocaleString(),
+	},
+];
 
 /**
  * LogsTable component
@@ -24,126 +86,42 @@ export default function LogsTable( { restEndpoint = '/wp-json/acrossai-abilities
 	const [ logs, setLogs ] = useState( [] );
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ error, setError ] = useState( null );
-	const [ totalPages, setTotalPages ] = useState( 0 );
-	const [ totalLogs, setTotalLogs ] = useState( 0 );
+	const [ totalItems, setTotalItems ] = useState( 0 );
+	const [ view, setView ] = useState( DEFAULT_VIEW );
 
-	// Define columns for DataViews
-	const columns = useMemo(
-		() => [
-			{
-				id: 'ability_slug',
-				label: 'Ability',
-				type: 'text',
-				isVisible: true,
-				enableHiding: false,
-				enableSorting: true,
-				isSearchable: true,
-			},
-			{
-				id: 'source',
-				label: 'Source',
-				type: 'enumeration',
-				isVisible: true,
-				options: [
-					{ value: 'mcp', label: 'MCP' },
-					{ value: 'rest', label: 'REST' },
-					{ value: 'cli', label: 'CLI' },
-					{ value: 'cron', label: 'Cron' },
-					{ value: 'ajax', label: 'AJAX' },
-					{ value: 'direct', label: 'Direct' },
-				],
-				enableSorting: true,
-				enableFiltering: true,
-			},
-			{
-				id: 'status',
-				label: 'Status',
-				type: 'enumeration',
-				isVisible: true,
-				options: [
-					{ value: 'success', label: 'Success' },
-					{ value: 'error', label: 'Error' },
-					{ value: 'permission_denied', label: 'Permission Denied' },
-				],
-				enableSorting: true,
-				enableFiltering: true,
-			},
-			{
-				id: 'duration_ms',
-				label: 'Duration',
-				type: 'integer',
-				isVisible: true,
-				enableSorting: true,
-				render: ( { item } ) => `${ item.duration_ms } ms`,
-			},
-			{
-				id: 'user_id',
-				label: 'User',
-				type: 'integer',
-				isVisible: true,
-				enableSorting: true,
-				render: ( { item } ) => item.user_id || '—',
-			},
-			{
-				id: 'created_at',
-				label: 'Created',
-				type: 'date',
-				isVisible: true,
-				enableSorting: true,
-				render: ( { item } ) => {
-					const date = new Date( item.created_at );
-					return date.toLocaleString();
-				},
-			},
-		],
-		[]
-	);
-
-	// Handle data view changes (filter, sort, search, pagination)
-	const handleChangeView = async ( newView ) => {
+	const fetchLogs = async ( currentView ) => {
 		setIsLoading( true );
 		setError( null );
 
 		try {
-			// Build query params
 			const params = new URLSearchParams();
 
-			// Pagination
-			if ( newView.page ) {
-				params.append( 'page', newView.page );
-			}
-			if ( newView.perPage ) {
-				params.append( 'per_page', newView.perPage );
+			params.append( 'page', currentView.page || 1 );
+			params.append( 'per_page', currentView.perPage || 20 );
+
+			if ( currentView.sort ) {
+				params.append( 'orderby', currentView.sort.field );
+				params.append( 'order', 'desc' === currentView.sort.direction ? 'DESC' : 'ASC' );
 			}
 
-			// Sort
-			if ( newView.sort ) {
-				params.append( 'orderby', newView.sort.field );
-				params.append( 'order', newView.sort.direction === 'desc' ? 'DESC' : 'ASC' );
+			if ( currentView.search ) {
+				params.append( 'search', currentView.search );
 			}
 
-			// Search
-			if ( newView.search ) {
-				params.append( 'search', newView.search );
-			}
-
-			// Filters
-			if ( newView.filters ) {
-				newView.filters.forEach( ( filter ) => {
+			if ( currentView.filters ) {
+				currentView.filters.forEach( ( filter ) => {
 					if ( filter.value && filter.value.length > 0 ) {
 						params.append( filter.field, filter.value.join( ',' ) );
 					}
 				} );
 			}
 
-			// Fetch from REST endpoint with nonce (set up by entry point)
 			const response = await apiFetch( {
-				path: `${ restEndpoint }?${ params.toString() }`,
+				url: `${ restEndpoint }?${ params.toString() }`,
 			} );
 
 			setLogs( response.logs || [] );
-			setTotalLogs( response.total || 0 );
-			setTotalPages( response.pages || 0 );
+			setTotalItems( response.total || 0 );
 		} catch ( err ) {
 			setError( err.message || 'Failed to fetch logs' );
 			setLogs( [] );
@@ -152,16 +130,14 @@ export default function LogsTable( { restEndpoint = '/wp-json/acrossai-abilities
 		}
 	};
 
-	// Initial load on mount and when restEndpoint changes (useEffect, not useMemo)
 	useEffect( () => {
-		handleChangeView( {
-			page: 1,
-			perPage: 20,
-			sort: { field: 'created_at', direction: 'desc' },
-			filters: [],
-			search: '',
-		} );
-	}, [ restEndpoint ] );
+		fetchLogs( view );
+	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+	const handleChangeView = ( newView ) => {
+		setView( newView );
+		fetchLogs( newView );
+	};
 
 	if ( error ) {
 		return (
@@ -179,31 +155,19 @@ export default function LogsTable( { restEndpoint = '/wp-json/acrossai-abilities
 		);
 	}
 
-	if ( logs.length === 0 ) {
-		return (
-			<div className="acrossai-logs-empty">
-				<p>No logs found</p>
-			</div>
-		);
-	}
-
 	return (
-		<div className="acrossai-logs-container">
-			<DataViews
-				columns={ columns }
-				data={ logs }
-				isLoading={ isLoading }
-				view={ {
-					type: 'table',
-					perPage: 20,
-					page: 1,
-				} }
-				onChangeView={ handleChangeView }
-				paginationInfo={ {
-					totalItems: totalLogs,
-					totalPages: totalPages,
-				} }
-			/>
-		</div>
+		<DataViews
+			data={ logs }
+			fields={ FIELDS }
+			view={ view }
+			onChangeView={ handleChangeView }
+			getItemId={ ( item ) => String( item.id ) }
+			isLoading={ isLoading }
+			paginationInfo={ {
+				totalItems,
+				totalPages: Math.ceil( totalItems / ( view.perPage || 20 ) ),
+			} }
+			defaultLayouts={ { table: {} } }
+		/>
 	);
 }

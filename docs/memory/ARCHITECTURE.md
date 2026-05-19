@@ -125,6 +125,95 @@ if ( AcrossAI_SingleSourceTruth::is_member( $slug ) ) { ... }
 
 **Reference**: `AcrossAI_Protected_Abilities` (feature 005, commit `62d25ad`), called from query layer + REST controller.
 
+## PATTERN-STAGE-NAMING
+
+In modules with multi-stage data transformations (raw → processed → formatted → stored), use distinct variable names for each transformation stage. This improves code clarity and prevents accidental overwrites.
+
+**Pattern**:
+```php
+// Stage 1: Raw extraction
+$output_value = $result;
+
+// Status detection based on raw value
+if ( is_wp_error( $result ) ) {
+    $output_value = $result->get_error_message();
+}
+
+// Stage 2: Formatting/truncation
+$formatted_output = AcrossAI_Logger_Formatter::format_value( $output_value );
+
+// Stage 3: Storage
+$entry['output'] = $formatted_output;
+```
+
+**Why this matters**:
+- Reader immediately sees which stage each variable represents
+- Prevents conditional overwrites from affecting later logic
+- Self-documents the transformation pipeline
+- Easier to debug (set breakpoints at each stage)
+
+**When to Apply**: Any class processing data through 3+ stages (raw, validated, transformed, formatted, stored).
+
+**Reference**: `AcrossAI_Ability_Logger::finish_pending_entry()` (feature 006, lines 195–220), where `$output_value` (raw) vs. `$formatted_output` (stage 2) enables clear status detection logic without confusion.
+
+**Evidence**:
+Feature 006 (2026-05-20): Refactored logger to use `$output_value` (raw), `$formatted_output` (formatted). Code review confirmed improved readability. PHPCS 0 errors.
+
+---
+
+## PATTERN-FEATURE-ASSET-SEPARATION
+
+When a feature module has its own admin UI, separate its assets from the main manager assets. Use feature-specific asset handles instead of generic names to prevent coupling and enable independent rebuild/versioning.
+
+**Pattern**:
+```
+build/
+  css/
+    index.css              # main manager assets
+    logger.css             # feature-specific: Feature 006
+  js/
+    index.js               # main manager assets
+    logger.js              # feature-specific: Feature 006
+```
+
+**In Admin/Main.php**:
+```php
+public function enqueue_styles( string $hook_suffix ) {
+    $on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' );
+    $on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );
+    
+    if ( ! $on_abilities && ! $on_logs ) {
+        return;
+    }
+    
+    // Main assets
+    if ( $on_abilities ) {
+        wp_enqueue_style( 'acrossai-abilities-manager', ... );
+    }
+    
+    // Feature-specific assets
+    if ( $on_logs && $this->logger_asset_file ) {
+        wp_enqueue_style( 'acrossai-abilities-logger', ... );
+    }
+}
+```
+
+**Why this matters**:
+- Each feature can be built/deployed independently
+- No cross-feature asset conflicts
+- Clear ownership of which CSS/JS belongs to which feature
+- `webpack.config.js` can define separate entry points
+
+**When to Apply**: When a feature module adds new admin pages or tabs with dedicated UI.
+
+**Reference**: Feature 006 logger (2026-05-20): Assets named `logger.css`, `logger.js`, `logger.asset.php` (not `index.*`). Admin/Main.php extended hook suffix detection to load logger assets only on `acrossai-abilities-logs` page.
+
+**Evidence**:
+Old pattern: `build/js/index.css` + `build/js/index.js` used for all admin UI (coupled).
+New pattern: `build/css/logger.css` + `build/js/logger.js` isolated to logger tab (decoupled).
+Admin/Main.php enqueue_scripts() now checks both `acrossai-abilities-manager` and `acrossai-abilities-logs` hook suffixes before enqueueing.
+
+
 ## Keep Here
 - stable system boundaries (PATH A/B, Manager namespace, BerlinDB layer)
 - ownership lines between modules or services

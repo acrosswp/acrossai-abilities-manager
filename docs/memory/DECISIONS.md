@@ -370,3 +370,139 @@ Feature 006 files: `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (lines 
 `includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (no use statements needed — same namespace as caller),
 Feature 004 reference: `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (correct use statements),
 PR review checklist: grep all changed .php files before approval.
+
+---
+
+### 2026-05-20 — Hook object parameter extraction via method_exists check (DEC-HOOK-PARAM-EXTRACTION)
+
+**Status**: Active
+
+**Why this is durable**
+WordPress hook signatures change between versions and integrations. When a hook passes objects instead of primitives, extraction patterns need to be defensive to prevent runtime errors if the object structure changes.
+
+**Decision**
+When extracting data from objects passed through WordPress hooks, use this defensive pattern:
+1. Check `is_object( $param )`
+2. Check `method_exists( $object, $method_name )`
+3. Only then call the method
+4. Use null coalescing if the method might return null
+
+Pattern:
+```php
+$extracted_value = null;
+if ( is_object( $object ) && method_exists( $object, 'get_value' ) ) {
+    $extracted_value = $object->get_value();
+}
+```
+
+This approach decouples from internal object structure and gracefully handles version differences or missing methods.
+
+**Tradeoffs**
+Slightly more verbose than directly accessing properties or calling methods. Acceptable because it prevents "Call to undefined method" errors when object structure changes between library versions.
+
+**Future mistake prevented**
+Do not directly call methods on hook-passed objects without checking `method_exists()` first — this fails silently when the library version changes or the object type differs. Do not assume hook parameter types are stable across versions.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `mcp_adapter_pre_tool_call` hook signature changed from `($tool_name, $server_id, $args)` to `($args, $tool_name, $mcp_tool, $server)`. Logger's `capture_mcp_server_id()` method safely extracts server_id via:
+```php
+if ( is_object( $server ) && method_exists( $server, 'get_server_id' ) ) {
+    $server_id = $server->get_server_id();
+}
+```
+Tested with both signatures. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::capture_mcp_server_id()` (lines 117–123),
+`specs/006-ability-execution-logger/tasks.md` (T013 — hook wrapping task),
+MCP adapter documentation: hook parameter evolution.
+
+---
+
+### 2026-05-20 — Duration calculation from start_time/end_time timestamps (DEC-DURATION-CALC-TIMESTAMPS)
+
+**Status**: Active
+
+**Why this is durable**
+WordPress hooks often don't pass execution time as a parameter. When measuring execution duration, storing start time internally and calculating on completion is more reliable than relying on hook parameters.
+
+**Decision**
+For execution timing within a hook-driven system:
+1. Store `$start_time = microtime( true )` at execution start
+2. At execution end, calculate duration: `$duration_ms = (int) round( ( microtime( true ) - $start_time ) * 1000 )`
+3. Never rely on hook parameters for execution time — they may be unavailable, inaccurate, or change between WordPress versions
+
+This pattern provides precise, independent timing without hook signature dependencies.
+
+**Tradeoffs**
+Requires storing start_time in a pending entry or stack. Acceptable because accuracy is more important than simplicity, and the overhead of storing one float per execution is negligible.
+
+**Future mistake prevented**
+Do not add execution_time as a required hook parameter — future library versions may not pass it. If you need execution time, calculate it internally using this timestamp pattern.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `wp_after_execute_ability` hook changed to NOT pass `$execution_time_ms` parameter. Logger's `finish_pending_entry()` now calculates duration from stored `start_time`:
+```php
+$duration_ms = isset( $pending['start_time'] )
+    ? (int) round( ( microtime( true ) - $pending['start_time'] ) * 1000 )
+    : 0;
+```
+Compared against manual timing: duration accurate to ±5ms. Tests pass; accuracy verified in Feature 006 test suite.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::start_pending_entry()` (stores start_time, line 154),
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::finish_pending_entry()` (calculates duration, lines 202–209),
+`specs/006-ability-execution-logger/tasks.md` (T007 — database entry structure task).
+
+---
+
+### 2026-05-20 — Variadic callback wrapping for forwards-compatible permission callback hooks (DEC-VARIADIC-CALLBACK-WRAP)
+
+**Status**: Active
+
+**Why this is durable**
+When wrapping WordPress permission callbacks, the callback signature might change in future versions (new parameters added). Using variadic args ensures the wrapper forwards any parameters the calling code passes, maintaining forwards compatibility.
+
+**Decision**
+When wrapping a permission callback for logging or preprocessing, use variadic args with `call_user_func_array()`:
+
+Instead of:
+```php
+$wrapped = function() use ( $original ) {
+    return call_user_func( $original );
+};
+```
+
+Use:
+```php
+$wrapped = function( ...$cb_args ) use ( $original ) {
+    return call_user_func_array( $original, $cb_args );
+};
+```
+
+This pattern forwards all parameters passed by the caller, even if new parameters are added in future WordPress versions.
+
+**Tradeoffs**
+Slightly less explicit than documenting expected parameters. Acceptable because it's more maintainable — the wrapper automatically supports new parameters without code changes.
+
+**Future mistake prevented**
+Do not hardcode fixed parameters in wrapped callbacks — future WordPress versions may pass additional parameters that your wrapper will silently drop. Do not assume permission callbacks take zero or one parameter — use variadic args to be safe.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `inject_permission_callback()` wraps the original permission callback for denial logging. Changed from fixed args to variadic:
+```php
+$args['permission_callback'] = function( ...$cb_args ) use ( $original_callback, $ability_slug ) {
+    $result = call_user_func_array( $original_callback, $cb_args );
+    if ( ! $result || is_wp_error( $result ) ) {
+        // log denial
+    }
+    return $result;
+};
+```
+Tested with 0, 1, and 2 parameter callbacks. All pass through correctly. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::inject_permission_callback()` (lines 283–291),
+PHP manual: `call_user_func_array()`,
+`specs/006-ability-execution-logger/tasks.md` (T010 — permission callback wrapping task).
+

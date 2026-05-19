@@ -17,7 +17,7 @@ Feature 006 builds a comprehensive execution logger for all WordPress abilities.
 - Database layer: `includes/Modules/Logger/Database/` (BerlinDB table, query, schema, row classes)
 - Logger class: `AcrossAI_Ability_Logger` singleton with stack-based pending entry management
 - REST controller split: `AcrossAI_Logger_Controller` (orchestrator) + `AcrossAI_Logger_Logs_Controller` (logs read-only endpoint)
-- Admin UI: New "Logs" tab in `admin/Partials/Menu.php` + REST-powered React component using @wordpress/dataviews
+- Admin UI: Dedicated "Logs" submenu page via `admin/Partials/LogsMenu.php` + REST-powered React component using @wordpress/dataviews
 
 ---
 
@@ -98,7 +98,8 @@ includes/Modules/Logger/                          # NEW: Logger module (utilitie
     ├── AcrossAI_Logger_Controller.php            # REST orchestrator (namespace, shared permission check)
     └── AcrossAI_Logger_Logs_Controller.php       # REST read-only logs endpoint (GET /logger/logs)
 
-admin/Partials/Menu.php                           # MODIFIED: Add "Logs" tab (in-place update)
+admin/Partials/LogsMenu.php                        # NEW: Logs submenu page (register_submenu, render, get_hook_suffix)
+admin/Partials/Menu.php                           # MODIFIED: Logs tab removed — submenu page replaces it
 
 includes/Utilities/AcrossAI_Logger_Formatter.php  # REUSE: Format log entry output (JSON encoding, truncation)
 includes/Utilities/AcrossAI_Sanitizer.php         # REUSE: Existing sanitizer for slug validation
@@ -230,23 +231,28 @@ $global = false  // BerlinDB will prepend site prefix (e.g. wp_logs_1, wp_logs_2
 
 **Headers**: `X-WP-Total: 1500`, `X-WP-TotalPages: 75` (pagination headers reflect *filtered* results, not all records — AC-QUERY-LAYER-FILTERING)
 
-### Admin UI: Logs Tab
+### Admin UI: Logs Submenu Page
 
 **Component**: React component using `@wordpress/dataviews` DataViews export (not a separate `@wordpress/dataforms` package — Constitution §III clarification).
 
 **Structure**:
-- New tab in `admin/Partials/Menu.php` labeled "Logs" (added in-place, no new menu class — AC-MENU-IN-PLACE)
+- Dedicated submenu page `admin/Partials/LogsMenu.php` at `admin.php?page=acrossai-abilities-logs`
+- Registered under parent menu `acrossai-abilities-manager` via `add_submenu_page()`
+- Hook suffix stored in `LogsMenu::$hook_suffix` for conditional asset enqueuing in `Admin\Main`
 - Mounts React component on `#acrossai-logs-container` div
-- DataViews displays columns: ability_slug, source, user_id, status, duration_ms, created_at
-- Supports: search (slug), sort (any column), filter (status, source dropdown), pagination
+- DataViews `fields` prop: ability_slug, source, user_id, status, duration_ms, created_at
+- View state managed via React `useState` (controlled component)
+- Supports: search (slug), sort (any field), filter (status, source), pagination
 
-**Columns** (all visible by default):
+**Fields** (all visible by default):
 - **Ability Slug** (searchable, sortable, primary sort key)
-- **Source** (sortable, filterable dropdown: mcp, rest, cli, cron, ajax, direct)
-- **User ID** (sortable, displays WordPress username if available, else user ID)
-- **Status** (sortable, filterable dropdown: success, error, permission_denied)
-- **Duration (ms)** (sortable, right-aligned, numeric)
+- **Source** (sortable, filterable: mcp, rest, cli, cron, ajax, direct)
+- **User ID** (sortable)
+- **Status** (sortable, filterable: success, error, permission_denied)
+- **Duration (ms)** (sortable, numeric)
 - **Timestamp** (sortable, formatted as locale date/time, default sort DESC)
+
+**Build**: webpack entry `js/logger` → `build/js/logger.js` / `build/js/logger.asset.php`; CSS entry `css/logger` → `build/css/logger.css`
 
 **Behaviors** (per user stories):
 - US1: Admins can sort/filter/search to audit execution history ✅ (DataViews sort, filter, search)
@@ -280,10 +286,10 @@ $this->loader->add_action( 'plugins_loaded', $logger, 'boot', 20 );
 
 | Hook | Priority | Handler | Purpose | Inputs | Outputs |
 |------|----------|---------|---------|--------|---------|
-| `mcp_adapter_pre_tool_call` | 5 | `capture_mcp_server_id()` | Stash MCP server ID (unavailable in execute_ability hooks) | tool_name, server_id, args | (none — store in instance variable) |
-| `wp_before_execute_ability` | 10 | `start_pending_entry()` | Start a pending log entry, record timestamp and source | ability_slug, args | (none — push to stack) |
-| `wp_after_execute_ability` | 10 | `finish_pending_entry()` | Pop pending entry, record output/status/duration, write to DB | ability_slug, result, execution_time_ms | (none — insert row) |
-| `wp_register_ability_args` | 100001 | `wrap_permission_callback()` | Wrap the permission_callback to log permission denials | ability_slug, args | modified `$args` with wrapped callback |
+| `mcp_adapter_pre_tool_call` | 5 | `capture_mcp_server_id()` | Stash MCP server ID. Hook signature: `($args, $tool_name, $mcp_tool, $server)` — server ID extracted via `$server->get_server_id()`. Accepts 4 args. Returns `$args` unchanged. | args, tool_name, mcp_tool, server | `$args` unchanged |
+| `wp_before_execute_ability` | 10 | `start_pending_entry()` | Start a pending log entry, record `microtime(true)` start time and source. Hook: `($name, $input)` | ability_slug, input | (none — push to stack) |
+| `wp_after_execute_ability` | 10 | `finish_pending_entry()` | Pop pending entry, calculate duration from `start_time`, record output/status, write to DB. Hook: `($name, $input, $result)` — WP core does NOT pass execution time, duration is self-calculated. | ability_slug, input, result | (none — insert row) |
+| `wp_register_ability_args` | 100001 | `wrap_permission_callback()` | Wrap the permission_callback to log permission denials. Wrapper uses `function( ...$cb_args )` + `call_user_func_array()` to forward all arguments to the original callback unchanged. | ability_slug, args | modified `$args` with wrapped callback |
 
 **Execution Flow**:
 1. MCP call (if applicable): `mcp_adapter_pre_tool_call` fires → capture `server_id` → stash in instance var
@@ -387,15 +393,16 @@ Three WordPress filters exposed for third-party extensions:
 
 **T012**: Create `src/scss/logs-table.scss` — Minimal styles for logs table container.
 
-**T013**: Create `src/js/index.js` — Build entry point that imports `LogsTable.js` and compiles via @wordpress/scripts.
+**T013**: Create `src/js/index.js` — Build entry point that imports `LogsTable.js` and mounts it via `createRoot` on `DOMContentLoaded`. Webpack entry key `js/logger` → outputs `build/js/logger.js` and `build/js/logger.asset.php`. CSS entry `css/logger` → `build/css/logger.css`.
 
-**T014**: Modify `admin/Partials/Menu.php` — Add "Logs" tab (in-place):
-- New tab button: "Logs"
-- Tab content div: `<div id="acrossai-logs-container"></div>`
-- Enqueue built script + stylesheet (enqueue in `Admin/Main.php`, not in Partials class per Constitution §I AC-ENQUEUE-ADMIN)
-- Mount React component into container on `DOMContentLoaded`
+**T014**: Create `admin/Partials/LogsMenu.php` — Dedicated Logs submenu page:
+- Singleton pattern (`instance()` / private constructor)
+- `register_submenu()` calls `add_submenu_page()` under `acrossai-abilities-manager`; stores returned hook suffix
+- `render()` outputs `<div class="wrap">` + `<div id="acrossai-logs-container"></div>`
+- `get_hook_suffix()` exposes stored suffix for conditional enqueue in `Admin\Main`
+- Wired in `includes/Main.php::define_admin_hooks()` via the Loader
 
-**T015**: Modify `admin/Main.php::enqueue_scripts()` + `enqueue_styles()` — Enqueue logger React bundle and stylesheet (only on admin Abilities Manager page).
+**T015**: Modify `admin/Main.php::enqueue_scripts()` + `enqueue_styles()` — Enqueue `build/js/logger.js` and `build/css/logger.css` conditionally: only when `$hook_suffix === LogsMenu::instance()->get_hook_suffix()`. Asset manifest read from `build/js/logger.asset.php`.
 
 ### Task Group F: Action Scheduler Integration
 
@@ -423,9 +430,9 @@ Three WordPress filters exposed for third-party extensions:
 - `tests/phpunit/FeatureLogger/QueryBuilderTest.php` — Query filtering, sorting, pagination accuracy
 - `tests/jest/components/LogsTable.test.js` — React component rendering, search/sort/filter interactions
 
-**T020**: PHPCS validation — `vendor/bin/phpcs includes/Modules/Logger/ admin/Partials/Menu.php includes/Main.php` (zero errors required)
+**T020**: PHPCS validation — `vendor/bin/phpcs includes/Modules/Logger/ admin/Partials/LogsMenu.php includes/Main.php includes/Utilities/AcrossAI_Logger_Formatter.php` (zero errors required)
 
-**T021**: PHPStan validation — `vendor/bin/phpstan analyse includes/Modules/Logger/ admin/Partials/Menu.php includes/Main.php -l 8` (zero errors required)
+**T021**: PHPStan validation — `vendor/bin/phpstan analyse includes/Modules/Logger/ admin/Partials/LogsMenu.php includes/Main.php includes/Utilities/AcrossAI_Logger_Formatter.php -l 8` (zero errors required)
 
 **T022**: ESLint validation — `npm run lint src/js/components/LogsTable.js` (zero errors required)
 
