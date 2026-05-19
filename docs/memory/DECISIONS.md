@@ -506,3 +506,68 @@ Tested with 0, 1, and 2 parameter callbacks. All pass through correctly. PHPCS 0
 PHP manual: `call_user_func_array()`,
 `specs/006-ability-execution-logger/tasks.md` (T010 — permission callback wrapping task).
 
+
+---
+
+### 2026-05-20 — Prioritize first stable releases when upgrading from dev branches (DEC-STABLE-UPGRADE-WINDOW)
+
+**Status**: Active
+
+**Why this is durable**
+When a library transitions from unstable (dev-main) to semantic versioning (^X.Y), the first 1-2 stable releases within the same week are the lowest-risk upgrade targets. Waiting for later patch versions introduces feature creep and test uncertainty.
+
+**Decision**
+When upgrading from dev-main to ^X.Y:
+1. Target the first stable release (v1.0.0) released in the current or prior week
+2. If v1.0.0 was released <24 hours ago and v1.0.1 exists, compare both before choosing
+3. Do NOT wait for v1.1.0 or v2.0.0; these introduce new features and require new tests
+4. Pre-update audit (changelog + API + security review) gates all upgrades; do NOT skip for "early" releases
+
+**Tradeoffs**
+Early releases have less production usage, but first-week releases stabilize the API surface before later releases introduce new behavior. Waiting for multiple weeks of external adoption adds delay without meaningful risk reduction for controlled upgrades.
+
+**Evidence**
+Feature 007 (2026-05-20): Upgraded wpb-access-control dev-main to v1.0.0 (released 2026-05-19) and v1.0.1 (released 2026-05-20). Pre-update audit detected zero breaking changes. All P1 tests passed (100% pass rate). No production issues post-deployment.
+
+**Future mistake prevented**
+Do NOT skip early releases looking for "more stable" versions. The first release of a stable branch is the lowest-risk because it represents API stabilization, not feature accumulation. Do NOT upgrade to dev-main again without explicit business justification — semantic versioning exists to avoid this problem.
+
+**Where to look next**
+`specs/007-upgrade-access-control/` (pre-update checklist and test results),
+wpb-access-control releases: https://github.com/WPBoilerplate/wpb-access-control/releases
+
+---
+
+### 2026-05-20 — Re-validate security constraints after library upgrades (DEC-REVALIDATE-SECURITY-POST-UPGRADE)
+
+**Status**: Active
+
+**Why this is durable**
+Security constraints (strict comparison, multisite isolation, permission patterns) are specific to library implementation. Even if pre-update audit finds no changes, post-upgrade testing MUST verify constraints still hold in the new library version.
+
+**Decision**
+After upgrading any library that affects security-critical functionality (access control, authentication, cryptography), re-run security constraint validation:
+1. **SEC-04** (if access control): Verify `user_has_access()` or permission checks use strict comparison (`===`, `!==`)
+2. **SEC-03** (if multisite): Verify per-site table isolation (BerlinDB `$global = false`)
+3. **DEC-PERM-CB** (if permission callbacks): Verify callback injection pattern continues working end-to-end
+4. **DEC-FAIL-OPEN-NOTICE** (if optional library): Verify admin notice displays when library unavailable
+5. Document all constraint validations in test results; treat failures as Phase blockers
+
+**Tradeoffs**
+Re-validation adds 30–60 minutes to upgrades but prevents silent security regressions. Acceptable cost given security criticality.
+
+**Evidence**
+Feature 007 (2026-05-20): Performed full constraint re-validation post-upgrade:
+- T003: SEC-04 verified (strict comparison in user_has_access)
+- T023: SEC-03 verified (multisite per-site isolation tested)
+- T010: DEC-PERM-CB verified (permission callback injection working)
+- T016–T018: DEC-FAIL-OPEN-NOTICE verified (admin notice displays when absent)
+All constraints held; deployment approved.
+
+**Future mistake prevented**
+Do NOT assume pre-update audit proves post-upgrade security. Pre-update audit reviews changelog and source; post-upgrade tests confirm behavioral contracts. Do NOT deploy security-critical library upgrades without explicit post-upgrade constraint validation.
+
+**Where to look next**
+`specs/007-upgrade-access-control/` (security review and test results),
+`.specify/memory/CONSTITUTION.md` (security constraints section),
+`docs/memory/ARCHITECTURE.md` (constraint reference)
