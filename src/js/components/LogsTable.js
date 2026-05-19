@@ -9,7 +9,7 @@
  */
 
 import { DataViews } from '@wordpress/dataviews';
-import { useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Spinner } from '@wordpress/components';
 
@@ -136,7 +136,7 @@ export default function LogsTable( { restEndpoint = '/wp-json/acrossai-abilities
 				} );
 			}
 
-			// Fetch from REST endpoint
+			// Fetch from REST endpoint with nonce (set up by entry point)
 			const response = await apiFetch( {
 				path: `${ restEndpoint }?${ params.toString() }`,
 			} );
@@ -152,8 +152,8 @@ export default function LogsTable( { restEndpoint = '/wp-json/acrossai-abilities
 		}
 	};
 
-	// Initial load
-	useMemo( () => {
+	// Initial load on mount and when restEndpoint changes (useEffect, not useMemo)
+	useEffect( () => {
 		handleChangeView( {
 			page: 1,
 			perPage: 20,
