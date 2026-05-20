@@ -266,3 +266,243 @@ Diff, tests, review, incident, or repeated implementation evidence.
 
 **Where to look next**
 Files, modules, or specs future maintainers should inspect.
+
+### 2026-05-19 — Project namespace convention: underscore-based, not PSR-4 backslash (DEC-NAMESPACE-CONVENTION)
+
+**Status**: Active
+
+**Why this is durable**
+Any new file added to the plugin must follow the same namespace convention. Mixing PSR-4 backslash-based namespaces (e.g., `AcrossAI\Abilities\Logger`) with underscore conventions (e.g., `AcrossAI_Abilities_Manager\Includes\Logger`) causes "Class not found" runtime errors at integration time.
+
+**Decision**
+All PHP files in the plugin use underscore-based namespace pattern: `AcrossAI_Abilities_Manager\Includes\<Category>\<Submodule>`. Never use PSR-4 backslash-only style (e.g., `AcrossAI\Abilities\*`). This applies to all files: utilities, modules, database layers, REST controllers, everything.
+
+Pattern examples:
+- Utilities: `AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter`
+- Module core: `AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Ability_Logger`
+- Database: `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query`
+
+**Tradeoffs**
+Underscore convention is more verbose than PSR-4 backslash style, but it matches WordPress plugin naming conventions and provides one single standard. Accepted because it eliminates namespace conflicts and is consistent across the entire plugin.
+
+**Future mistake prevented**
+Do not import from `AcrossAI\Abilities\*` namespaces — they do not exist in this project. Do not create new files with PSR-4 backslash namespaces. At PR review, check all namespace declarations match the pattern above.
+
+**Evidence**
+Fixed in Feature 006 (2026-05-19): `AcrossAI_Logger_Source_Detector.php`, `AcrossAI_Logger_Formatter.php`, and `AcrossAI_Ability_Logger.php` all rewritten with correct underscore namespace. Use statements in logger updated to `AcrossAI_Abilities_Manager\Includes\*` pattern. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+Reference file: `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (demonstrates correct pattern),
+Feature 006 files: `includes/Modules/Logger/AcrossAI_*`, `includes/Utilities/AcrossAI_Logger_Formatter.php`,
+`specs/006-ability-execution-logger/plan.md` (namespace fix tasks).
+
+---
+
+### 2026-05-19 — Utility classes are pure static, not singletons (DEC-UTILITY-STATIC-ONLY)
+
+**Status**: Active
+
+**Why this is durable**
+The plugin uses two patterns: stateless utilities (pure static methods) and stateful orchestrators (singletons). Distinguishing between them prevents accidental singleton bloat in the utility layer.
+
+**Decision**
+Utility classes that have no mutable state and perform functional transformations MUST be 100% static. Never add `$_instance`, `instance()`, or `private __construct()` to utility classes. Only stateful components (Logger, Query, Table, REST controllers) use the singleton pattern.
+
+Examples:
+- **Pure utilities (static only)**: `AcrossAI_Logger_Formatter` (formatting logic), `AcrossAI_Logger_Source_Detector` (context checks), `AcrossAI_Protected_Abilities` (exclusion list)
+- **Stateful singletons**: `AcrossAI_Ability_Logger` (manages pending_entries stack), `AcrossAI_Ability_Logs_Query` (BerlinDB wrapper), `AcrossAI_Sitewide_Table` (database registration)
+
+**Tradeoffs**
+Utilities are slightly less flexible than singletons (cannot hold request-scoped state), but simplicity is gained. Acceptable because utilities should be deterministic and state-free.
+
+**Future mistake prevented**
+Do not convert a pure utility to a singleton just to avoid passing state around — if you need state, reconsider whether it belongs in the utility layer or a higher-level orchestrator.
+
+**Evidence**
+Feature 006 cleanup (2026-05-19): `AcrossAI_Logger_Formatter.php` removed 50+ lines of singleton boilerplate (`$_instance`, `instance()`, `__construct()`). File is now 215 lines of pure static methods. `AcrossAI_Logger_Source_Detector.php` is pure static utility (only private static properties for MCP context stashing, which is necessary for cross-hook communication).
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Logger_Formatter.php` (pure utility example),
+`includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (pure utility with private state),
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php` (stateful singleton example),
+`specs/006-ability-execution-logger/plan.md` (B-phase logger tasks).
+
+---
+
+### 2026-05-19 — Use statement namespace must match project underscore convention; catch at PR review (DEC-USE-STATEMENT-CONSISTENCY)
+
+**Status**: Active
+
+**Why this is durable**
+Import path errors cause "Class not found" failures at runtime, often caught late (during integration testing). Early detection at PR review prevents this class of error.
+
+**Decision**
+All `use` statements must follow the project underscore namespace convention. Before merge, verify every `use` statement imports from `AcrossAI_Abilities_Manager\Includes\*` namespaces, never from `AcrossAI\Abilities\*` or other non-standard paths. Lint rule: `grep -n '^use AcrossAI\\\\' src_file.php` should return zero results.
+
+Correct pattern:
+```php
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+```
+
+Incorrect pattern (never use):
+```php
+use AcrossAI\Abilities\Utilities\AcrossAI_Logger_Formatter;  // ❌ Wrong namespace
+use AcrossAI\Abilities\Logger\AcrossAI_Ability_Logger;        // ❌ Wrong namespace
+```
+
+**Tradeoffs**
+Requires manual review discipline. Acceptable because `use` statements are static and centralized at the top of every file.
+
+**Future mistake prevented**
+Do not approve a PR with `use AcrossAI\Abilities\*` imports — request the developer rewrite them using the underscore convention before merge.
+
+**Evidence**
+Feature 006 fix (2026-05-19): `AcrossAI_Ability_Logger.php` had two incorrect `use` statements pointing to `AcrossAI\Abilities\*`. Rewritten to:
+```php
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+```
+All three logger files verified at merge (2026-05-19). grep confirmed zero backslash-only uses.
+
+**Where to look next**
+Feature 006 files: `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (lines 14–15, use statements),
+`includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (no use statements needed — same namespace as caller),
+Feature 004 reference: `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (correct use statements),
+PR review checklist: grep all changed .php files before approval.
+
+---
+
+### 2026-05-20 — Hook object parameter extraction via method_exists check (DEC-HOOK-PARAM-EXTRACTION)
+
+**Status**: Active
+
+**Why this is durable**
+WordPress hook signatures change between versions and integrations. When a hook passes objects instead of primitives, extraction patterns need to be defensive to prevent runtime errors if the object structure changes.
+
+**Decision**
+When extracting data from objects passed through WordPress hooks, use this defensive pattern:
+1. Check `is_object( $param )`
+2. Check `method_exists( $object, $method_name )`
+3. Only then call the method
+4. Use null coalescing if the method might return null
+
+Pattern:
+```php
+$extracted_value = null;
+if ( is_object( $object ) && method_exists( $object, 'get_value' ) ) {
+    $extracted_value = $object->get_value();
+}
+```
+
+This approach decouples from internal object structure and gracefully handles version differences or missing methods.
+
+**Tradeoffs**
+Slightly more verbose than directly accessing properties or calling methods. Acceptable because it prevents "Call to undefined method" errors when object structure changes between library versions.
+
+**Future mistake prevented**
+Do not directly call methods on hook-passed objects without checking `method_exists()` first — this fails silently when the library version changes or the object type differs. Do not assume hook parameter types are stable across versions.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `mcp_adapter_pre_tool_call` hook signature changed from `($tool_name, $server_id, $args)` to `($args, $tool_name, $mcp_tool, $server)`. Logger's `capture_mcp_server_id()` method safely extracts server_id via:
+```php
+if ( is_object( $server ) && method_exists( $server, 'get_server_id' ) ) {
+    $server_id = $server->get_server_id();
+}
+```
+Tested with both signatures. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::capture_mcp_server_id()` (lines 117–123),
+`specs/006-ability-execution-logger/tasks.md` (T013 — hook wrapping task),
+MCP adapter documentation: hook parameter evolution.
+
+---
+
+### 2026-05-20 — Duration calculation from start_time/end_time timestamps (DEC-DURATION-CALC-TIMESTAMPS)
+
+**Status**: Active
+
+**Why this is durable**
+WordPress hooks often don't pass execution time as a parameter. When measuring execution duration, storing start time internally and calculating on completion is more reliable than relying on hook parameters.
+
+**Decision**
+For execution timing within a hook-driven system:
+1. Store `$start_time = microtime( true )` at execution start
+2. At execution end, calculate duration: `$duration_ms = (int) round( ( microtime( true ) - $start_time ) * 1000 )`
+3. Never rely on hook parameters for execution time — they may be unavailable, inaccurate, or change between WordPress versions
+
+This pattern provides precise, independent timing without hook signature dependencies.
+
+**Tradeoffs**
+Requires storing start_time in a pending entry or stack. Acceptable because accuracy is more important than simplicity, and the overhead of storing one float per execution is negligible.
+
+**Future mistake prevented**
+Do not add execution_time as a required hook parameter — future library versions may not pass it. If you need execution time, calculate it internally using this timestamp pattern.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `wp_after_execute_ability` hook changed to NOT pass `$execution_time_ms` parameter. Logger's `finish_pending_entry()` now calculates duration from stored `start_time`:
+```php
+$duration_ms = isset( $pending['start_time'] )
+    ? (int) round( ( microtime( true ) - $pending['start_time'] ) * 1000 )
+    : 0;
+```
+Compared against manual timing: duration accurate to ±5ms. Tests pass; accuracy verified in Feature 006 test suite.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::start_pending_entry()` (stores start_time, line 154),
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::finish_pending_entry()` (calculates duration, lines 202–209),
+`specs/006-ability-execution-logger/tasks.md` (T007 — database entry structure task).
+
+---
+
+### 2026-05-20 — Variadic callback wrapping for forwards-compatible permission callback hooks (DEC-VARIADIC-CALLBACK-WRAP)
+
+**Status**: Active
+
+**Why this is durable**
+When wrapping WordPress permission callbacks, the callback signature might change in future versions (new parameters added). Using variadic args ensures the wrapper forwards any parameters the calling code passes, maintaining forwards compatibility.
+
+**Decision**
+When wrapping a permission callback for logging or preprocessing, use variadic args with `call_user_func_array()`:
+
+Instead of:
+```php
+$wrapped = function() use ( $original ) {
+    return call_user_func( $original );
+};
+```
+
+Use:
+```php
+$wrapped = function( ...$cb_args ) use ( $original ) {
+    return call_user_func_array( $original, $cb_args );
+};
+```
+
+This pattern forwards all parameters passed by the caller, even if new parameters are added in future WordPress versions.
+
+**Tradeoffs**
+Slightly less explicit than documenting expected parameters. Acceptable because it's more maintainable — the wrapper automatically supports new parameters without code changes.
+
+**Future mistake prevented**
+Do not hardcode fixed parameters in wrapped callbacks — future WordPress versions may pass additional parameters that your wrapper will silently drop. Do not assume permission callbacks take zero or one parameter — use variadic args to be safe.
+
+**Evidence**
+Feature 006 logger (2026-05-20): `inject_permission_callback()` wraps the original permission callback for denial logging. Changed from fixed args to variadic:
+```php
+$args['permission_callback'] = function( ...$cb_args ) use ( $original_callback, $ability_slug ) {
+    $result = call_user_func_array( $original_callback, $cb_args );
+    if ( ! $result || is_wp_error( $result ) ) {
+        // log denial
+    }
+    return $result;
+};
+```
+Tested with 0, 1, and 2 parameter callbacks. All pass through correctly. PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Ability_Logger.php::inject_permission_callback()` (lines 283–291),
+PHP manual: `call_user_func_array()`,
+`specs/006-ability-execution-logger/tasks.md` (T010 — permission callback wrapping task).
+

@@ -263,12 +263,16 @@ final class Main {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+		$this->loader->add_action( 'plugin_action_links', $plugin_admin, 'plugin_action_links', 1000, 2 );
 		/**
 		 * Add the Plugin Main Menu
 		 */
 		$main_menu = new \AcrossAI_Abilities_Manager\Admin\Partials\Menu( $this->get_plugin_name(), $this->get_version() );
 		$this->loader->add_action( 'admin_menu', $main_menu, 'main_menu' );
-		$this->loader->add_action( 'plugin_action_links', $main_menu, 'plugin_action_links', 1000, 2 );
+
+		// Execution Logs submenu page (Feature 006: T014)
+		$logs_menu = \AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu::instance();
+		$this->loader->add_action( 'admin_menu', $logs_menu, 'register_submenu' );
 
 		// Sitewide Ability Manager — DB table setup and REST routes via singleton pattern.
 		// Table instance call makes the class available; BerlinDB hooks maybe_upgrade() to admin_init.
@@ -308,6 +312,15 @@ final class Main {
 		$override_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Ability_Override_Processor::instance();
 		$this->loader->add_action( 'plugins_loaded', $override_processor, 'boot_hook', 20 );
 		$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', $override_processor, 'bust_cache_hook' );
+
+		// Ability Execution Logger — create DB table, boot logger at P20, register REST routes.
+		\AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Table::instance();
+
+		$logger = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Ability_Logger::instance();
+		$this->loader->add_action( 'plugins_loaded', $logger, 'boot', 20 );
+
+		$logger_rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest\AcrossAI_Logger_Controller::instance();
+		$this->loader->add_action( 'rest_api_init', $logger_rest_controller, 'register_routes' );
 	}
 
 	/**

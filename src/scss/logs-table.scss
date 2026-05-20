@@ -1,0 +1,78 @@
+/**
+ * Logs Table Styles
+ *
+ * Minimal styling for LogsTable component.
+ * Most styles inherited from @wordpress/dataviews component.
+ *
+ * @package acrossai-abilities-manager
+ * @since 0.1.0
+ */
+
+#acrossai-logs-container {
+	padding: 1rem;
+
+	// Loading state
+	.acrossai-logs-loading {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 300px;
+		color: var(--wp-colors-gray-700, #555);
+	}
+
+	// Error state
+	.acrossai-logs-error {
+		padding: 1rem;
+		background-color: var(--wp-colors-red-100, #ffcccc);
+		border: 1px solid var(--wp-colors-red-300, #ff6666);
+		border-radius: 4px;
+		color: var(--wp-colors-red-900, #990000);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	// Empty state
+	.acrossai-logs-empty {
+		padding: 1rem;
+		text-align: center;
+		color: var(--wp-colors-gray-600, #777);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	// Table styling (DataViews inherits from WordPress design system)
+	.wp-dataviews {
+		margin-top: 1rem;
+
+		// Responsive design for mobile
+		@media (max-width: 600px) {
+			.wp-dataviews-table {
+				font-size: 0.875rem;
+
+				th,
+				td {
+					padding: 0.5rem;
+				}
+			}
+		}
+	}
+
+	// Column-specific styling
+	.wp-dataviews-table {
+		// Duration column (right-aligned)
+		th:has(> .wp-dataviews-column__header:contains("Duration")),
+		td:has(> .wp-dataviews-cell:contains("ms")) {
+			text-align: right;
+		}
+
+		// Status column (center-aligned)
+		th:has(> .wp-dataviews-column__header:contains("Status")),
+		td:has(> .wp-dataviews-cell:contains("Success")) {
+			text-align: center;
+		}
+	}
+}
