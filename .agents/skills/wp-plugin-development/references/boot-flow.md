@@ -6,14 +6,13 @@
 // File is loaded by WordPress
 wordpress-plugin-boilerplate.php
   └─ define WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_FILE = __FILE__
-  └─ require includes/Main.php
   └─ register_activation_hook  → Includes\Activator::activate()
   └─ register_deactivation_hook → Includes\Deactivator::deactivate()
   └─ wordpress_plugin_boilerplate_run()
        └─ Main::instance()           // singleton; triggers __construct()
-            ├─ define_constants()    // all constants except PLUGIN_FILE (version hardcoded)
-            ├─ $this->plugin_dir     // set directly in constructor from PLUGIN_PATH constant
-            ├─ load_composer_dependencies() // conditionally loads vendor/autoload_packages.php
+            ├─ define_constants()    // all constants except PLUGIN_FILE
+            ├─ register_autoloader() // spl_autoload_register via Autoloader.php
+            ├─ load_composer_dependencies() // vendor/autoload.php + Mozart blocks
             ├─ load_dependencies()   // $this->loader = Loader::instance()
             ├─ set_locale()          // loader->add_action('init', $i18n, 'do_load_textdomain')
             └─ load_hooks()
@@ -52,7 +51,12 @@ Never add constants in the bootstrap file or in any other class.
 - `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_URL`
 - `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_NAME_SLUG`
 - `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_NAME`
-- `WORDPRESS_PLUGIN_BOILERPLATE_VERSION` — hardcoded string in `define_constants()`; update it manually when bumping the version
+- `WORDPRESS_PLUGIN_BOILERPLATE_VERSION` — read live from `get_plugin_data()`
+
+⚠️ **Known source bug**: `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_URL` is `define()`-d twice
+in `define_constants()`. The private guard prevents a PHP fatal; the constant keeps its
+first (correct URL) value. Do not attempt to fix it — leave the block as-is and append
+new constants below it.
 
 ## Kill switch
 
@@ -94,77 +98,44 @@ Never call `add_action()` or `add_filter()` directly in any class — always go 
 methods that feed hooks into the Loader. Every hook the plugin registers must trace back to
 one of those two methods.
 
-**Correct pattern for feature classes (singleton + direct wiring):**
-
-All feature classes in this plugin use the `instance()` singleton pattern. There is no
-`Module_Base` abstract class and no `register_hooks()` delegation. `includes/Main.php` is
-the single location that wires every hook:
+**Correct pattern for feature modules:**
 
 ```php
 // includes/Main.php::define_admin_hooks()
 private function define_admin_hooks(): void {
-    // Admin asset enqueue
-    $plugin_admin = new \AcrossAI_Abilities_Manager\Admin\Main( $this->get_plugin_name(), $this->get_version() );
+    // Direct hooks
+    $plugin_admin = new \My_Plugin\Admin\Main( $this->get_plugin_name(), $this->get_version() );
     $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
-    $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
-    // Admin menu
-    $menu = new \AcrossAI_Abilities_Manager\Admin\Partials\Menu( $this->get_plugin_name(), $this->get_version() );
-    $this->loader->add_action( 'admin_menu', $menu, 'main_menu' );
-    $this->loader->add_action( 'plugin_action_links', $menu, 'plugin_action_links', 1000, 2 );
-
-    // Feature REST routes — singleton instance, no constructor args needed
-    $this->loader->add_action(
-        'rest_api_init',
-        \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Rest_Controller::instance(),
-        'register_routes'
-    );
+    // Module hooks — pass $this->loader; do NOT let the module self-register
+    $module = new \My_Plugin\Includes\Modules\MyFeature\MyFeature_Module();
+    $module->register_hooks( $this->loader );
 }
 ```
 
-Feature classes expose the singleton via:
-
 ```php
-// Any feature class (e.g. AcrossAI_Sitewide_Rest_Controller, AcrossAI_Sitewide_Query, etc.)
-protected static $_instance = null;
-
-public static function instance(): self {
-    if ( null === self::$_instance ) {
-        self::$_instance = new self();
-    }
-    return self::$_instance;
-}
-
-private function __construct() {
-    // dependencies obtained via other ::instance() calls, never via constructor injection
-    $this->db_query = \AcrossAI_Sitewide_Query::instance();
+// includes/Modules/MyFeature/MyFeature_Module.php
+public function register_hooks( Loader $loader ): void {
+    $admin_page = new \My_Plugin\Admin\Partials\MyFeaturePage();
+    $loader->add_action( 'admin_menu', $admin_page, 'register_menu' );
+    $loader->add_action( 'admin_enqueue_scripts', $admin_page, 'enqueue_assets' );
 }
 ```
 
 **What to avoid:**
 
 ```php
-// ❌ Module orchestrator with register_hooks() — this pattern is NOT used
-class AcrossAI_Sitewide_Module {
-    public function register_hooks( Loader $loader ): void { ... }
-}
-
-// ❌ Abstract Module_Base — deleted; do not recreate
-abstract class AcrossAI_Module_Base {
-    abstract public function register_hooks( Loader $loader ): void;
-}
-
-// ❌ Module self-registering
+// ❌ Module grabbing the Loader singleton itself
 public function boot(): void {
     $loader = Loader::instance();   // wrong — module must not self-register
     $this->register_hooks( $loader );
 }
 
-// ❌ Calling register_hooks() from load_dependencies()
+// ❌ Calling boot() / register_hooks() from load_dependencies()
 private function load_dependencies(): void {
     $this->loader = Loader::instance();
     $module = new SomeModule();
-    $module->register_hooks( $this->loader ); // wrong — runs before define_admin_hooks()
+    $module->boot(); // wrong — this runs before define_admin_hooks()
 }
 ```
 
