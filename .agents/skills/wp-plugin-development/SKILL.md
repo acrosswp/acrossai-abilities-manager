@@ -1,7 +1,7 @@
 ---
 name: wp-plugin-development
 description: "Use for all development work on plugins built with WPBoilerplate/wordpress-plugin-boilerplate: hooks via the Loader singleton, PSR-4 namespace layout, security baseline (nonces/capabilities/escaping), settings API, REST endpoints, lifecycle, i18n, multisite, performance, and the @wordpress/scripts build pipeline."
-compatibility: "WordPress 6.0+ (PHP 7.4+). Uses @wordpress/scripts build pipeline and the namespaced PSR-4 layout from the main branch."
+compatibility: "WordPress 6.9+ (PHP 8.0+). Uses @wordpress/scripts build pipeline, Jetpack autoloader, and the namespaced PSR-4 layout from the main branch."
 ---
 
 # WP Plugin Development (WPBoilerplate)
@@ -80,11 +80,14 @@ See: `references/structure.md`
   `define($name, $value)` guard. Never define constants elsewhere.
 - **`includes/Main.php` is the single and only place where hooks enter WordPress.**
   `define_admin_hooks()` and `define_public_hooks()` are the only methods that call
-  `$this->loader->add_action()` / `$this->loader->add_filter()`, whether directly or by
-  delegating to a module's `register_hooks( Loader $loader )` method.
-- Feature modules may expose a `register_hooks( Loader $loader )` method, but they must
-  **never** call `Loader::instance()` themselves. `includes/Main.php` passes `$this->loader`
-  to them — the module does not reach for the Loader on its own.
+  `$this->loader->add_action()` / `$this->loader->add_filter()`. All hooks must trace
+  directly to those two methods — there is no module `register_hooks()` delegation.
+- **All feature classes use the singleton `instance()` pattern** (`protected static $_instance = null;`
+  + `public static function instance(): self`). `includes/Main.php` obtains instances via
+  `FeatureClass::instance()` and passes them to the Loader. Feature classes must **never**
+  call `Loader::instance()` themselves.
+- There is **no `Module_Base` abstract class** and no `register_hooks( Loader $loader )` convention.
+  Do not create these. Hooks go directly in `define_admin_hooks()` / `define_public_hooks()`.
 - `load_dependencies()` is for wiring up the Loader singleton and loading files only.
   **Never call `boot()`, `register_hooks()`, or any hook-registering method from `load_dependencies()`.**
 - The `apply_filters('wordpress-plugin-boilerplate-load', true)` gate in `load_hooks()` is the
@@ -177,6 +180,10 @@ See: `references/rest-api.md`
 - Load on `init` with `load_plugin_textdomain()` — not `plugins_loaded`.
 - Always escape after translating: `esc_html__()`, `esc_attr__()`, `esc_html_e()`. Never `echo __()`.
 - JS strings: `wp_set_script_translations()` + JSON file in `languages/`.
+- **Never call `get_plugin_data()` with `$translate = true` (the default) before `init`.**
+  Doing so causes WordPress 6.7+ to trigger JIT translation loading and log a `_doing_it_wrong`
+  notice. Always pass `get_plugin_data( $file, false, false )` when reading headers early in the
+  boot sequence, or avoid `get_plugin_data()` entirely and hardcode the version constant.
 
 See: `references/i18n.md`
 
@@ -256,7 +263,6 @@ node skills/wp-plugin-development/scripts/detect-rest-endpoints.mjs --dir=.
 - Frontend assets enqueue only on the correct pages.
 - Settings save and read correctly (capability check + nonce enforced).
 - Uninstall removes all intended data — and nothing else.
-- `WORDPRESS_PLUGIN_BOILERPLATE_PLUGIN_URL` holds a URL, not a version string (known double-define bug — the guard prevents a fatal; first definition wins).
 - PHPCS passes: `./vendor/bin/phpcs` (WordPress-Extra + WordPress-Docs + PHPCompatibility).
 - PHPUnit passes (if present); JS build succeeds if the plugin ships assets.
 - All four pre-ship scripts above exit 0.
@@ -273,6 +279,7 @@ node skills/wp-plugin-development/scripts/detect-rest-endpoints.mjs --dir=.
 - **Settings not saving** — option not registered with `register_setting()`, wrong option group, missing capability, or nonce failure.
 - **Security regression** — nonce without capability check (or vice versa); input sanitized but output not escaped.
 - **Text-domain not loading** — `do_load_textdomain()` moved to `plugins_loaded`; it must stay on `init`.
+- **`_load_textdomain_just_in_time` notice (WP 6.7+)** — a translation function or `get_plugin_data()` (with `$translate=true`) is being called before `init`. Fix: ensure no `__()` / `_e()` / `get_plugin_data()` call with the plugin's text domain runs before `init`. Version constants must be hardcoded, not read via `get_plugin_data()`.
 - **Vendor conflict** — run `composer install` then `composer dump-autoload`; Mozart may need to re-scope namespaces.
 
 See: `references/debugging.md`
