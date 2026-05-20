@@ -157,6 +157,79 @@ Processor classes with all-static logic implement the singleton pattern and expo
 **Tradeoffs**
 Adds wrapper boilerplate. Acceptable because it keeps all logic static (no instance state mutations during request processing), preserves Loader compatibility, and allows direct static calls from REST controllers without constructing a new instance.
 
+
+### 2026-05-19 — Centralized exclusion utility with filter extensibility (DEC-PROTECTED-SLUGS-PATTERN)
+
+**Status**: Active
+
+**Why this is durable**
+Any REST list endpoint that should exclude internal/protected resources will benefit from a centralized, filter-extensible exclusion utility. The pattern is reusable for future feature-gating (hidden ability categories, restricted MCP servers, private custom abilities).
+
+**Decision**
+Sensitive/internal resources that should be excluded from public REST list endpoints MUST be centralized in a single utility class with:
+1. Static method returning protected items array
+2. WordPress filter called at array-return time (allows third-party extensibility)
+3. Static method for membership check (used by query layer + REST controller)
+4. Defensive cast on filter result to enforce type contract
+
+Pattern: `AcrossAI_Protected_Abilities::get_protected_slugs()` returns array, then `apply_filters('acrossai_abilities_manager_protected_slugs', $default)`. Membership check: `is_protected($slug)` uses `in_array($slug, $protected_slugs, true)` with strict comparison.
+
+**Tradeoffs**
+Adds thin utility layer (72 LOC) vs. inline checks scattered across controllers. Thin layer accepted for DRY principle (Constitution §VI) and maintainability.
+
+**Future mistake prevented**
+Do not duplicate exclusion logic in multiple controllers. Do not inline the protected list — extract to a utility first. Do not use loose comparison in membership checks — always use `strict=true`.
+
+**Evidence**
+Implemented in `includes/Utilities/AcrossAI_Protected_Abilities.php` (feature 005, commit `62d25ad`). Called from 2 locations: query layer (`AcrossAI_Ability_Registry_Query::query()`) and REST controller (`AcrossAI_Sitewide_Abilities_Controller::get_ability()`). Security review passed (SECURITY-REVIEW.md). PHPCS 0 errors, PHPStan L8 exit 0.
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Protected_Abilities.php` (get_protected_slugs, is_protected),
+`includes/Utilities/AcrossAI_Ability_Registry_Query.php` (query loop filtering),
+`includes/Modules/Sitewide/Rest/AcrossAI_Sitewide_Abilities_Controller.php` (get_ability 404 check),
+`specs/005-hide-mcp-system-abilities/spec.md` (FR-004, FR-005).
+
+---
+
+### 2026-05-19 — Early 404 checks before database lookups in REST controllers (DEC-EARLY-404-REST-CHECK)
+
+**Status**: Active
+
+**Why this is durable**
+Any REST controller that filters/excludes resources based on system policies will need to decide: check first (fail-fast) or check after lookup? Documenting the fail-fast pattern prevents unnecessary DB queries and information disclosure.
+
+**Decision**
+REST controllers that filter/exclude resources based on system policies MUST perform the exclusion check BEFORE any database lookup or expensive operation. Check must occur immediately after input sanitization. Pattern:
+
+1. Sanitize input
+2. Check exclusion policy immediately
+3. Return 404 if excluded
+4. Only then proceed with DB lookups
+
+Example: `$slug = sanitize_ability_slug(...); if (is_protected($slug)) { return 404; } $ability = wp_get_ability(...);`
+
+**Rationale**
+Fail-fast approach provides multiple benefits:
+- Prevents DB queries for internal/protected resources (performance)
+- Consistent 404 response (client cannot distinguish "hidden" from "doesn't exist")
+- Simpler to test and audit
+- Reduces attack surface (no DB access for excluded resource)
+- Prevents information disclosure (attacker cannot enumerate protected abilities)
+
+**Tradeoffs**
+Early check means information about whether slug is "hidden" vs "non-existent" is not revealed. This is intentional (prevents enumeration attacks), not a limitation.
+
+**Future mistake prevented**
+Do not check exclusion status after a successful lookup — this wastes a DB query and may leak information. Do not return different error codes for "hidden" vs "doesn't exist" — use consistent 404 for both.
+
+**Evidence**
+Implemented in `AcrossAI_Sitewide_Abilities_Controller::get_ability()` (feature 005, commit `62d25ad`, lines 183–186). Security review confirmed no information disclosure (SECURITY-REVIEW.md). All three MCP adapter abilities correctly return 404 on manual testing.
+
+**Where to look next**
+`includes/Modules/Sitewide/Rest/AcrossAI_Sitewide_Abilities_Controller.php` (get_ability method),
+`includes/Utilities/AcrossAI_Protected_Abilities.php` (is_protected check),
+`specs/005-hide-mcp-system-abilities/spec.md` (FR-002, failure scenarios).
+
 **Future mistake prevented**
 Do not convert static processor methods to instance methods to avoid wrappers — this introduces instance state mutation risk in classes designed to be stateless across a request. Do not pass `::instance()` inline to the Loader — always assign to a named variable first.
 

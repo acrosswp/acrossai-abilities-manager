@@ -34,7 +34,7 @@
 		"mcp:status": "agents status"
 	},
 	"devDependencies": {
-		"@agents-dev/cli": "^0.8.7",
+		"@agents-dev/cli": "^0.8.8",
 		"@wordpress/env": "latest",
 		"@wordpress/eslint-plugin": "latest",
 		"@wordpress/prettier-config": "latest",

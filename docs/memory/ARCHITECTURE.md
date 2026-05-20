@@ -79,6 +79,52 @@ and a REST-API-first admin UI backed by @wordpress/dataviews.
   files exist but cannot be run until `phpunit.xml.dist` + WP bootstrap
   shim are added (T014, pre-existing gap).
 
+
+## AC-QUERY-LAYER-FILTERING
+
+All list-endpoint filtering (search, sort, pagination, field filtering) MUST occur in the query builder layer (`AcrossAI_Ability_Registry_Query`), not in the REST controller. Pagination headers (`X-WP-Total`, `X-WP-TotalPages`) MUST reflect the filtered results.
+
+**Rationale**: Query layer is the single source of truth for "what items exist in the result set". Filtering at query layer ensures pagination counts are accurate, search/sort/filter operations treat filtered items as non-existent, and REST controller doesn't duplicate filtering logic.
+
+**Pattern**: In query builder loop, before adding to results: `if ( condition ) { continue; }` to skip filtered items and prevent them from being added to result set.
+
+**Example**: `AcrossAI_Ability_Registry_Query::query()` excludes protected abilities at line 67–70 before appending to `$results[]`.
+
+**Reference**: Feature 005 (commit `62d25ad`), plan.md FR-001, FR-003.
+
+---
+
+## PATTERN-SINGLE-SOURCE-UTILITY
+
+When a logical concept is used in multiple places (query layer + REST controller), extract it to a single utility class with public static methods. Call the utility from both locations instead of duplicating logic.
+
+**Benefits**:
+- DRY principle enforced (Constitution §VI)
+- Single edit point (fix once, applies everywhere)
+- Easier to test in isolation
+- Self-documenting (utility name = concept name)
+
+**Structure**:
+```php
+// includes/Utilities/AcrossAI_SingleSourceTruth.php
+class AcrossAI_SingleSourceTruth {
+    public static function get_items(): array { /* return list */ }
+    public static function is_member( string $id ): bool {
+        return in_array( $id, self::get_items(), true );
+    }
+}
+
+// Usage location 1: Query layer
+if ( AcrossAI_SingleSourceTruth::is_member( $item_id ) ) { ... }
+
+// Usage location 2: REST controller
+if ( AcrossAI_SingleSourceTruth::is_member( $slug ) ) { ... }
+```
+
+**When to Apply**: Logic used in 2+ locations, small enough for `Utilities/`, stateless (only static methods).
+
+**Reference**: `AcrossAI_Protected_Abilities` (feature 005, commit `62d25ad`), called from query layer + REST controller.
+
 ## Keep Here
 - stable system boundaries (PATH A/B, Manager namespace, BerlinDB layer)
 - ownership lines between modules or services

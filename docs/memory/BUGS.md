@@ -164,3 +164,30 @@ How should future work avoid it and how can we catch it sooner?
 
 **Where to look next**
 Files, modules, logs, or checks maintainers should inspect.
+
+## BUG-LOOSE-COMPARISON-BYPASS
+
+Loose comparison in access control checks allows type coercion attacks.
+
+**Pattern**: Mixed integer/string comparisons in access checks bypass security. Example:
+- `if ( $user_role == 'admin' )` → `0 == 'admin'` → TRUE (type coercion) ❌
+- `if ( $user_role === 'admin' )` → `0 === 'admin'` → FALSE (correct) ✅
+
+**When This Bug Occurs**:
+- Mixed integer/string comparisons in access checks
+- `in_array()` without `strict=true` parameter
+- Loose equality (`==`) for identity checks
+
+**Prevention Rule**: Always use strict comparison (`===`, `!==`) in security-sensitive code. Always pass `strict=true` to `in_array()` for access checks.
+
+**Example Fix**:
+```php
+// WRONG
+if ( in_array( $user_role, $admin_roles ) ) { grant_access(); }
+
+// CORRECT
+if ( in_array( $user_role, $admin_roles, true ) ) { grant_access(); }
+```
+
+**Reference**: Feature 005 implementation, security review (SECURITY-REVIEW.md "Type Safety" section), OWASP A03:2021 (Injection).
+
