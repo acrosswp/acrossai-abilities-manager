@@ -92,6 +92,8 @@ module.exports = {
 		),
 		'js/logger': path.resolve( process.cwd(), 'src/js', 'index.js' ),
 		'css/logger': path.resolve( process.cwd(), 'src/scss', 'logs-table.scss' ),
+		'js/custom-abilities': path.resolve( process.cwd(), 'src/js/admin/custom-abilities', 'index.js' ),
+		'css/custom-abilities': path.resolve( process.cwd(), 'src/scss/admin/custom-abilities', 'index.scss' ),
 	},
 	output: {
 		...defaultConfig.output,

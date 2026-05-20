@@ -86,6 +86,16 @@ class AcrossAI_Custom_Ability_Assets {
 				filemtime( $script_path ),
 				true
 			);
+
+			// Localize script with REST namespace
+			wp_localize_script(
+				'acrossai-abilities-custom',
+				'acrossaiAbilitiesManager',
+				array(
+					'restNamespace' => 'acrossai-abilities-manager/v1',
+					'nonce' => wp_create_nonce( 'wp_rest' ),
+				)
+			);
 		}
 	}
 

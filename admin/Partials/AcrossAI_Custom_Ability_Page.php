@@ -67,26 +67,8 @@ class AcrossAI_Custom_Ability_Page {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'acrossai-abilities-manager' ) );
 		}
 
-		// Enqueue assets
-		$assets = AcrossAI_Custom_Ability_Assets::instance();
-		$assets->enqueue_scripts();
-		$assets->enqueue_styles();
-
-		// Get REST namespace
-		$rest_namespace = rest_url( 'acrossai-abilities-manager/v1' );
-
-		// Pass data to JS via inline script
-		$js_data = array(
-			'nonce'          => wp_create_nonce( 'wp_rest' ),
-			'restNamespace'  => $rest_namespace,
-			'currentUserId'  => get_current_user_id(),
-		);
-
-		wp_add_inline_script(
-			'acrossai-abilities-custom',
-			'window.acrossaiCustomAbilities = ' . wp_json_encode( $js_data ) . ';',
-			'before'
-		);
+		// Assets are enqueued via admin_enqueue_scripts hook
+		// wp_localize_script is called in AcrossAI_Custom_Ability_Assets
 
 		?>
 		<div class="wrap acrossai-custom-abilities-admin">
