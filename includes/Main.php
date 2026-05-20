@@ -321,6 +321,11 @@ final class Main {
 
 		$logger_rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest\AcrossAI_Logger_Controller::instance();
 		$this->loader->add_action( 'rest_api_init', $logger_rest_controller, 'register_routes' );
+
+		// Custom Ability Processor — register custom abilities at wp_abilities_api_init.
+		// Named variable before Loader call satisfies Boot Flow Rule (SEC-PLAN-002).
+		$custom_ability_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Custom_Ability\AcrossAI_Custom_Ability_Processor::instance();
+		$this->loader->add_action( 'wp_abilities_api_init', $custom_ability_processor, 'register_abilities', 10 );
 	}
 
 	/**
