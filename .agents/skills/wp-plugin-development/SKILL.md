@@ -229,7 +229,7 @@ See: `references/lifecycle.md`
 **To add a new JS or CSS file**, follow this 5-step workflow:
 
 1. **Create** the source file in `src/js/<name>.js` and/or `src/scss/<name>.scss`.
-2. **Register** a new entry in `webpack.config.js` `entry:` object.
+2. **Register** a new entry in `webpack.config.js` `entry:` object. Before writing the entry key, **read the existing `webpack.config.js`** and match the project's key naming convention (e.g. `'js/<name>'` / `'css/<name>'` if the project uses a directory-prefix pattern). Never guess the key format.
 3. **Load the manifest** — add `include …build/js/<name>.asset.php` in the relevant `Main` constructor.
 4. **Enqueue** — use the manifest arrays for dependencies and version. Never hardcode either.
 5. **Build** — run `npm run build` and confirm `build/js/<name>.js` + `build/js/<name>.asset.php` are present.

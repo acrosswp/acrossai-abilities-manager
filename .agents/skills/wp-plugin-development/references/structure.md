@@ -56,6 +56,7 @@ plugin-root/
 > **⚠️ No `includes/Base/` directory, no abstract module base class, no `register_hooks()` delegation.**
 > See SKILL.md §2 and the plugin CONSTITUTION for the canonical rules.
 
+
 ### Where does feature module code live?
 
 | Code type | Correct location |
@@ -74,6 +75,7 @@ There is **no module orchestrator class** (`MyFeature_Module.php`), **no `boot()
 `register_hooks()` delegation**. All hooks are wired directly in `includes/Main.php::define_admin_hooks()`
 / `define_public_hooks()`. Every feature class uses the singleton `instance()` pattern with a
 `private` constructor — see SKILL.md §2 for the canonical form.
+
 
 ## PSR-4 namespace map
 
