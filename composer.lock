@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "82be9e8da565fe890fbcc348a52a4800",
+    "content-hash": "e42c2f531381462379fc3695712fa409",
     "packages": [
         {
             "name": "automattic/jetpack-autoloader",
@@ -104,16 +104,16 @@
         },
         {
             "name": "wpboilerplate/wpb-access-control",
-            "version": "dev-main",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WPBoilerplate/wpb-access-control.git",
-                "reference": "2a9ddbdf29fff064078f04fbd121ec9ff7c69500"
+                "reference": "8902fa920d0ae4fb7952d55d4120adbff675e41c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/2a9ddbdf29fff064078f04fbd121ec9ff7c69500",
-                "reference": "2a9ddbdf29fff064078f04fbd121ec9ff7c69500",
+                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/8902fa920d0ae4fb7952d55d4120adbff675e41c",
+                "reference": "8902fa920d0ae4fb7952d55d4120adbff675e41c",
                 "shasum": ""
             },
             "require": {
@@ -125,7 +125,6 @@
                 "brain/monkey": "^2.6",
                 "phpunit/phpunit": "^9.6"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -155,7 +154,7 @@
                 "issues": "https://github.com/WPBoilerplate/wpb-access-control/issues",
                 "source": "https://github.com/WPBoilerplate/wpb-access-control"
             },
-            "time": "2026-05-16T09:20:25+00:00"
+            "time": "2026-05-19T17:23:16+00:00"
         },
         {
             "name": "wpboilerplate/wpb-mcp-servers-list",
@@ -2853,7 +2852,6 @@
         "phpstan/phpstan": 20,
         "phpunit/phpunit": 20,
         "szepeviktor/phpstan-wordpress": 20,
-        "wpboilerplate/wpb-access-control": 20,
         "wpboilerplate/wpb-mcp-servers-list": 20
     },
     "prefer-stable": false,

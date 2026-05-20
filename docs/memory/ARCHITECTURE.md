@@ -264,3 +264,75 @@ Feature 006 (2026-05-19): Fixed file headers in 3 logger files to match this pat
 
 **Why this is durable**:
 New developers copy-paste headers from existing files. If all files follow one pattern, copy-paste stays consistent. If files vary, inconsistency spreads. This constraint prevents drift.
+
+---
+
+## 2026-05-20 — Enable dependency upgrades without plugin code changes (ARCH-ZERO-CODE-DEPENDENCY-UPGRADE)
+
+**Pattern**: Architecture that allows dependency upgrades (composer constraint changes only) without modifying plugin code
+
+**Conditions** (all required):
+1. **Singleton-based service integration** — Services are accessed via `::instance()` static factory, not direct instantiation
+2. **Interface-based dependency injection** — Integration points use service locators or abstract interfaces, not concrete class dependencies
+3. **No breaking API changes** — Pre-validated via pre-update audit (changelog, API signature review, security scan)
+4. **Clean separation of concerns** — Library is isolated from plugin hooks, Main.php, and core architecture
+
+**Implementation Pattern**:
+```php
+// ✅ Singleton + Service Locator (supports zero-code upgrades)
+class AcrossAI_Sitewide_Access_Control {
+    private static $_instance = null;
+    
+    public static function instance() {
+        if ( null === self::$_instance ) {
+            self::$_instance = new self();
+        }
+        return self::$_instance;
+    }
+    
+    private function __construct() {}
+    
+    public function get_manager() {
+        // Service locator pattern — library is encapsulated
+        $ac = new wpboilerplate\AccessControlLibrary();
+        return $ac->get_manager();
+    }
+}
+
+// Usage: always via instance()
+$ac = AcrossAI_Sitewide_Access_Control::instance();
+$manager = $ac->get_manager(); // Works regardless of library version
+```
+
+**Benefit**: Allows upgrades to ^X.Y constraints with zero plugin code changes; only composer.json and composer.lock are modified.
+
+**Validation**: All Phase 1 tests must pass without plugin code changes. If code changes are required, the upgrade is NOT zero-code; refactor architecture or escalate as Feature X-N (separate task).
+
+**Evidence**:
+Feature 007 (2026-05-20): Upgraded wpb-access-control dev-main → ^1.0 with:
+- **0 plugin files modified** (only composer.json, composer.lock)
+- **0 code changes to AcrossAI_Sitewide_Access_Control** (pre-existing singleton pattern worked as-is)
+- **100% Phase 1 test pass rate** (6/6 tests, no code adaptation needed)
+- **All security constraints validated** (DEC-PERM-CB, SEC-04, SEC-03, DEC-FAIL-OPEN-NOTICE)
+
+**Counter-Example** (do NOT do this):
+```php
+// ❌ Direct instantiation (breaks with API changes)
+public function get_manager() {
+    return new wpboilerplate\AccessControlManager(); // If constructor signature changes, breaks
+}
+
+// ❌ Static method coupling (hard to version)
+$manager = AccessControlManager::get_instance(); // Hardcoded class name
+
+// ❌ Concrete class properties (prevents upgrades)
+private AccessControlManager $manager; // If interface changes, code breaks
+```
+
+**Where to Look Next**:
+- `includes/Modules/Sitewide/AcrossAI_Sitewide_Access_Control.php` (singleton + service locator pattern)
+- `specs/007-upgrade-access-control/` (zero-code upgrade example)
+- `.specify/memory/CONSTITUTION.md` (singleton pattern requirement)
+
+**Maintenance Rule**:
+When adding new library integrations, architect using singleton + service locator pattern to enable future zero-code upgrades. Document public API contracts in code comments. Test integration points with multiple library versions (if available) before locking to a specific constraint.

@@ -191,3 +191,54 @@ if ( in_array( $user_role, $admin_roles, true ) ) { grant_access(); }
 
 **Reference**: Feature 005 implementation, security review (SECURITY-REVIEW.md "Type Safety" section), OWASP A03:2021 (Injection).
 
+
+---
+
+## 2026-05-20 — Access control permission checks silently fail when library returns null (BUG-AC-NULL-RETURN-SILENT-FAIL)
+
+**Pattern**: Permission callback returns null instead of false; access control enforcement silently fails
+
+**Root Cause**: Code that checks `if ( $manager->user_has_access(...) )` treats null as falsy, but code paths expecting explicit boolean logic may behave unexpectedly. If a library returns null instead of false, silent permission failures can occur.
+
+**Example Scenario**:
+```php
+// Vulnerable pattern
+if ( $manager->user_has_access($user_id, $namespace, $key) ) {
+    allow_access();
+} else {
+    deny_access(); // null is falsy, so this executes, but semantically wrong
+}
+```
+
+If library returns `null` instead of `false`, the code "works" (denies access) but for the wrong reason. Future code refactoring could break this assumption.
+
+**Prevention Rules**:
+1. Use typed return values in AC libraries (`: bool`, never nullable)
+2. Add validation tests that confirm return type consistency:
+   ```php
+   $result = $manager->user_has_access($user_id, $namespace, $key);
+   assert(gettype($result) === 'boolean', 'AC library must return bool, not null');
+   ```
+3. Validate at integration points before production deployment (T011 pattern)
+4. Document return type contract in code comments and tests
+
+**Verification Checklist**:
+- [ ] Method signature explicitly declares `bool` return type (not nullable)
+- [ ] Code inspection finds only `return true;` and `return false;` statements
+- [ ] Unit tests verify return type with `gettype()` checks
+- [ ] Integration tests call the method with multiple user roles; confirm boolean returns
+- [ ] No `return null;` or `return $mixed;` patterns in method
+
+**Evidence**:
+Feature 007 (2026-05-20): T011 validated that wpb-access-control `user_has_access()` always returns boolean:
+- Method signature: `: bool` (not nullable)
+- Return statements: only `true` and `false`
+- Test results: 100% boolean returns (admin=true, subscriber=false, null_user=boolean)
+- Validation confirmed: `gettype() === 'boolean'` for all cases
+
+**Related Constraints**:
+- DEC-PERM-CB: Permission callback pattern relies on boolean return type
+- SEC-04: Strict comparison in access control assumes boolean returns, not null
+
+**Future Prevention**:
+When reviewing access control library upgrades or integrations, make T011-style type validation a mandatory Phase 1 test. Treat return type regressions as Phase blockers.
