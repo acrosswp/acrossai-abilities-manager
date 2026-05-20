@@ -212,4 +212,17 @@ class AcrossAI_Custom_Ability_Table extends Table {
 	public function count() {
 		return $this->new_query()->count();
 	}
+
+	/**
+	 * Set the schema for this table.
+	 *
+	 * Required abstract method from BerlinDB\Database\Table.
+	 * Instantiates the schema class.
+	 *
+	 * @since 0.0.1
+	 * @return void
+	 */
+	protected function set_schema() {
+		$this->schema = new $this->schema( $this );
+	}
 }
