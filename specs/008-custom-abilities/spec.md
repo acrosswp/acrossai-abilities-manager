@@ -2,225 +2,192 @@
 
 **Feature Branch**: `008-custom-abilities`  
 **Created**: 2026-05-20  
-**Status**: Draft  
-
-## Overview
-
-Enable WordPress administrators to define new custom abilities directly through the database without requiring PHP code. This feature introduces a database-driven ability registration system with a dedicated admin interface, REST API, and integration with the WordPress Abilities API and MCP servers.
+**Status**: Clarified  
 
 ## User Scenarios & Testing
 
 ### User Story 1 - Admin Creates Custom Ability (Priority: P1)
 
-As a WordPress admin, I want to create a new custom ability via the admin UI by specifying its slug, label, description, and basic properties.
+An admin with `manage_options` permission needs to create a new WordPress ability without writing PHP code. They navigate to the Custom Abilities submenu under the Abilities Manager and use a form to define a new ability with all configuration.
 
-**Why this priority**: Core functionality—admins must be able to define abilities before any other feature can operate.
+**Why this priority**: This is the core MVP feature. Without ability creation, the system cannot function. This unlocks the entire custom abilities workflow.
 
-**Independent Test**: Ability can be fully created, saved to database, and listed in the admin table without any dependent features.
+**Independent Test**: Can be fully tested by: navigating to Custom Abilities > Add New, filling the form (ability slug, label, description, callback config), and clicking Save. Delivers: a new ability stored in the database and registered.
 
 **Acceptance Scenarios**:
 
-1. **Given** the admin is on the Custom Abilities admin page, **When** they click "Add New Ability", **Then** a DataForm opens with all required fields (slug, label, description, category, enabled, permission type)
-2. **Given** an admin has filled the form with valid data (unique slug in namespace/name format), **When** they click "Create", **Then** the ability is saved to the database and a success message appears
-3. **Given** an admin creates an ability with a duplicate slug, **When** they click "Create", **Then** an error message appears indicating the slug must be unique
-4. **Given** an ability has been created, **When** the admin navigates to the Custom Abilities page, **Then** the new ability appears in the DataViews table with all properties visible
+1. **Given** an admin user logged in with `manage_options` capability, **When** they navigate to Abilities Manager → Custom Abilities, **Then** they see an "Add New" button and a list of existing custom abilities
+2. **Given** the admin clicks "Add New", **When** they fill in all required fields (ability slug, label, description, category, callback type, permission type), **Then** a form is displayed with all configuration options
+3. **Given** the admin fills in the form and clicks "Save Ability", **When** form validation passes, **Then** the ability is created in the database and they see a success message
+4. **Given** the admin enters duplicate ability slug, **When** they click "Save", **Then** validation fails with error message about uniqueness constraint
 
 ---
 
-### User Story 2 - Admin Configures Ability Behavior (Priority: P1)
+### User Story 2 - Custom Abilities Appear in Admin Interface (Priority: P1)
 
-As a WordPress admin, I want to specify how a custom ability is executed: no-op (disabled), filter hook callback, or remote POST callback with callback configuration.
+Once created, custom abilities must be visible in the Custom Abilities DataViews table so admins can review, edit, enable/disable, and delete them.
 
-**Why this priority**: Determines whether the ability can actually execute—foundational to the feature.
+**Why this priority**: Admin visibility is essential for managing custom abilities. Without a list view, admins cannot verify their abilities were created or manage them.
 
-**Independent Test**: Callback configuration is saved and retrievable via REST API without requiring execution.
+**Independent Test**: Can be fully tested by: creating one ability, navigating to Custom Abilities list, and verifying it appears in the table with all columns (slug, label, status, callback type, etc.). Delivers: a manageable list of all custom abilities with edit/delete actions.
 
 **Acceptance Scenarios**:
 
-1. **Given** an admin is editing an ability, **When** they select `callback_type = "filter_hook"`, **Then** a `callback_config` JSON field appears allowing them to specify the hook name
-2. **Given** an admin selects `callback_type = "wp_remote_post"`, **When** they enter a webhook URL in `callback_config`, **Then** the URL is validated and saved
-3. **Given** an admin selects `callback_type = "noop"`, **When** they save, **Then** the ability is marked as non-functional but still listed
+1. **Given** one or more custom abilities exist in the database, **When** an admin visits Custom Abilities admin page, **Then** a DataViews table displays all abilities with searchable/filterable columns
+2. **Given** the admin views the table, **When** they click on an ability row, **Then** the ability's edit form opens, pre-populated with all current settings
+3. **Given** the admin has an ability record, **When** they click the "Enable/Disable" toggle, **Then** the ability's `enabled` flag is updated and takes effect immediately
+4. **Given** the admin clicks "Delete" on an ability, **When** they confirm deletion, **Then** the ability is removed and no longer registered
 
 ---
 
-### User Story 3 - Admin Restricts Ability Access (Priority: P1)
+### User Story 3 - Custom Abilities Integrate with WordPress Abilities API (Priority: P1)
 
-As a WordPress admin, I want to control who can invoke each custom ability by setting its permission type (always allow, logged-in only, or specific capability).
+At WordPress initialization (`wp_abilities_api_init` hook), all enabled custom abilities from the database must be automatically registered into the WordPress Abilities API so they can be used by rest of the system.
 
-**Why this priority**: Security-critical—unauthorized access must be prevented.
+**Why this priority**: Without API registration, custom abilities are inert database records. Integration is essential for them to function in the ecosystem.
 
-**Independent Test**: Permission restrictions can be configured and retrieved without executing the ability.
+**Independent Test**: Can be fully tested by: creating a custom ability, enabling it, triggering `wp_abilities_api_init`, and verifying the ability is present via `wp_get_registered_abilities()` or REST endpoint.
 
 **Acceptance Scenarios**:
 
-1. **Given** an admin is creating an ability, **When** they set `permission_type = "always_allow"`, **Then** the `permission_config` is optional/empty
-2. **Given** an admin sets `permission_type = "capability"`, **When** they enter a capability name (e.g., "manage_options"), **Then** the capability is saved in `permission_config`
-3. **Given** an ability has `permission_type = "logged_in"`, **When** a non-logged-in user attempts to call it, **Then** access is denied
+1. **Given** a custom ability with `enabled = true` exists in database, **When** WordPress initializes the Abilities API, **Then** the ability is automatically registered with correct metadata
+2. **Given** a custom ability with `enabled = false` exists, **When** WordPress initializes the Abilities API, **Then** the ability is NOT registered
+3. **Given** custom abilities are registered, **When** the REST endpoint `/wp-json/wp-abilities/v1/abilities` is called, **Then** custom abilities appear in the response with full metadata
+4. **Given** ability registration occurs, **When** systems call `wp_execute_ability()`, **Then** custom abilities execute via their configured callback (noop, filter_hook, or wp_remote_post)
 
 ---
 
-### User Story 4 - Ability Registers in WordPress API (Priority: P1)
+### User Story 4 - REST API CRUD Operations (Priority: P2)
 
-As a developer/integration, I want all enabled custom abilities to automatically register with the WordPress Abilities API so they can be discovered and invoked via standard mechanisms.
+Admin and external systems need programmatic access to create, read, update, and delete custom abilities via REST API endpoints under `acrossai-abilities-manager/v1/custom-abilities`.
 
-**Why this priority**: Enables integration with the broader WordPress abilities ecosystem—essential for adoption.
+**Why this priority**: Programmatic API enables automation, integration with other tools, and advanced workflows. This enables external orchestration systems to manage abilities.
 
-**Independent Test**: Ability can be queried via the WordPress Abilities API without manual code.
+**Independent Test**: Can be fully tested by: calling REST endpoints (POST to create, GET to list, GET/ID to get one, POST/ID to update, DELETE/ID to delete) with proper authentication and verifying CRUD operations work.
 
 **Acceptance Scenarios**:
 
-1. **Given** a custom ability exists in the database with `enabled = 1`, **When** WordPress loads (on `wp_abilities_api_init`), **Then** the ability is registered with `wp_register_ability()`
-2. **Given** a custom ability is disabled (`enabled = 0`), **When** WordPress loads, **Then** the ability is not registered
-3. **Given** the ability is registered, **When** a developer calls `wp_get_ability( 'namespace/ability-slug' )`, **Then** the ability details are returned including metadata
+1. **Given** an authenticated admin request to `POST /wp-json/acrossai-abilities-manager/v1/custom-abilities` with ability data, **When** validation passes, **Then** a new ability is created and the response includes the new ability object
+2. **Given** an authenticated request to `GET /wp-json/acrossai-abilities-manager/v1/custom-abilities`, **When** the request is made, **Then** a list of all custom abilities is returned with pagination
+3. **Given** an authenticated request to `POST /wp-json/acrossai-abilities-manager/v1/custom-abilities/{id}` with updated data, **When** validation passes, **Then** the ability is updated and reflects changes
+4. **Given** an authenticated request to `DELETE /wp-json/acrossai-abilities-manager/v1/custom-abilities/{id}`, **When** the request is made, **Then** the ability is deleted
+5. **Given** an unauthenticated or low-privilege request to any endpoint, **When** the request is made, **Then** a 403 Forbidden response is returned
 
 ---
 
-### User Story 5 - REST API CRUD Operations (Priority: P2)
+### User Story 5 - MCP Integration for Custom Abilities (Priority: P2)
 
-As an external tool or UI, I want to manage custom abilities via REST API endpoints so I can automate ability creation and updates.
+Admins can optionally configure custom abilities to expose as MCP tools, resources, or prompts to MCP clients by setting `show_in_mcp = true` and specifying `mcp_type` and `mcp_servers`.
 
-**Why this priority**: Enables programmatic management and third-party integrations.
+**Why this priority**: MCP integration extends the custom ability ecosystem to AI/automation clients. This is a high-value feature but secondary to basic CRUD.
 
-**Independent Test**: Full CRUD operations work independently without admin UI.
-
-**Acceptance Scenarios**:
-
-1. **Given** a user has `manage_options` capability, **When** they POST to `/wp-json/acrossai-abilities-manager/v1/custom-abilities`, **Then** a new ability is created
-2. **Given** a user lacks `manage_options`, **When** they attempt to POST, **Then** a 403 Forbidden response is returned
-3. **Given** an ability exists, **When** a user with `manage_options` GETs `/wp-json/acrossai-abilities-manager/v1/custom-abilities/{id}`, **Then** the full ability object is returned
-4. **Given** an ability exists, **When** a user with `manage_options` PUTs an updated property, **Then** the ability is updated and persisted
-
----
-
-### User Story 6 - Admin Views All Abilities in Table (Priority: P2)
-
-As an admin, I want to see all custom abilities in a sortable, filterable table so I can manage them efficiently.
-
-**Why this priority**: Provides visibility and discoverability—enhances usability.
-
-**Independent Test**: Table displays and filters without depending on edit/create operations.
+**Independent Test**: Can be fully tested by: creating a custom ability with `show_in_mcp = true` and `mcp_type = 'tool'`, then verifying it appears in MCP server discovery.
 
 **Acceptance Scenarios**:
 
-1. **Given** multiple custom abilities exist, **When** the admin navigates to Custom Abilities, **Then** all abilities are listed in a DataViews table with columns: slug, label, category, enabled, permission_type, callback_type
-2. **Given** the admin clicks the "Enabled" column header, **When** the table re-renders, **Then** abilities are sorted by enabled status
-3. **Given** the admin enters a search term, **When** the search is applied, **Then** only abilities matching the slug or label are displayed
-
----
-
-### User Story 7 - MCP Server Integration (Priority: P3)
-
-As an admin, I want to expose custom abilities to MCP servers so they can be invoked through MCP clients.
-
-**Why this priority**: Optional integration—extends capabilities but not required for MVP.
-
-**Independent Test**: MCP metadata can be configured without requiring an MCP server.
-
-**Acceptance Scenarios**:
-
-1. **Given** an ability is marked `show_in_mcp = 1`, **When** an MCP server queries the abilities, **Then** the ability is included with its `mcp_type` (tool, resource, prompt) and associated servers list
-2. **Given** an ability is marked `show_in_mcp = 0`, **When** an MCP server queries, **Then** the ability is not listed
+1. **Given** a custom ability with `show_in_mcp = true` and `mcp_type = 'tool'`, **When** MCP server processes abilities, **Then** the ability is registered as an MCP tool
+2. **Given** a custom ability specifies `mcp_servers` array (e.g., `['server1', 'server2']`), **When** the ability is queried by an MCP client, **Then** it is only available to those servers
+3. **Given** an ability is marked `destructive = true`, **When** it is exposed via MCP, **Then** MCP clients receive a clear destructive/warning flag
+4. **Given** an ability specifies input and output schemas, **When** MCP clients query the ability, **Then** schemas are provided for validation
 
 ---
 
 ### Edge Cases
 
-- What happens if a custom ability's slug conflicts with a built-in ability slug?
-- How does the system handle a callback_config that points to a non-existent webhook URL?
-- If an ability is marked readonly=1, can it still be deleted by an admin, or is deletion prevented?
-- What happens if the database table is missing during WordPress initialization?
-- Can an ability's permission_config reference a non-existent capability, and how is that validated?
+- What happens when an admin tries to create two abilities with the same slug? → Validation error, slug must be unique
+- What happens if the callback_config references a non-existent filter hook? → Ability registers but callback silently fails to execute
+- What happens if a custom ability is deleted while it's in use by another system? → Dependent systems fail gracefully; deletion is allowed
+- How does the system handle readonly abilities? → Readonly flag is metadata annotation only; does not prevent mutations in admin UI or REST API
+- What happens if `permission_config` references a capability that doesn't exist? → Ability registers; permission check fails for users without capability
+- What happens when custom abilities are migrated between WordPress sites? → BerlinDB provides export/import capability; schemas are portable
+- What is the noop callback used for? → Placeholder/documentation abilities registered for discoverability (e.g., in MCP for external reference) but not executed via wp_execute_ability()
 
 ## Requirements
 
 ### Functional Requirements
 
-1. **Database Schema** — Create table `{prefix}acrossai_custom_abilities` with:
-   - `id` (bigint primary key)
-   - `ability_slug` (varchar unique, pattern: namespace/name)
-   - `label`, `description`, `category` (text fields)
-   - `enabled` (bool), `callback_type` (enum: noop|filter_hook|wp_remote_post), `callback_config` (JSON)
-   - `permission_type` (enum: always_allow|logged_in|capability), `permission_config` (JSON)
-   - `input_schema`, `output_schema` (JSON)
-   - `show_in_rest`, `show_in_mcp` (bool), `mcp_type` (enum), `mcp_servers` (JSON array)
-   - `readonly`, `destructive`, `idempotent` (nullable tinyint: NULL=inherit, 0=false, 1=true)
-   - `created_at`, `updated_at`, `created_by`, `updated_by` (timestamps/user IDs)
+- **FR-001**: System MUST create a BerlinDB-based database table `{prefix}acrossai_custom_abilities` with all specified columns (id, ability_slug, label, description, category, enabled, callback_type, callback_config, permission_type, permission_config, input_schema, output_schema, show_in_rest, show_in_mcp, mcp_type, mcp_servers, readonly, destructive, idempotent, created_at, updated_at)
 
-2. **BerlinDB Implementation** — Implement 4-file pattern:
-   - `Schema` — table definition
-   - `Row` — row object with properties
-   - `Query` — query builder (filtering, pagination)
-   - `Table` — table registration and manager
+- **FR-002**: Admins MUST be able to create custom abilities via DataForm admin UI under "Abilities Manager → Custom Abilities" menu, with all fields for ability definition
 
-3. **Abilities API Registration** — On `wp_abilities_api_init`, fetch all enabled abilities from database and call `wp_register_ability()` for each
+- **FR-003**: Admins MUST be able to list all custom abilities in a DataViews table with search, filtering, sorting, and enable/disable/edit/delete actions
 
-4. **REST API** — Routes under `/wp-json/acrossai-abilities-manager/v1/custom-abilities`:
-   - `GET /` — list abilities with pagination/filtering
-   - `POST /` — create new ability
-   - `GET /{id}` — retrieve single ability
-   - `PUT /{id}` — update ability
-   - `DELETE /{id}` — delete ability
-   - All endpoints require `manage_options` capability
+- **FR-004**: System MUST automatically register all enabled custom abilities into WordPress Abilities API at `wp_abilities_api_init` hook so they become available system-wide
 
-5. **Admin UI** — New "Custom Abilities" submenu under Abilities Manager:
-   - DataViews table listing all abilities
-   - DataForm for create/edit modal with all fields
-   - Bulk actions (enable/disable/delete)
-   - Singleton menu class pattern
+- **FR-005**: System MUST provide complete REST API CRUD endpoints under `acrossai-abilities-manager/v1/custom-abilities` route with `manage_options` permission requirement
 
-6. **Namespace & Code Organization**:
-   - `AcrossAI_Abilities_Manager\Includes\Modules\Custom_Ability` (namespace)
-   - Schema: `Custom_Ability_Schema`
-   - Row: `Custom_Ability_Row`
-   - Query: `Custom_Ability_Query`
-   - Table: `Custom_Ability_Table`
-   - REST Controller: `Custom_Ability_REST_Controller` or decomposed per pattern
+- **FR-006**: System MUST validate ability_slug follows "namespace/name" pattern (e.g., "custom/my-ability") and enforce uniqueness
 
-### Non-Functional Requirements
+- **FR-007**: System MUST support three callback types: "noop" (placeholder/documentation), "filter_hook" (trigger WordPress filter), and "wp_remote_post" (HTTP POST to external URL)
 
-- **Security**: Sanitize input, escape output, validate capability checks on all REST endpoints, prepared statements for all DB queries
-- **Performance**: Index on `ability_slug`, `enabled` for fast lookups during registration
-- **Multisite**: Ensure table is per-site (set `$global = false` in Table registration)
-- **Backward Compatibility**: No breaking changes to existing Abilities API or admin UI
+- **FR-008**: System MUST support three permission types: "always_allow" (no permission check), "logged_in" (user must be logged in), "capability" (check specific WordPress capability)
+
+- **FR-009**: System MUST store and validate input_schema and output_schema as JSON, following JSON Schema standard
+
+- **FR-010**: System MUST expose custom abilities to MCP servers when `show_in_mcp = true`, respecting `mcp_type` (tool/resource/prompt) and `mcp_servers` configuration
+
+- **FR-011**: System MUST track readonly, destructive, and idempotent flags (tri-state: NULL=inherit, 0=false, 1=true) as metadata annotations and expose them via API/MCP. Readonly flag does not prevent mutations in UI or API
+
+- **FR-012**: System MUST enforce `manage_options` capability check on all REST endpoints and admin UI pages
+
+- **FR-013**: System MUST follow namespace pattern `AcrossAI_Abilities_Manager\Includes\Modules\Custom_Ability` exactly, matching existing plugin architecture
+
+- **FR-014**: System MUST use BerlinDB 4-file pattern (Schema, Row, Query, Table classes) for database layer implementation
+
+- **FR-015**: Admin UI MUST be accessible via DataForm and DataViews components, inheriting WCAG 2.1 A compliance from WordPress standard admin UI patterns
+
+### Key Entities
+
+- **Custom Ability**: Represents a user-defined WordPress ability with configuration for callback execution, permissions, API exposure, and MCP integration. Attributes include slug, label, callback type/config, permission type/config, schemas, and visibility flags.
+
+- **Ability Callback**: Configuration for how the ability is executed (noop for documentation, filter_hook, or remote HTTP post). Stored as JSON in callback_config, specifies execution method and parameters.
+
+- **Ability Permission**: Configuration for who can execute the ability (always allow, logged-in users, specific capability). Stored as JSON in permission_config.
+
+- **Ability Schema**: JSON Schema definitions for ability input and output, enabling validation and documentation.
+
+- **MCP Exposure**: Configuration for exposing ability to MCP clients (enabled/disabled, type, server list), enabling AI/automation client access.
 
 ## Success Criteria
 
-1. **Ability Creation** — Admins can create custom abilities via UI/API and abilities appear immediately in admin table
-2. **Database Persistence** — All ability properties are correctly stored and retrievable from database
-3. **Abilities API Registration** — All enabled abilities register with WordPress Abilities API on init hook
-4. **REST API Functionality** — CRUD operations work correctly with proper permission checks and data validation
-5. **Admin UI Usability** — DataViews table and DataForm render correctly with intuitive workflows
-6. **Security Validation** — All input is sanitized, output escaped, capabilities checked; PHPStan level 8 and PHPCS pass
-7. **Test Coverage** — Unit tests cover database operations, API registration, REST endpoints, and permission checks
-8. **Performance** — Ability registration completes in under 100ms for up to 500 custom abilities
+### Measurable Outcomes
 
-## Key Entities
+- **SC-001**: Admins can create a custom ability and see it in the Custom Abilities list within 2 minutes without writing any code
 
-### Custom Ability
+- **SC-002**: All enabled custom abilities appear in WordPress Abilities API registry after initialization (100% registration success)
 
-- **Attributes**: slug, label, description, category, enabled, callback_type, callback_config, permission_type, permission_config, input_schema, output_schema, show_in_rest, show_in_mcp, mcp_type, mcp_servers, readonly, destructive, idempotent, created_at, updated_at, created_by, updated_by
-- **Primary Behavior**: Defined and stored in database; registered to WordPress Abilities API; executed via callback mechanism
-- **Relationships**: Belongs to plugin; can be exposed to MCP servers; has REST endpoints
+- **SC-003**: REST API endpoints return complete ability CRUD operations with schema validation (all endpoints functional before deployment)
 
-## Constraints & Dependencies
+- **SC-004**: Custom abilities with `show_in_mcp = true` are discoverable by MCP clients and properly categorized by `mcp_type`
 
-- **Dependency**: WordPress Abilities API must be registered before custom abilities can hook into it
-- **Constraint**: Ability slugs must follow `namespace/name` pattern for consistency
-- **Constraint**: `callback_type` determines execution mechanism; invalid configs should gracefully degrade to noop
-- **Constraint**: Multisite support requires per-site table (no shared table)
+- **SC-005**: Database queries for listing/filtering custom abilities execute in under 500ms with 1000+ records
+
+- **SC-006**: Permission checks prevent non-admin users from accessing/modifying custom abilities (100% enforcement)
+
+- **SC-007**: Backward compatibility is maintained; existing Abilities Manager features continue to function with custom abilities present
 
 ## Assumptions
 
-- WordPress 6.9+ is installed with Abilities API support
-- `@wordpress/dataviews` v14.2+ is available for admin UI (exports DataForm)
-- Admins have basic understanding of ability slugs and callback concepts
-- Database table creation uses BerlinDB standard (basedon existing patterns in plugin)
-- Permission checks use standard WordPress capabilities (e.g., `manage_options`)
+- Admin users have sufficient understanding of ability configuration to fill form fields (callback type, permission type, schemas)
 
-## Design Notes
+- External callback URLs (for wp_remote_post type) are responsive and handle timeouts gracefully; system assumes 30-second timeout default
 
-- Follow existing plugin patterns: singleton classes, Loader hook registration in Main.php, asset enqueue in Admin\Main
-- Use DataViews and DataForm consistently with Constitution principle III
-- Ensure REST controller follows modularization pattern (thin orchestrator + sub-controllers if needed)
-- Validate slug uniqueness during create/update
-- Consider cached ability registration for performance (invalidate on ability update)
+- JSON Schema validation follows standard JSON Schema Draft 7 conventions; complex schema features are supported but not required
+
+- BerlinDB provides sufficient performance for up to 10,000 custom ability records per site
+
+- WordPress Abilities API is already initialized before custom abilities plugin loads, allowing seamless registration
+
+- Database prefix is properly configured and available via `$wpdb->prefix`
+
+- `manage_options` capability is the appropriate permission level for all custom ability admin operations (no granular sub-permissions needed in v1)
+
+- Deleted custom abilities do not require archiving or soft-delete; hard delete is acceptable
+
+- MCP client discovery uses standard ability metadata endpoint and does not require separate MCP schema endpoint
+
+- Custom abilities do not require version/deprecation management in v1; versioning is out of scope
+
+- Admin UI accessibility requirements are satisfied by inheritance from @wordpress/dataforms and @wordpress/dataviews components; no additional accessibility testing/documentation required
+
+- Readonly flag serves as metadata annotation only and does not enforce mutation prevention at UI or API layer
