@@ -1,6 +1,6 @@
 <?php
 /**
- * BerlinDB Query class for ability override records.
+ * BerlinDB Query class for ability records.
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
@@ -15,7 +15,7 @@ use BerlinDB\Database\Query;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Provides CRUD operations for the acrossai_abilities_overwrite table.
+ * Provides CRUD operations for the acrossai_abilities table.
  *
  * @since 0.1.0
  */
@@ -40,7 +40,7 @@ class AcrossAI_Sitewide_Query extends Query {
 	 *
 	 * @var string
 	 */
-	protected $table_name = 'acrossai_abilities_overwrite';
+	protected $table_name = 'acrossai_abilities';
 
 	/**
 	 * Singleton instance.
@@ -48,6 +48,15 @@ class AcrossAI_Sitewide_Query extends Query {
 	 * @var AcrossAI_Sitewide_Query|null
 	 */
 	protected static $_instance = null;
+
+	/**
+	 * Private constructor — enforces singleton pattern.
+	 *
+	 * @since  0.1.0
+	 */
+	private function __construct() {
+		parent::__construct();
+	}
 
 	/**
 	 * Get the singleton instance of this query.
@@ -90,19 +99,14 @@ class AcrossAI_Sitewide_Query extends Query {
 	 * On INSERT: sets created_at and created_by.
 	 * On UPDATE: sets updated_at and updated_by only — does NOT overwrite created_at/created_by (A1/A2).
 	 *
+	 * JSON field size/depth validation is the caller's responsibility.
+	 *
 	 * @since  0.1.0
 	 * @param  string $slug   Ability slug.
 	 * @param  array  $fields Field values to save.
 	 * @return bool
 	 */
 	public function save_override( string $slug, array $fields ): bool {
-		// JSON-encode mcp_servers before passing to BerlinDB — the column is longtext and
-		// BerlinDB does NOT auto-encode PHP arrays. Without this the DB receives "[Array]"
-		// instead of valid JSON, and mcp_servers would be lost on read.
-		if ( isset( $fields['mcp_servers'] ) && is_array( $fields['mcp_servers'] ) ) {
-			$fields['mcp_servers'] = wp_json_encode( $fields['mcp_servers'] );
-		}
-
 		// Cast PHP booleans to integers for all tinyint tri-state columns.
 		// $wpdb->insert/update auto-detects format: is_int() → %d, otherwise → %s.
 		// PHP false is not an int, so without this cast it gets format %s → '' (empty
@@ -114,6 +118,41 @@ class AcrossAI_Sitewide_Query extends Query {
 		foreach ( $tri_state_columns as $col ) {
 			if ( array_key_exists( $col, $fields ) && is_bool( $fields[ $col ] ) ) {
 				$fields[ $col ] = (int) $fields[ $col ]; // true → 1, false → 0.
+			}
+		}
+
+		// F2 enum guards — strip invalid enum values before BerlinDB write.
+		// Placed after tri-state cast (FR-018: tri-state block must come first).
+		if ( array_key_exists( 'status', $fields ) && null !== $fields['status'] ) {
+			if ( ! in_array( $fields['status'], array( 'draft', 'publish' ), true ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'acrossai: invalid status value blocked before DB write' );
+				unset( $fields['status'] );
+			}
+		}
+		if ( array_key_exists( 'callback_type', $fields ) && null !== $fields['callback_type'] ) {
+			if ( ! in_array( $fields['callback_type'], array( 'noop', 'filter_hook', 'wp_remote_post', 'php_code' ), true ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'acrossai: invalid callback_type value blocked before DB write' );
+				unset( $fields['callback_type'] );
+			}
+		}
+
+		// JSON-encode all registered JSON longtext fields before passing to BerlinDB.
+		// BerlinDB does NOT auto-encode PHP arrays. Registry is extensible via
+		// acrossai_abilities_json_fields filter (SC-005).
+		// On encode failure, or if the encoded string exceeds 64 KB, store null.
+		// TASK-SEC-001: This is a DB-layer size guard; caller-side validation is still
+		// required before reaching this method (N4 advisory).
+		$max_json_bytes = 65536; // 64 KB — consistent with php_code field limit (spec).
+		foreach ( AcrossAI_Sitewide_Row::get_json_fields() as $json_field ) {
+			if ( isset( $fields[ $json_field ] ) && is_array( $fields[ $json_field ] ) ) {
+				$encoded = wp_json_encode( $fields[ $json_field ] );
+				if ( false === $encoded || strlen( $encoded ) > $max_json_bytes ) {
+					$fields[ $json_field ] = null;
+				} else {
+					$fields[ $json_field ] = $encoded;
+				}
 			}
 		}
 
@@ -200,5 +239,44 @@ class AcrossAI_Sitewide_Query extends Query {
 			}
 		}
 		return $indexed;
+	}
+
+	/**
+	 * Retrieve all ability rows matching the given source value.
+	 *
+	 * Uses number => 0 (BerlinDB unlimited query — NOT -1, which absint() converts
+	 * to 1, silently limiting results to a single row).
+	 *
+	 * AUTHORIZATION CONTRACT (TASK-SEC-002):
+	 * This is a raw DB-layer helper. It performs no capability check.
+	 * Every caller that surfaces results to a HTTP response or admin screen
+	 * MUST call current_user_can( 'manage_options' ) before invoking this method.
+	 * Callers that skip this check create an unauthenticated data-disclosure path
+	 * (OWASP A01:2025). REST controller permission_callback is the canonical gate.
+	 *
+	 * @since  0.1.0
+	 * @param  string|null $source Source value to match (e.g. 'db', 'plugin', 'core').
+	 *                             Returns empty array for null or empty string (FR-011).
+	 * @return AcrossAI_Sitewide_Row[]
+	 */
+	public function by_source( ?string $source ): array {
+		if ( null === $source || '' === $source ) {
+			return array();
+		}
+
+		$results = $this->query(
+			array(
+				'source' => $source,
+				'number' => 0,
+			)
+		);
+
+		$rows = array();
+		foreach ( $results as $row ) {
+			if ( $row instanceof AcrossAI_Sitewide_Row ) {
+				$rows[] = $row;
+			}
+		}
+		return $rows;
 	}
 }

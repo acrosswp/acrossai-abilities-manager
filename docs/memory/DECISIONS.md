@@ -1,5 +1,73 @@
 # Decisions
 
+---
+
+### 2026-05-22 — BerlinDB Table singletons must NOT have a private constructor (DEC-TABLE-SOFT-SINGLETON)
+
+**Context**
+`AcrossAI_Activator` calls `(new AcrossAI_Sitewide_Table())->maybe_upgrade()` directly. Adding `private function __construct()` to `AcrossAI_Sitewide_Table` — even as part of enforcing the singleton pattern — causes a fatal error because Activator is not a subclass and cannot call a private constructor. FR-015 forbids touching Activator.
+
+**Decision**
+BerlinDB `Table` subclasses in this plugin use a **soft singleton**: `$_instance` + `instance()` are present but no `private function __construct()` is added. Singleton behaviour is convention-enforced, not language-enforced. This is the required pattern for any Table class that is also instantiated via `new` elsewhere (e.g., in Activator or tests).
+
+BerlinDB `Query`, `Schema`, and `Row` subclasses are free to use private constructors because they are never directly instantiated via `new` outside their own `instance()` method.
+
+**Rule**
+- `AcrossAI_Sitewide_Table` and any future `*_Table` class: **no `private function __construct()`**
+- `*_Query` classes: private constructor is fine (always accessed via `::instance()`)
+- `*_Row` / `*_Schema` classes: BerlinDB instantiates these internally — do not add constructors that break parent behaviour
+
+**Future mistake prevented**
+Architecture reviews flagging "missing private constructor" on a Table class MUST check whether any other class calls `new ClassName()` before adding the private constructor. If they do, keep the soft singleton pattern.
+
+**Evidence**
+Feature 008 (2026-05-22): Adding `private function __construct()` to `AcrossAI_Sitewide_Table` caused a PHP fatal error on plugin activation — `AcrossAI_Activator::activate()` calls `new AcrossAI_Sitewide_Table()` on line 40. Fix: remove private constructor, keep `instance()` method.
+
+**Where to look next**
+`includes/AcrossAI_Activator.php` (line 40 — direct instantiation),
+`includes/Modules/Sitewide/Database/AcrossAI_Sitewide_Table.php` (soft singleton example)
+
+---
+
+### 2026-05-22 — JSON registry fields get a 64 KB size guard at the DB layer (DEC-JSON-SIZE-GUARD)
+
+**Context**
+TASK-SEC-001 (security review, Feature 008): `save_override()` now encodes four registry-driven JSON fields instead of one hardcoded `mcp_servers` field. The reviewer flagged that oversized payloads could flow through the expanded path without a DB-layer boundary.
+
+**Decision**
+Add a 64 KB `strlen()` guard inside the JSON registry loop in `save_override()`. If `wp_json_encode()` produces a string longer than 65 536 bytes, store `null` for that field and continue (same behaviour as encode failure). This mirrors the 64 KB php_code size limit stated in the spec and is belt-and-suspenders only — caller-side (REST layer) validation remains required and is the primary enforcement point (N4 advisory).
+
+**Rule**
+The constant `$max_json_bytes = 65536` is defined locally in `save_override()`. If ever changed, update both the DB layer and the REST validator (Spec 009 `AcrossAI_Abilities_Validator`).
+
+**Why not depth-limit here?**
+`json_decode()` default max depth is 512. Enforcing a lower depth limit at the DB layer requires a recursive check or try/catch that adds complexity with low marginal gain for admin-only data. Depth validation is delegated to Spec 009's `validate_schema()`.
+
+**Where to look next**
+`AcrossAI_Sitewide_Query::save_override()` (JSON registry loop),
+`AcrossAI_Abilities_Validator` (Spec 009 — depth validation)
+
+---
+
+### 2026-05-22 — by_source() is an authorization-free DB helper; all callers must gate it (DEC-BY-SOURCE-AUTHZ)
+
+**Context**
+TASK-SEC-002 (security review, Feature 008): `by_source()` is public and returns all matching records with no built-in capability check. The reviewer flagged that a future caller could accidentally expose ability metadata without a permission gate.
+
+**Decision**
+Keep `by_source()` as a raw DB-layer helper with no internal capability check. The authorization contract is documented in the docblock with an explicit `AUTHORIZATION CONTRACT` header naming the risk (OWASP A01:2025) and the canonical gate (REST `permission_callback`). This is the same pattern as all other Query methods in the plugin.
+
+Adding a capability check inside the DB layer would couple access-control logic to the query layer, break server-side internal callers (e.g., the Processor which runs before a user context exists), and violate separation of concerns.
+
+**Rule**
+Every public method on `*_Query` classes is an authorization-free data accessor. Access control belongs in the REST controller `permission_callback` or the admin page capability check — never inside the Query class.
+
+**Where to look next**
+`AcrossAI_Sitewide_Query::by_source()` (docblock with AUTHORIZATION CONTRACT note),
+`AcrossAI_Abilities_Rest_Controller::check_permission()` (Spec 009 — canonical gate)
+
+---
+
 ## Entry Lifecycle
 
 Each decision follows this lifecycle:

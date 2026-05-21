@@ -1,6 +1,6 @@
 <?php
 /**
- * Database schema definition for the abilities overwrite table.
+ * Database schema definition for the unified abilities table.
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
@@ -15,7 +15,7 @@ use BerlinDB\Database\Schema;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Schema class defining all 16 columns of the acrossai_abilities_overwrite table.
+ * Schema class defining all 25 columns of the acrossai_abilities table.
  *
  * @since 0.1.0
  */
@@ -49,6 +49,46 @@ class AcrossAI_Sitewide_Schema extends Schema {
 			'sortable'   => true,
 		),
 
+		// Display name (FR-021: nullable — override rows carry no label).
+		array(
+			'name'       => 'label',
+			'type'       => 'varchar',
+			'length'     => '255',
+			'allow_null' => true,
+			'default'    => null,
+			'searchable' => true,
+			'sortable'   => true,
+		),
+
+		// Full description.
+		array(
+			'name'       => 'description',
+			'type'       => 'longtext',
+			'allow_null' => true,
+			'default'    => null,
+			'searchable' => true,
+		),
+
+		// Organizational category.
+		array(
+			'name'       => 'category',
+			'type'       => 'varchar',
+			'length'     => '100',
+			'allow_null' => true,
+			'default'    => null,
+			'sortable'   => true,
+		),
+
+		// Lifecycle status. 20-char max, defaults to draft.
+		array(
+			'name'     => 'status',
+			'type'     => 'varchar',
+			'length'   => '20',
+			'null'     => false,
+			'default'  => 'draft',
+			'sortable' => true,
+		),
+
 		// Provider string.
 		array(
 			'name'       => 'provider',
@@ -59,17 +99,17 @@ class AcrossAI_Sitewide_Schema extends Schema {
 			'sortable'   => true,
 		),
 
-		// Source enum.
+		// Source origin of the record. Defaults to db.
 		array(
-			'name'       => 'source',
-			'type'       => 'varchar',
-			'length'     => '50',
-			'allow_null' => true,
-			'default'    => null,
-			'sortable'   => true,
+			'name'     => 'source',
+			'type'     => 'varchar',
+			'length'   => '50',
+			'null'     => false,
+			'default'  => 'db',
+			'sortable' => true,
 		),
 
-		// Tri-state boolean columns.
+		// Tri-state: site-wide allow override.
 		array(
 			'name'       => 'site_allowed',
 			'type'       => 'tinyint',
@@ -77,27 +117,41 @@ class AcrossAI_Sitewide_Schema extends Schema {
 			'allow_null' => true,
 			'default'    => null,
 		),
+
+		// Callback type (enum guard in save_override).
 		array(
-			'name'       => 'readonly',
-			'type'       => 'tinyint',
-			'length'     => '1',
+			'name'    => 'callback_type',
+			'type'    => 'varchar',
+			'length'  => '50',
+			'null'    => false,
+			'default' => 'noop',
+		),
+
+		// Callback configuration JSON.
+		array(
+			'name'       => 'callback_config',
+			'type'       => 'longtext',
 			'allow_null' => true,
 			'default'    => null,
 		),
+
+		// Input JSON Schema.
 		array(
-			'name'       => 'destructive',
-			'type'       => 'tinyint',
-			'length'     => '1',
+			'name'       => 'input_schema',
+			'type'       => 'longtext',
 			'allow_null' => true,
 			'default'    => null,
 		),
+
+		// Output JSON Schema.
 		array(
-			'name'       => 'idempotent',
-			'type'       => 'tinyint',
-			'length'     => '1',
+			'name'       => 'output_schema',
+			'type'       => 'longtext',
 			'allow_null' => true,
 			'default'    => null,
 		),
+
+		// REST and MCP visibility flags (tri-state).
 		array(
 			'name'       => 'show_in_rest',
 			'type'       => 'tinyint',
@@ -126,6 +180,29 @@ class AcrossAI_Sitewide_Schema extends Schema {
 		array(
 			'name'       => 'mcp_servers',
 			'type'       => 'longtext',
+			'allow_null' => true,
+			'default'    => null,
+		),
+
+		// Remaining tri-state boolean columns.
+		array(
+			'name'       => 'readonly',
+			'type'       => 'tinyint',
+			'length'     => '1',
+			'allow_null' => true,
+			'default'    => null,
+		),
+		array(
+			'name'       => 'destructive',
+			'type'       => 'tinyint',
+			'length'     => '1',
+			'allow_null' => true,
+			'default'    => null,
+		),
+		array(
+			'name'       => 'idempotent',
+			'type'       => 'tinyint',
+			'length'     => '1',
 			'allow_null' => true,
 			'default'    => null,
 		),

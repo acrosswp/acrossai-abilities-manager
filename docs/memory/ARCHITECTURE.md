@@ -23,9 +23,13 @@ and a REST-API-first admin UI backed by @wordpress/dataviews.
   registrations at `plugins_loaded P20` via PATH A/B branching. Wires
   `wp_register_ability_args`, `wp_abilities_api_init`, and
   `mcp_adapter_expose_ability` directly in `boot()` (ARCH-ADV-001 deviation).
-- **`includes/Modules/Sitewide/Database/`**: BerlinDB table, query, schema,
-  and row classes for override persistence. `AcrossAI_Sitewide_Row::__construct()`
-  decodes `mcp_servers` JSON to `array|null`.
+- **`includes/Modules/Abilities/Database/`**: BerlinDB table, query, schema,
+  and row classes for the unified `wp_acrossai_abilities` table (24 columns).
+  `AcrossAI_Abilities_Row::__construct()` decodes `callback_config`, `input_schema`,
+  `output_schema`, and `mcp_servers` JSON fields to `array|null`.
+- **`includes/Modules/Sitewide/Database/`**: BerlinDB Sitewide classes — thin
+  wrappers that now point at `wp_acrossai_abilities` (same table as Abilities module).
+  `source != 'db'` rows are the sitewide override rows managed by this module.
 - **`includes/Modules/Sitewide/Rest/`**: REST sub-controller split:
   `AcrossAI_Sitewide_Abilities_Controller` (read), `AcrossAI_Sitewide_Override_Controller`
   (write), `AcrossAI_Sitewide_Bulk_Controller` (bulk), `AcrossAI_Sitewide_Mcp_Controller`

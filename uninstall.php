@@ -16,7 +16,12 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 global $wpdb;
 
-// Drop the sitewide ability overrides table.
+// Drop the unified abilities table (renamed in 008-unified-abilities-table).
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}acrossai_abilities`" );
+delete_option( 'acrossai_abilities_db_version' );
+
+// Drop the legacy sitewide ability overrides table (backward compat).
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
 $wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}acrossai_abilities_overwrite`" );
 
