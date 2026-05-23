@@ -1,6 +1,6 @@
 # Architecture
 
-Last reviewed: 2026-05-17
+Last reviewed: 2026-05-22
 
 ## System Overview
 

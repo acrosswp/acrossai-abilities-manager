@@ -16,6 +16,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-NAMESPACE-CONVENTION | Project uses AcrossAI_Abilities_Manager\Includes\* underscore convention | Plugin-wide | namespace, PSR-4, pattern | Active | DECISIONS.md |
 | DEC-UTILITY-STATIC-ONLY | Utility classes are 100% static; only orchestrators use singleton | Plugin-wide | utilities, singleton, stateless | Active | DECISIONS.md |
 | DEC-USE-STATEMENT-CONSISTENCY | All use statements must match underscore convention | Plugin-wide | imports, namespace, pr-review | Active | DECISIONS.md |
+| DEC-TABLE-SOFT-SINGLETON | BerlinDB Table subclasses stay soft-singleton when activation or tests instantiate them directly | Sitewide/DB | berlinddb, singleton, activator | Active | DECISIONS.md |
+| DEC-JSON-SIZE-GUARD | Registry-driven JSON fields get a 64 KB DB-layer guard in save paths | Sitewide/DB | json, berlinddb, size-guard | Active | DECISIONS.md |
+| DEC-BY-SOURCE-AUTHZ | Query-layer helpers remain auth-free; callers must gate before exposure | Sitewide/DB | query-layer, authz, separation-of-concerns | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -27,6 +30,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | AC-MENU-IN-PLACE | admin/Partials/Menu.php updated in-place; no new menu class | Admin | menu, partials | FR-020 |
 | AC-QUERY-LAYER-FILTERING | List filtering in query builder, not REST controller | REST/Utilities | filtering, query-builder, pagination | ARCHITECTURE.md |
 | AC-FILE-HEADER-PATTERN | @package AcrossAI_Abilities_Manager, @subpackage full/path, @since 0.1.0 | Plugin-wide | headers, phpcs, standards | ARCHITECTURE.md |
+| ARCH-UNIFIED-ABILITIES-STORAGE | Abilities and Sitewide DB wrappers share the unified abilities table; Sitewide override rows are identified by source semantics | Abilities/Sitewide | unified-table, berlinddb, source-boundary | ARCHITECTURE.md |
 
 ## Implementation Patterns
 | ID | Pattern | Scope | Tags | Source |
