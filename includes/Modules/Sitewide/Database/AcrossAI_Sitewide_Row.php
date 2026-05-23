@@ -1,6 +1,6 @@
 <?php
 /**
- * BerlinDB Row class for a single ability override record.
+ * BerlinDB Row class for a single ability record.
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
@@ -16,7 +16,7 @@ use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Represents a single row from the acrossai_abilities_overwrite table.
+ * Represents a single row from the acrossai_abilities table.
  *
  * Tinyint → PHP bool/null casting is delegated to AcrossAI_Sanitizer::cast_tri_state()
  * and MUST NOT be duplicated here (RF-02).
@@ -25,16 +25,24 @@ defined( 'ABSPATH' ) || exit;
  *
  * @property int         $id
  * @property string      $ability_slug
+ * @property string|null $label
+ * @property string|null $description
+ * @property string|null $category
+ * @property string      $status
  * @property string|null $provider
- * @property string|null $source
+ * @property string      $source
  * @property bool|null   $site_allowed
- * @property bool|null   $readonly
- * @property bool|null   $destructive
- * @property bool|null   $idempotent
+ * @property string      $callback_type
+ * @property array|null  $callback_config
+ * @property array|null  $input_schema
+ * @property array|null  $output_schema
  * @property bool|null   $show_in_rest
  * @property bool|null   $show_in_mcp
  * @property string|null $mcp_type
- * @property string|null $mcp_servers
+ * @property array|null  $mcp_servers
+ * @property bool|null   $readonly
+ * @property bool|null   $destructive
+ * @property bool|null   $idempotent
  * @property string      $created_at
  * @property string|null $updated_at
  * @property int|null    $created_by
@@ -57,6 +65,34 @@ class AcrossAI_Sitewide_Row extends Row {
 	public $ability_slug = '';
 
 	/**
+	 * Display name. NULL = no override (FR-021: nullable).
+	 *
+	 * @var string|null
+	 */
+	public $label = null;
+
+	/**
+	 * Full description.
+	 *
+	 * @var string|null
+	 */
+	public $description = null;
+
+	/**
+	 * Organizational category.
+	 *
+	 * @var string|null
+	 */
+	public $category = null;
+
+	/**
+	 * Lifecycle status. Allowed values: 'draft', 'publish'.
+	 *
+	 * @var string
+	 */
+	public $status = 'draft';
+
+	/**
 	 * Provider string.
 	 *
 	 * @var string|null
@@ -64,11 +100,11 @@ class AcrossAI_Sitewide_Row extends Row {
 	public $provider = null;
 
 	/**
-	 * Source enum: plugin|theme|core|db.
+	 * Source (origin of the record). Default 'db'.
 	 *
-	 * @var string|null
+	 * @var string
 	 */
-	public $source = null;
+	public $source = 'db';
 
 	/**
 	 * Whether the ability is allowed site-wide. NULL = use registry default.
@@ -78,25 +114,32 @@ class AcrossAI_Sitewide_Row extends Row {
 	public $site_allowed = null;
 
 	/**
-	 * Whether the ability is read-only. NULL = use registry default.
+	 * Callback type. Default 'noop'.
 	 *
-	 * @var bool|null
+	 * @var string
 	 */
-	public $readonly = null;
+	public $callback_type = 'noop';
 
 	/**
-	 * Whether the ability is destructive. NULL = use registry default.
+	 * Callback configuration (decoded JSON array). NULL = not configured.
 	 *
-	 * @var bool|null
+	 * @var array|null
 	 */
-	public $destructive = null;
+	public $callback_config = null;
 
 	/**
-	 * Whether the ability is idempotent. NULL = use registry default.
+	 * Input JSON Schema (decoded array). NULL = no schema defined.
 	 *
-	 * @var bool|null
+	 * @var array|null
 	 */
-	public $idempotent = null;
+	public $input_schema = null;
+
+	/**
+	 * Output JSON Schema (decoded array). NULL = no schema defined.
+	 *
+	 * @var array|null
+	 */
+	public $output_schema = null;
 
 	/**
 	 * Whether the ability is shown in the REST API. NULL = use registry default.
@@ -122,9 +165,30 @@ class AcrossAI_Sitewide_Row extends Row {
 	/**
 	 * JSON-encoded MCP server IDs. NULL = all servers.
 	 *
-	 * @var string|null
+	 * @var array|null
 	 */
 	public $mcp_servers = null;
+
+	/**
+	 * Whether the ability is read-only. NULL = use registry default.
+	 *
+	 * @var bool|null
+	 */
+	public $readonly = null;
+
+	/**
+	 * Whether the ability is destructive. NULL = use registry default.
+	 *
+	 * @var bool|null
+	 */
+	public $destructive = null;
+
+	/**
+	 * Whether the ability is idempotent. NULL = use registry default.
+	 *
+	 * @var bool|null
+	 */
+	public $idempotent = null;
 
 	/**
 	 * Creation timestamp.
@@ -155,7 +219,58 @@ class AcrossAI_Sitewide_Row extends Row {
 	public $updated_by = null;
 
 	/**
-	 * Constructor — casts tinyint fields to PHP bool/null via shared utility.
+	 * Return the list of column names that store JSON-encoded values.
+	 *
+	 * Blocklist guard (N1 / SC-005): the base list covers the four known JSON
+	 * longtext columns. Callers may extend via the filter, but any column name
+	 * that appears in the scalar blocklist is silently removed from the result
+	 * to prevent accidental JSON-decode of scalar columns.
+	 *
+	 * @since  0.1.0
+	 * @return string[] JSON field names safe for json_decode/wp_json_encode.
+	 */
+	public static function get_json_fields(): array {
+		$blocked_scalar_columns = array(
+			'id',
+			'ability_slug',
+			'label',
+			'description',
+			'category',
+			'status',
+			'provider',
+			'source',
+			'site_allowed',
+			'callback_type',
+			'show_in_rest',
+			'show_in_mcp',
+			'mcp_type',
+			'readonly',
+			'destructive',
+			'idempotent',
+			'created_at',
+			'updated_at',
+			'created_by',
+			'updated_by',
+		);
+
+		$base_json_fields = array( 'mcp_servers', 'callback_config', 'input_schema', 'output_schema' );
+
+		/**
+		 * Allow plugins/themes to register additional JSON-encoded longtext columns.
+		 *
+		 * @since 0.1.0
+		 * @param string[] $fields Base list of JSON column names.
+		 */
+		$json_fields = (array) apply_filters( 'acrossai_abilities_json_fields', $base_json_fields );
+
+		// Blocklist guard: remove any column that is a known scalar to prevent
+		// accidental decode of non-JSON columns (N1 security correction).
+		return array_values( array_diff( $json_fields, $blocked_scalar_columns ) );
+	}
+
+	/**
+	 * Constructor — casts tinyint fields to PHP bool/null via shared utility,
+	 * decodes all JSON longtext fields using the registry, and casts integer fields.
 	 *
 	 * @since  0.1.0
 	 * @param  object|array $item Raw DB row.
@@ -169,12 +284,13 @@ class AcrossAI_Sitewide_Row extends Row {
 			$this->{$field} = AcrossAI_Sanitizer::cast_tri_state( $this->{$field} );
 		}
 
-		// JSON-decode mcp_servers — stored as JSON longtext, must return as PHP array.
-		// Without this, the REST response would return a raw JSON string instead of an array,
-		// breaking the JS client which expects string[].
-		if ( null !== $this->mcp_servers ) {
-			$decoded           = json_decode( $this->mcp_servers, true );
-			$this->mcp_servers = is_array( $decoded ) ? $decoded : null;
+		// JSON-decode all registered JSON longtext fields.
+		// Registry is extensible via acrossai_abilities_json_fields filter (SC-005).
+		foreach ( self::get_json_fields() as $json_field ) {
+			if ( null !== $this->{$json_field} ) {
+				$decoded             = json_decode( $this->{$json_field}, true );
+				$this->{$json_field} = is_array( $decoded ) ? $decoded : null;
+			}
 		}
 
 		// Cast integer fields.
