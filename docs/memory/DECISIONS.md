@@ -721,3 +721,37 @@ Do NOT assume pre-update audit proves post-upgrade security. Pre-update audit re
 `specs/007-upgrade-access-control/` (security review and test results),
 `.specify/memory/CONSTITUTION.md` (security constraints section),
 `docs/memory/ARCHITECTURE.md` (constraint reference)
+
+
+---
+
+### 2026-05-24 — Hardcode WordPress hook suffix for top-level menu pages (DEC-MENU-HOOK-SUFFIX)
+
+**Status**: Active
+
+**Why this is durable**
+WordPress generates `toplevel_page_{menu-slug}` as the hook suffix for any page registered with `add_menu_page()`. This string is deterministic and stable. Coupling enqueue logic to a menu class instance via `get_hook_suffix()` creates a class dependency that breaks when the menu class is deleted or refactored.
+
+**Decision**
+`is_*_page()` helper methods in `Admin\Main` MUST hardcode the WordPress-generated hook suffix as a string literal. Never store or retrieve the hook suffix via `add_menu_page()` return value or `get_hook_suffix()` on a menu class instance. Pattern (Yoda form required by PHPCS):
+```php
+private function is_manager_page( string $hook_suffix ): bool {
+    return 'toplevel_page_acrossai-abilities-manager' === $hook_suffix;
+}
+```
+Formula: `toplevel_page_{menu-slug}` for top-level pages; `{parent-slug}_page_{submenu-slug}` for submenu pages.
+
+**Tradeoffs**
+Hardcoded string must be updated if the menu slug changes. Accepted because menu slugs are stable plugin-wide constants — they rarely change and the failure mode is obvious (assets stop loading, no fatal).
+
+**Future mistake prevented**
+Do not add `get_hook_suffix()` accessors to menu Partial classes solely to feed enqueue logic. Do not call `AcrossAI_SomeMenuClass::instance()->get_hook_suffix()` inside `Admin\Main` — this couples enqueue to a menu class and breaks when that class is deleted.
+
+**Evidence**
+Feature 011 (2026-05-24): `is_abilities_custom_page()` called `AcrossAI_Abilities_Menu::instance()->get_hook_suffix()` dynamically. After `AcrossAI_Abilities_Menu` was deleted, replacement `is_manager_page()` hardcodes `'toplevel_page_acrossai-abilities-manager' === $hook_suffix`. PHPCS Yoda correction applied. PHPCS exit 0, PHPStan L8 exit 0.
+
+**Where to look next**
+`admin/Main.php` (`is_manager_page()`, `is_logs_page()` — canonical examples),
+WordPress docs: `add_menu_page()` return value (hook suffix),
+`specs/011-merge-abilities-ui/tasks.md` (T011 — is_manager_page implementation).
+

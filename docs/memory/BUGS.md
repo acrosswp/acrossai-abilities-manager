@@ -176,6 +176,39 @@ On any REST create form with a prefix+suffix slug: grep the payload for `ability
 
 ---
 
+---
+
+### 2026-05-24 — include of .asset.php without file_exists guard causes PHP fatal (BUG-UNCONDITIONAL-ASSET-INCLUDE)
+
+**Status**: Active
+
+**Symptoms**
+PHP fatal error on every page load: `include(): Failed opening '.../build/js/sitewide.asset.php'`. Occurs when a webpack bundle is decommissioned or has not been built yet.
+
+**Root Cause**
+`Admin\Main::__construct()` contained an unconditional `include` of `build/js/sitewide.asset.php`. When that file was deleted during decommissioning, the missing file caused a PHP fatal with no recovery path. The `logger.asset.php` and `abilities.asset.php` loads immediately below used `file_exists()` guards — confirming the correct pattern existed but was never applied to the older sitewide bundle.
+
+**Future mistake prevented**
+Every `include` of a `build/*.asset.php` file in any constructor MUST be wrapped in a `file_exists()` guard. Optional or feature-specific bundles must use:
+```php
+$asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/bundle.asset.php';
+if ( file_exists( $asset_path ) ) {
+    $this->bundle_asset_file = include $asset_path;
+}
+```
+
+**Evidence**
+Feature 011 (2026-05-24): `$this->sitewide_asset_file = include ... 'build/js/sitewide.asset.php'` unconditional include identified as PLAN-SEC-003 in `specs/011-merge-abilities-ui/security-constraints.md`. Fixed by removing the include entirely (T008). The `logger_asset_file` and `abilities_asset_file` loads remain as the canonical examples of the correct pattern.
+
+**Prevention / Detection**
+Before adding any `include .asset.php` to a constructor, grep `admin/Main.php` for existing `file_exists()` guard examples and apply the same guard. When decommissioning a bundle, remove the PHP include BEFORE deleting the asset file.
+
+**Where to look next**
+`admin/Main.php` (constructor — logger and abilities asset guards as correct examples),
+`specs/011-merge-abilities-ui/security-constraints.md` (PLAN-SEC-003),
+`specs/011-merge-abilities-ui/tasks.md` (T008, RISK-001).
+
+
 ## Template
 ### YYYY-MM-DD - Bug / Failure Pattern
 **Status**

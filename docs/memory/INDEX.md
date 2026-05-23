@@ -22,6 +22,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-DESIGN-OVERRIDES-DATAVIEWS | User design prototype overrides DataViews/DataForm Constitution §III mandate | Abilities/Admin | dataviews, dataform, constitution, design | Active | DECISIONS.md |
 | DEC-ABILITIES-DUAL-MODE-LIST | GET /abilities branches source=db→DB query, else→registry merge; format_merged_ability() normalises shape | Abilities REST | rest, registry, merge, formatter | Active | DECISIONS.md |
 | DEC-NODE-20-BUILD-REQUIRED | npm run build requires Node ≥ 20; toSorted dependency fails silently on Node 16 | Build | node, nvm, build, toSorted | Active | DECISIONS.md |
+| DEC-MENU-HOOK-SUFFIX | Hardcode `toplevel_page_{slug}`; avoid `get_hook_suffix()` coupling | Admin/Enqueue | hook-suffix, enqueue, menu, yoda | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -41,6 +42,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | PATTERN-SINGLE-SOURCE-UTILITY | Extract duplication to single utility class | Utilities | DRY, reusability, modularity | ARCHITECTURE.md |
 | PATTERN-STAGE-NAMING | Multi-stage data with distinct variable names per transformation stage | Logger | clarity, multi-stage, readability | ARCHITECTURE.md |
 | PATTERN-FEATURE-ASSET-SEPARATION | Feature-specific asset separation from main manager assets | Logger/Admin | assets, modularity, decoupling | ARCHITECTURE.md |
+| PATTERN-ENQUEUE-PAGE-GUARD | `is_*_page()` helpers + Yoda `===`; no `strpos` variables in enqueue guards | Admin/Enqueue | enqueue, guards, is_page, strpos | ARCHITECTURE.md |
+| PATTERN-ASSET-DECOMMISSION-ORDER | Remove PHP `include` first, then webpack entry + source files, then clean build | Admin/Build | decommission, webpack, include, order | ARCHITECTURE.md |
 
 ## Bug Patterns
 | ID | Pattern | Affected Area | Tags | Source |
@@ -51,6 +54,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-UNIMPLEMENTED-HOOK | apply_filters() declared in plan but missing from implementation | Sitewide REST | filter, apply_filters, extensibility | BUGS.md |
 | BUG-LOOSE-COMPARISON-BYPASS | Type coercion in loose equality access checks | Access Control | type-safety, security, injection | BUGS.md |
 | BUG-SLUG-SUFFIX-MISMATCH | REST create expects slug_suffix (suffix only), not ability_slug (full slug) | Abilities REST | slug, prefix, create, form | BUGS.md |
+| BUG-UNCONDITIONAL-ASSET-INCLUDE | `include .asset.php` without `file_exists` guard causes PHP fatal on missing bundle | Admin/Enqueue | asset-include, fatal, build, constructor | BUGS.md |
 
 ## Security Constraints
 | ID | Constraint | Scope | Tags | Source |

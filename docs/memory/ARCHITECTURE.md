@@ -342,3 +342,67 @@ private AccessControlManager $manager; // If interface changes, code breaks
 
 **Maintenance Rule**:
 When adding new library integrations, architect using singleton + service locator pattern to enable future zero-code upgrades. Document public API contracts in code comments. Test integration points with multiple library versions (if available) before locking to a specific constraint.
+
+
+---
+
+## PATTERN-ENQUEUE-PAGE-GUARD
+
+Page detection in `enqueue_styles()` and `enqueue_scripts()` MUST use dedicated `is_*_page()` boolean helper methods. Never use intermediate `strpos` variables (`$on_abilities`, `$on_logs`). Each helper uses Yoda `===` strict comparison against a hardcoded WP hook suffix string.
+
+**Required pattern**:
+```php
+public function enqueue_scripts( string $hook_suffix ) {
+    if ( ! $this->is_manager_page( $hook_suffix ) && ! $this->is_logs_page( $hook_suffix ) ) {
+        return;
+    }
+    // ...
+}
+
+private function is_manager_page( string $hook_suffix ): bool {
+    return 'toplevel_page_acrossai-abilities-manager' === $hook_suffix;
+}
+```
+
+**Forbidden pattern**:
+```php
+$on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' ); // strpos variable
+$on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );    // strpos variable
+if ( ! $on_abilities && ! $on_logs ) { return; }
+```
+
+**Why this matters**:
+- `strpos` intermediate variables are architecture violations (V1/V2 flagged in Feature 011 review)
+- `===` strict comparison prevents type-coercion bypass (SC-011-04)
+- Named helpers are self-documenting and reusable across enqueue methods
+- Extends AC-ENQUEUE-ADMIN constraint; see also DEC-MENU-HOOK-SUFFIX
+
+**Evidence**: Feature 011 (2026-05-24) — V1/V2 architecture violations resolved in T011. PHPCS exit 0, PHPStan L8 exit 0.
+
+**Reference**: `admin/Main.php` (`is_manager_page()`, `is_logs_page()` — canonical implementations).
+
+---
+
+## PATTERN-ASSET-DECOMMISSION-ORDER
+
+When decommissioning a webpack bundle, the PHP constructor `include` MUST be removed before deleting source files or build artifacts. Removing the built file before the PHP include causes a PHP fatal error on the next page load.
+
+**Correct order**:
+1. Remove PHP constructor `include` and associated property (T008 pattern)
+2. Remove webpack entry from `webpack.config.js`
+3. Delete source files (`src/js/bundle/`, `src/scss/bundle/`)
+4. Run a clean build (`npm run build`)
+
+**Wrong order** (causes PHP fatal):
+- Delete `build/js/bundle.asset.php` ← triggers fatal immediately
+- Then try to remove the PHP include
+
+**Why this matters**:
+- WordPress boots PHP before any build step; a missing `include` target is a fatal error
+- The fatal is hard to diagnose because the asset file is simply absent with no PHP warning at the include site
+- This ordering risk was documented as RISK-001 in Feature 011 `tasks.md` before implementation began
+
+**Evidence**: Feature 011 (2026-05-24) — PLAN-SEC-003 flagged the ordering risk in `specs/011-merge-abilities-ui/security-constraints.md`. Task order enforced: T008 (PHP) → T002/T003 (sources) → T001 (webpack) → T015 (build). Zero PHP fatals during implementation.
+
+**Reference**: `specs/011-merge-abilities-ui/tasks.md` (T008, RISK-001), `admin/Main.php` constructor (correct `file_exists()` guard pattern).
+

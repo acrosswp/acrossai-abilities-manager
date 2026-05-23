@@ -9,7 +9,6 @@
 
 namespace AcrossAI_Abilities_Manager\Admin;
 
-use AcrossAI_Abilities_Manager\Admin\Partials\AcrossAI_Abilities_Menu;
 use AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu;
 
 // Exit if accessed directly.
@@ -74,14 +73,6 @@ class Main {
 	 */
 	private $css_asset_file;
 
-	/**
-	 * Asset manifest for the sitewide ability manager JS/CSS bundle.
-	 *
-	 * @since    0.1.0
-	 * @access   private
-	 * @var      array
-	 */
-	private $sitewide_asset_file;
 
 	/**
 	 * Asset manifest for the logger JS/CSS bundle.
@@ -113,9 +104,8 @@ class Main {
 		$this->plugin_name = $plugin_name;
 		$this->version     = $version;
 
-		$this->js_asset_file       = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/backend.asset.php';
-		$this->css_asset_file      = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/css/backend.asset.php';
-		$this->sitewide_asset_file = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/sitewide.asset.php';
+		$this->js_asset_file  = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/backend.asset.php';
+		$this->css_asset_file = include \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/css/backend.asset.php';
 
 		// Load logger asset file if it exists (built by @wordpress/scripts build).
 		$logger_asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/logger.asset.php';
@@ -141,20 +131,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_styles( string $hook_suffix ) {
-		$on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' );
-		$on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );
-		$on_custom    = false !== strpos( $hook_suffix, 'acrossai-abilities-custom' );
-		if ( ! $on_abilities && ! $on_logs && ! $on_custom ) {
+		if ( ! $this->is_manager_page( $hook_suffix ) && ! $this->is_logs_page( $hook_suffix ) ) {
 			return;
 		}
-
-		wp_register_style(
-			'acrossai-abilities-sitewide',
-			\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/sitewide.css',
-			array(),
-			$this->sitewide_asset_file['version']
-		);
-		wp_enqueue_style( 'acrossai-abilities-sitewide' );
 
 		// Enqueue logger styles only on Logs submenu page (T015: feature 006).
 		if ( $this->logger_asset_file && $this->is_logs_page( $hook_suffix ) ) {
@@ -167,8 +146,8 @@ class Main {
 			wp_enqueue_style( 'acrossai-abilities-logger' );
 		}
 
-		// Enqueue Custom Abilities styles only on Custom Abilities submenu page (feature 010).
-		if ( $this->abilities_asset_file && $this->is_abilities_custom_page( $hook_suffix ) ) {
+		// Enqueue Abilities Manager styles only on main manager page (feature 011).
+		if ( $this->abilities_asset_file && $this->is_manager_page( $hook_suffix ) ) {
 			wp_register_style(
 				'acrossai-abilities-manager-abilities',
 				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/abilities.css',
@@ -186,33 +165,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_scripts( string $hook_suffix ) {
-		$on_abilities = false !== strpos( $hook_suffix, 'acrossai-abilities-manager' );
-		$on_logs      = false !== strpos( $hook_suffix, 'acrossai-abilities-logs' );
-		$on_custom    = false !== strpos( $hook_suffix, 'acrossai-abilities-custom' );
-		if ( ! $on_abilities && ! $on_logs && ! $on_custom ) {
+		if ( ! $this->is_manager_page( $hook_suffix ) && ! $this->is_logs_page( $hook_suffix ) ) {
 			return;
 		}
-
-		wp_register_script(
-			'acrossai-abilities-sitewide',
-			\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/sitewide.js',
-			$this->sitewide_asset_file['dependencies'],
-			$this->sitewide_asset_file['version'],
-			true
-		);
-		wp_enqueue_script( 'acrossai-abilities-sitewide' );
-
-		wp_add_inline_script(
-			'acrossai-abilities-sitewide',
-			'window.acrossaiAbilitiesSitewide = ' . wp_json_encode(
-				array(
-					'nonce'           => wp_create_nonce( 'wp_rest' ),
-					'rest_url'        => untrailingslashit( rest_url() ),
-					'current_user_id' => get_current_user_id(),
-				)
-			) . ';',
-			'before'
-		);
 
 		// Enqueue logger scripts only on Logs submenu page (T015: feature 006).
 		if ( $this->logger_asset_file && $this->is_logs_page( $hook_suffix ) ) {
@@ -237,8 +192,8 @@ class Main {
 			);
 		}
 
-		// Enqueue Custom Abilities scripts only on Custom Abilities submenu page (feature 010).
-		if ( $this->abilities_asset_file && $this->is_abilities_custom_page( $hook_suffix ) ) {
+		// Enqueue Abilities Manager scripts only on main manager page (feature 011).
+		if ( $this->abilities_asset_file && $this->is_manager_page( $hook_suffix ) ) {
 			wp_register_script(
 				'acrossai-abilities-manager-abilities',
 				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/js/abilities.js',
@@ -276,17 +231,16 @@ class Main {
 	}
 
 	/**
-	 * Check if currently viewing the Custom Abilities submenu page.
+	 * Check if currently viewing the main Abilities Manager page.
 	 *
-	 * SEC-04: Uses === strict comparison to prevent type-coercion bypass.
+	 * SC-011-04: Uses === strict comparison to prevent type-coercion bypass.
 	 *
-	 * @since    0.2.0
+	 * @since    0.3.0
 	 * @param string $hook_suffix Current admin page hook suffix.
-	 * @return bool True if on Custom Abilities submenu page.
+	 * @return bool True if on main Abilities Manager page.
 	 */
-	private function is_abilities_custom_page( string $hook_suffix ): bool {
-		$abilities_menu = AcrossAI_Abilities_Menu::instance();
-		return $hook_suffix === $abilities_menu->get_hook_suffix();
+	private function is_manager_page( string $hook_suffix ): bool {
+		return 'toplevel_page_acrossai-abilities-manager' === $hook_suffix;
 	}
 
 	/**

@@ -76,16 +76,6 @@ module.exports = {
 			'frontend.scss'
 		),
 		'css/backend': path.resolve(process.cwd(), 'src/scss', 'backend.scss'),
-		'js/sitewide': path.resolve(
-			process.cwd(),
-			'src/js/sitewide',
-			'index.js'
-		),
-		'css/sitewide': path.resolve(
-			process.cwd(),
-			'src/scss/sitewide',
-			'admin.scss'
-		),
 		'js/logger': path.resolve(process.cwd(), 'src/js', 'index.js'),
 		'css/logger': path.resolve(
 			process.cwd(),

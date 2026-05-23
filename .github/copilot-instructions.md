@@ -45,3 +45,8 @@ After `/implement` and after `/verify`:
 Treat `docs/memory` as the repository memory layer. Keep entries concise, durable, and reviewable in Git.
 A task is not fully complete until memory has been reviewed.
 <!-- MEMORY-MD END -->
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

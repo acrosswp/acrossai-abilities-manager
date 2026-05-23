@@ -77,10 +77,13 @@ class Menu {
 	 * @return void
 	 */
 	public function contents() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'acrossai-abilities-manager' ) );
+		}
 		?>
 		<div class="wrap acrossai-abilities-manager-wrap">
 			<!-- Main Abilities Manager React app -->
-			<div id="acrossai-abilities-manager-root"></div>
+			<div id="acrossai-abilities-root"></div>
 		</div>
 		<?php
 	}

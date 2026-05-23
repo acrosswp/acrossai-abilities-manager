@@ -137,3 +137,14 @@ Customize Phase 1 tests based on library criticality and integration depth.
 1. Apply this workflow to future library upgrades (maintenance, WP-CLI integrations, etc.)
 2. Refactor similar library integrations to support zero-code upgrades
 3. Document workflow in Spec Kit templates for new projects
+
+
+---
+
+### 2026-05-24 — Feature 011: Sitewide React app decommissioned; abilities React app merged into main manager page
+
+- **Why durable**: Establishes the decommission ordering pattern and enqueue guard convention for all future webpack bundle lifecycle changes. The sitewide bundle was the last remaining asset without a `file_exists()` guard and the last enqueue method using intermediate `strpos` variables — Feature 011 closes both gaps.
+- **Future mistake prevented**: Four new patterns captured: BUG-UNCONDITIONAL-ASSET-INCLUDE (missing file_exists guard causes PHP fatal), DEC-MENU-HOOK-SUFFIX (hardcode WP hook suffix; avoid get_hook_suffix() coupling), PATTERN-ENQUEUE-PAGE-GUARD (is_*_page() helpers with Yoda ===, no strpos variables), PATTERN-ASSET-DECOMMISSION-ORDER (PHP include removal must precede source/build deletion).
+- **Evidence**: Tasks T001–T015 complete. PHPCS exit 0, PHPStan L8 exit 0, webpack clean build (6027ms). Security review: Approved (SC-011-01 through SC-011-04 all pass). Architecture review: 0 constitution violations. GitHub issue #15 created for C1 (admin page enqueue double-registration advisory).
+- **Where to look**: `admin/Main.php` (`is_manager_page()`, enqueue guards), `docs/memory/BUGS.md` (BUG-UNCONDITIONAL-ASSET-INCLUDE), `docs/memory/ARCHITECTURE.md` (PATTERN-ASSET-DECOMMISSION-ORDER, PATTERN-ENQUEUE-PAGE-GUARD), `docs/memory/DECISIONS.md` (DEC-MENU-HOOK-SUFFIX), `specs/011-merge-abilities-ui/`.
+
