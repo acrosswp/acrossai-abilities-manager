@@ -6,14 +6,14 @@
  * WordPress ability registrations at request boot time.
  *
  * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Abilities
  * @since      0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Sitewide;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities;
 
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Query;
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -31,7 +31,7 @@ defined( 'ACROSSAI_MANAGER_REST_NAMESPACE' ) || define( 'ACROSSAI_MANAGER_REST_N
  *
  * HOOK WIRING PATTERN (ARCH-ADV-001):
  * Only two hooks go through Main.php / Loader — plugins_loaded P20 (boot_hook) and
- * acrossai_abilities_sitewide_after_save (bust_cache_hook). The Loader always registers hooks
+ * acrossai_abilities_after_create/update/delete (bust_cache_hook). The Loader always registers hooks
  * unconditionally, so it cannot express the PATH A / PATH B split. All downstream hooks
  * (wp_register_ability_args, wp_abilities_api_init, mcp_adapter_tool_call_result,
  * mcp_adapter_pre_tool_call) are registered conditionally inside boot() only when
@@ -52,9 +52,9 @@ final class AcrossAI_Ability_Override_Processor {
 	protected static $_instance = null;
 
 	/**
-	 * In-memory cache: slug → AcrossAI_Sitewide_Row. Null means not yet loaded.
+	 * In-memory cache: slug → AcrossAI_Abilities_Row. Null means not yet loaded.
 	 *
-	 * @var AcrossAI_Sitewide_Row[]|null
+	 * @var AcrossAI_Abilities_Row[]|null
 	 */
 	protected static $_overrides_cache = null;
 
@@ -118,7 +118,7 @@ final class AcrossAI_Ability_Override_Processor {
 	}
 
 	/**
-	 * Loader-compatible wrapper for bust_cache(). Wired at acrossai_abilities_sitewide_after_save via Main.php.
+	 * Loader-compatible wrapper for bust_cache(). Wired at acrossai_abilities_after_create/update/delete via Main.php.
 	 *
 	 * @since  0.1.0
 	 * @return void
@@ -169,7 +169,7 @@ final class AcrossAI_Ability_Override_Processor {
 		add_action( 'wp_abilities_api_init', array( __CLASS__, 'unregister_blocked_abilities' ), 100001 );
 
 		// T016 — enforce mcp_servers allowlist via real mcp-adapter filter hooks.
-		// (mcp_adapter_expose_ability does NOT exist in mcp-adapter — these are the real hooks.)
+		// mcp_adapter_expose_ability does NOT exist in mcp-adapter — these are the real hooks.
 
 		// Remove abilities from DiscoverAbilitiesAbility result when the current server is not
 		// in the ability's mcp_servers allowlist.
@@ -251,7 +251,7 @@ final class AcrossAI_Ability_Override_Processor {
 		}
 
 		if ( null === $cached ) {
-			$cached = AcrossAI_Sitewide_Query::instance()->get_all_overrides();
+			$cached = AcrossAI_Abilities_Query::instance()->get_all_overrides();
 			set_transient( 'acrossai_ability_overrides_cache', $cached, 12 * HOUR_IN_SECONDS );
 		}
 
@@ -272,7 +272,7 @@ final class AcrossAI_Ability_Override_Processor {
 	 *   show_in_mcp               → $args['meta']['mcp']['public']   (plugin-specific)
 	 *   mcp_type                  → $args['meta']['mcp']['type']     (plugin-specific)
 	 *   mcp_servers               → $args['meta']['mcp']['servers']  (plugin-specific; already
-	 *                               decoded to array|null by AcrossAI_Sitewide_Row::__construct())
+	 *                               decoded to array|null by AcrossAI_Abilities_Row::__construct())
 	 *   permission_callback       → $args['permission_callback']     (runtime AC enforcement;
 	 *                               injected only when an access-control rule is stored in
 	 *                               RuleQuery for this slug — checked independently of the
@@ -342,7 +342,7 @@ final class AcrossAI_Ability_Override_Processor {
 				}
 
 				/*
-				 * mcp_servers: AcrossAI_Sitewide_Row::__construct() already decodes
+				 * mcp_servers: AcrossAI_Abilities_Row::__construct() already decodes
 				 * the JSON string from DB to array|null — no json_decode() needed.
 				 * We inject the array into $args['meta']['mcp']['servers'] so the value
 				 * travels on the WP_Ability object after registration.
@@ -385,7 +385,7 @@ final class AcrossAI_Ability_Override_Processor {
 	 * @return callable|null Closure returning bool, or null if no rule is configured.
 	 */
 	private static function build_permission_callback( string $slug ): ?callable {
-		$manager = AcrossAI_Sitewide_Access_Control::instance()->get_manager();
+		$manager = AcrossAI_Abilities_Access_Control::instance()->get_manager();
 		if ( null === $manager ) {
 			return null;
 		}
@@ -396,7 +396,7 @@ final class AcrossAI_Ability_Override_Processor {
 		}
 
 		return static function () use ( $slug ): bool {
-			$mgr = AcrossAI_Sitewide_Access_Control::instance()->get_manager();
+			$mgr = AcrossAI_Abilities_Access_Control::instance()->get_manager();
 			return null !== $mgr
 				? $mgr->user_has_access( \get_current_user_id(), 'acrossai-abilities', $slug )
 				: true; // Fail-open: AC library unavailable.
@@ -592,7 +592,7 @@ final class AcrossAI_Ability_Override_Processor {
 	 * Clear the in-memory cache and the transient.
 	 *
 	 * Called directly from REST controllers after delete/reset operations that do not
-	 * fire acrossai_abilities_sitewide_after_save (W-001 resolution). Also wired as the
+	 * fire Abilities lifecycle hooks (acrossai_abilities_after_create/update/delete, W-001 resolution). Also wired as the
 	 * bust_cache_hook() instance wrapper target for the Loader action.
 	 *
 	 * @internal public by necessity — hook callback + cross-controller direct call.

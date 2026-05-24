@@ -2,10 +2,28 @@
 
 ---
 
+### 2026-05-24 — Abilities module is now the single source of truth for override DB logic (DEC-012-SUPERSESSION)
+
+**Context**
+Spec 009 originally had `AcrossAI_Abilities_Query` reuse `AcrossAI_Sitewide_Schema` and `AcrossAI_Sitewide_Row` to avoid duplication (Feature 012 clarification Q3). Feature 012 supersedes that design by decommissioning the Sitewide module entirely and making `includes/Modules/Abilities/Database/` fully self-contained with its own Table, Schema, Row, and Query classes.
+
+**Decision**
+`AcrossAI_Abilities_Query` (and its companion Table/Schema/Row classes) is the authoritative and only BerlinDB entry point for the `wp_acrossai_abilities` table. The Sitewide DB classes (`AcrossAI_Sitewide_Table`, `AcrossAI_Sitewide_Schema`, `AcrossAI_Sitewide_Row`, `AcrossAI_Sitewide_Query`) were deleted in Feature 012. The Override Processor (`AcrossAI_Ability_Override_Processor`) and Access Control wrapper (`AcrossAI_Abilities_Access_Control`) now live in `includes/Modules/Abilities/`.
+
+**Rule**
+All future features that need override persistence, enforcement, or access-control injection MUST use the Abilities module classes. No new Sitewide module classes should be created.
+
+**Where to look next**
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php` (canonical DB layer),
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (enforcement),
+`specs/012-refactor-sitewide-abilities/` (full feature plan and security constraints).
+
+---
+
 ### 2026-05-22 — BerlinDB Table singletons must NOT have a private constructor (DEC-TABLE-SOFT-SINGLETON)
 
 **Context**
-`AcrossAI_Activator` calls `(new AcrossAI_Sitewide_Table())->maybe_upgrade()` directly. Adding `private function __construct()` to `AcrossAI_Sitewide_Table` — even as part of enforcing the singleton pattern — causes a fatal error because Activator is not a subclass and cannot call a private constructor. FR-015 forbids touching Activator.
+`AcrossAI_Activator` calls `(new AcrossAI_Abilities_Table())->maybe_upgrade()` directly. Adding `private function __construct()` to `AcrossAI_Abilities_Table` — even as part of enforcing the singleton pattern — causes a fatal error because Activator is not a subclass and cannot call a private constructor. FR-015 forbids touching Activator.
 
 **Decision**
 BerlinDB `Table` subclasses in this plugin use a **soft singleton**: `$_instance` + `instance()` are present but no `private function __construct()` is added. Singleton behaviour is convention-enforced, not language-enforced. This is the required pattern for any Table class that is also instantiated via `new` elsewhere (e.g., in Activator or tests).
@@ -13,7 +31,7 @@ BerlinDB `Table` subclasses in this plugin use a **soft singleton**: `$_instance
 BerlinDB `Query`, `Schema`, and `Row` subclasses are free to use private constructors because they are never directly instantiated via `new` outside their own `instance()` method.
 
 **Rule**
-- `AcrossAI_Sitewide_Table` and any future `*_Table` class: **no `private function __construct()`**
+- `AcrossAI_Abilities_Table` and any future `*_Table` class: **no `private function __construct()`**
 - `*_Query` classes: private constructor is fine (always accessed via `::instance()`)
 - `*_Row` / `*_Schema` classes: BerlinDB instantiates these internally — do not add constructors that break parent behaviour
 
@@ -21,11 +39,11 @@ BerlinDB `Query`, `Schema`, and `Row` subclasses are free to use private constru
 Architecture reviews flagging "missing private constructor" on a Table class MUST check whether any other class calls `new ClassName()` before adding the private constructor. If they do, keep the soft singleton pattern.
 
 **Evidence**
-Feature 008 (2026-05-22): Adding `private function __construct()` to `AcrossAI_Sitewide_Table` caused a PHP fatal error on plugin activation — `AcrossAI_Activator::activate()` calls `new AcrossAI_Sitewide_Table()` on line 40. Fix: remove private constructor, keep `instance()` method.
+Feature 008 (2026-05-22): Adding `private function __construct()` to `AcrossAI_Abilities_Table` caused a PHP fatal error on plugin activation — `AcrossAI_Activator::activate()` calls `new AcrossAI_Abilities_Table()` directly. Fix: remove private constructor, keep `instance()` method.
 
 **Where to look next**
-`includes/AcrossAI_Activator.php` (line 40 — direct instantiation),
-`includes/Modules/Sitewide/Database/AcrossAI_Sitewide_Table.php` (soft singleton example)
+`includes/AcrossAI_Activator.php` (direct instantiation),
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Table.php` (soft singleton example)
 
 ---
 
@@ -44,7 +62,7 @@ The constant `$max_json_bytes = 65536` is defined locally in `save_override()`. 
 `json_decode()` default max depth is 512. Enforcing a lower depth limit at the DB layer requires a recursive check or try/catch that adds complexity with low marginal gain for admin-only data. Depth validation is delegated to Spec 009's `validate_schema()`.
 
 **Where to look next**
-`AcrossAI_Sitewide_Query::save_override()` (JSON registry loop),
+`AcrossAI_Abilities_Query::save_override()` (JSON registry loop),
 `AcrossAI_Abilities_Validator` (Spec 009 — depth validation)
 
 ---
@@ -63,7 +81,7 @@ Adding a capability check inside the DB layer would couple access-control logic 
 Every public method on `*_Query` classes is an authorization-free data accessor. Access control belongs in the REST controller `permission_callback` or the admin page capability check — never inside the Query class.
 
 **Where to look next**
-`AcrossAI_Sitewide_Query::by_source()` (docblock with AUTHORIZATION CONTRACT note),
+`AcrossAI_Abilities_Query::by_source()` (docblock with AUTHORIZATION CONTRACT note),
 `AcrossAI_Abilities_Rest_Controller::check_permission()` (Spec 009 — canonical gate)
 
 ---
@@ -121,11 +139,11 @@ Fail-open preserves access when the library is absent but means an unavailable l
 Do not guard the permission_callback injection inside the `isset($_overrides_cache[$slug])` block — it must run even when no override record exists for the slug.
 
 **Evidence**
-Implemented in `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php::inject_override_args()` (2026-05-16). Verified PHPCS 0 errors, PHPStan L8 exit 0.
+Implemented in `includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php::inject_override_args()` (2026-05-16). Verified PHPCS 0 errors, PHPStan L8 exit 0.
 
 **Where to look next**
-`includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (inject_override_args),
-`includes/Modules/Sitewide/AcrossAI_Sitewide_Access_Control.php` (get_manager),
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (inject_override_args),
+`includes/Modules/Abilities/AcrossAI_Abilities_Access_Control.php` (get_manager),
 `vendor/wpboilerplate/wpb-access-control/src/AccessControlManager.php` (get_query, user_has_access),
 `specs/004-ability-override-processor/spec.md` (FR-009).
 
@@ -139,7 +157,11 @@ Implemented in `includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.ph
 Any processor class that needs PATH A/B conditional hook wiring will face this same Boot Flow Rule tension. Documenting why direct `add_filter`/`add_action` is acceptable here prevents false violation flags.
 
 **Decision**
-`AcrossAI_Ability_Override_Processor::boot()` registers `wp_register_ability_args`, `wp_abilities_api_init`, and `mcp_adapter_expose_ability` hooks via direct WordPress API calls (`add_filter`/`add_action`), not through the Loader. This is an accepted deviation from the Boot Flow Rule. The Loader only wires `plugins_loaded P20` (boot_hook) and `acrossai_abilities_sitewide_after_save` (bust_cache_hook). All downstream hooks are registered conditionally inside `boot()` because the Loader cannot express conditional registration (it always wires hooks).
+`AcrossAI_Ability_Override_Processor::boot()` registers `wp_register_ability_args`, `wp_abilities_api_init`, and `mcp_adapter_expose_ability` hooks via direct WordPress API calls (`add_filter`/`add_action`), not through the Loader. This is an accepted deviation from the Boot Flow Rule. The Loader wires `plugins_loaded P20` (boot_hook) and three cache-bust hooks:
+`acrossai_abilities_after_create`, `acrossai_abilities_after_update`,
+`acrossai_abilities_after_delete` (all wired to `bust_cache_hook`). All downstream
+hooks are registered conditionally inside `boot()` because the Loader cannot
+express conditional registration (it always wires hooks).
 
 **Tradeoffs**
 Hooks in `boot()` are invisible to the Loader's hook inventory. Acceptable here because the hooks are simple, well-documented, and encapsulated within one class.
@@ -148,10 +170,10 @@ Hooks in `boot()` are invisible to the Loader's hook inventory. Acceptable here 
 Do not move `wp_register_ability_args` or `wp_abilities_api_init` registration into Main.php via the Loader — they would fire on PATH A (Manager REST) and corrupt the `_registry` layer shown in the Manager UI.
 
 **Evidence**
-`includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php::boot()`. Reviewed in governed-plan session 2026-05-17. `mcp_adapter_expose_ability` added in T016 (commit `2c9442e`, 2026-05-17).
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php::boot()`. Reviewed in governed-plan session 2026-05-17. `mcp_adapter_expose_ability` added in T016 (commit `2c9442e`, 2026-05-17).
 
 **Where to look next**
-`includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor.php` (boot, is_manager_rest_request),
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (boot, is_manager_rest_request),
 `includes/Main.php` (define_public_hooks — Loader wires only),
 `specs/004-ability-override-processor/plan.md` (ARCH-ADV-001 note).
 

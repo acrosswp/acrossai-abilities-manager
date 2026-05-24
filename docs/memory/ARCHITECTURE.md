@@ -18,27 +18,18 @@ and a REST-API-first admin UI backed by @wordpress/dataviews.
 - **`includes/Main.php`**: Sole hook-registration surface. All Loader
   wiring lives here. No other class calls `add_action` / `add_filter`
   through the Loader (exception: ARCH-ADV-001 in boot()).
-- **`includes/Modules/Sitewide/AcrossAI_Ability_Override_Processor`**:
+- **`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor`**:
   Static runtime processor. Bridges DB overrides into WP ability
   registrations at `plugins_loaded P20` via PATH A/B branching. Wires
   `wp_register_ability_args`, `wp_abilities_api_init`, and
   `mcp_adapter_expose_ability` directly in `boot()` (ARCH-ADV-001 deviation).
-- **`includes/Modules/Abilities/Database/`**: `AcrossAI_Abilities_Query` — the
-  only new BerlinDB file in Spec 009. Reuses `AcrossAI_Sitewide_Schema` and
-  `AcrossAI_Sitewide_Row` (no new Table, Schema, or Row classes). Provides CRUD,
-  browse, and runtime-publication helpers for the `wp_acrossai_abilities` table.
-  JSON field decoding happens in `AcrossAI_Sitewide_Row::__construct()` via
-  `get_json_fields()` — not in a separate Abilities Row class.
-- **`includes/Modules/Sitewide/Database/`**: BerlinDB Sitewide classes — thin
-  wrappers that now point at `wp_acrossai_abilities` (same table as Abilities module).
-  `source != 'db'` rows are the sitewide override rows managed by this module.
-- **`includes/Modules/Sitewide/Rest/`**: REST sub-controller split:
-  `AcrossAI_Sitewide_Abilities_Controller` (read), `AcrossAI_Sitewide_Override_Controller`
-  (write), `AcrossAI_Sitewide_Bulk_Controller` (bulk), `AcrossAI_Sitewide_Mcp_Controller`
-  (MCP server list). Orchestrated by `AcrossAI_Sitewide_Rest_Controller`.
-- **`includes/Modules/Sitewide/AcrossAI_Ability_Merger`**: Merges WP registry
-  values with DB overrides for the Manager UI `_registry` / `_override` diff view.
-- **`includes/Modules/Sitewide/AcrossAI_Sitewide_Access_Control`**: Wraps
+- **`includes/Modules/Abilities/Database/`**: Self-contained BerlinDB classes —
+  `AcrossAI_Abilities_Table`, `AcrossAI_Abilities_Schema`, `AcrossAI_Abilities_Row`,
+  and `AcrossAI_Abilities_Query`. `AcrossAI_Abilities_Query` is the single entry
+  point for all DB reads/writes. JSON field decoding happens in
+  `AcrossAI_Abilities_Row::__construct()` via `get_json_fields()`. Supersedes the
+  Sitewide DB classes (Feature 012).
+- **`includes/Modules/Abilities/AcrossAI_Abilities_Access_Control`**: Wraps
   `wpb-access-control` library for per-ability rule storage and permission
   callback injection.
 - **`includes/Utilities/`**: Shared sanitization (`AcrossAI_Sanitizer`),
@@ -51,7 +42,7 @@ and a REST-API-first admin UI backed by @wordpress/dataviews.
   WP registry values, never merged override values.
 - **All other requests** (PATH B): override injection fires at boot; blocked
   abilities are unregistered after all registrations complete.
-- **BerlinDB layer**: `AcrossAI_Sitewide_Query` is the only entry point for
+- **BerlinDB layer**: `AcrossAI_Abilities_Query` is the only entry point for
   DB reads/writes. No direct `$wpdb` SQL in module or REST classes.
 - **Hook surface**: Only `includes/Main.php` wires hooks through the Loader.
   `boot()` in the processor is the only approved exception (ARCH-ADV-001).
@@ -72,8 +63,9 @@ and a REST-API-first admin UI backed by @wordpress/dataviews.
 
 - **Override cache TTL (12h transient)**: Stale cache after delete/reset is
   mitigated by direct `bust_cache()` calls in Override + Bulk controllers.
-  Any new write path that does not fire `acrossai_abilities_sitewide_after_save`
-  MUST call `bust_cache()` directly (W-001 pattern — see DECISIONS.md).
+  Any new write path must fire one of `acrossai_abilities_after_create`,
+  `acrossai_abilities_after_update`, or `acrossai_abilities_after_delete`; if none
+  apply, call `bust_cache()` directly (W-001 pattern — see DECISIONS.md).
 - **PATH A detection is a performance hint, not a security gate**: If the
   Manager REST namespace constant is misconfigured, override injection may
   fire on Manager requests. REST routes remain protected by `check_permission()`

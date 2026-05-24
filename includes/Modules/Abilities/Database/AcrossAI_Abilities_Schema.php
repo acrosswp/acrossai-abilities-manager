@@ -3,11 +3,11 @@
  * Database schema definition for the unified abilities table.
  *
  * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Abilities/Database
  * @since      0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
 
 use BerlinDB\Database\Schema;
 
@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 0.1.0
  */
-class AcrossAI_Sitewide_Schema extends Schema {
+class AcrossAI_Abilities_Schema extends Schema {
 
 	/**
 	 * Array of column definitions.

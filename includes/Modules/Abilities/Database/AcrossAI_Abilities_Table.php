@@ -3,11 +3,11 @@
  * Database table definition for the unified abilities table.
  *
  * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Abilities/Database
  * @since      0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
 
 use BerlinDB\Database\Table;
 
@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 0.1.0
  */
-class AcrossAI_Sitewide_Table extends Table {
+class AcrossAI_Abilities_Table extends Table {
 
 	/**
 	 * Table name (without WordPress table prefix).
@@ -55,7 +55,7 @@ class AcrossAI_Sitewide_Table extends Table {
 	/**
 	 * Singleton instance.
 	 *
-	 * @var AcrossAI_Sitewide_Table|null
+	 * @var AcrossAI_Abilities_Table|null
 	 */
 	protected static $_instance = null;
 
@@ -63,7 +63,7 @@ class AcrossAI_Sitewide_Table extends Table {
 	 * Get the singleton instance of this table.
 	 *
 	 * @since  0.1.0
-	 * @return AcrossAI_Sitewide_Table
+	 * @return AcrossAI_Abilities_Table
 	 */
 	public static function instance(): self {
 		if ( null === self::$_instance ) {
@@ -78,7 +78,7 @@ class AcrossAI_Sitewide_Table extends Table {
 	 * BerlinDB interpolates $this->schema directly into:
 	 *   CREATE TABLE {name} ( {schema} ) {charset_collation}
 	 * so this must be a raw SQL column definition string.
-	 * AcrossAI_Sitewide_Schema (BerlinDB\Schema subclass) is used by the
+	 * AcrossAI_Abilities_Schema (BerlinDB\Schema subclass) is used by the
 	 * Query class for column metadata and is separate from this.
 	 *
 	 * @since  0.1.0

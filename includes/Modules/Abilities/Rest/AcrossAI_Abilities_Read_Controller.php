@@ -19,7 +19,6 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Rest;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Query;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Formatter;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Registry_Query;
 
@@ -50,7 +49,7 @@ class AcrossAI_Abilities_Read_Controller {
 	/**
 	 * Sitewide DB query instance (used for override lookups in registry merge).
 	 *
-	 * @var AcrossAI_Sitewide_Query
+	 * @var AcrossAI_Abilities_Query
 	 */
 	private $sitewide_query;
 
@@ -74,7 +73,7 @@ class AcrossAI_Abilities_Read_Controller {
 	 */
 	private function __construct() {
 		$this->db_query       = AcrossAI_Abilities_Query::instance();
-		$this->sitewide_query = AcrossAI_Sitewide_Query::instance();
+		$this->abilities_query = AcrossAI_Abilities_Query::instance();
 	}
 
 	/**
@@ -210,7 +209,7 @@ class AcrossAI_Abilities_Read_Controller {
 			'per_page' => (int) ( $request->get_param( 'per_page' ) ?? 20 ),
 		);
 
-		$result   = AcrossAI_Ability_Registry_Query::query( $registry_params, $this->sitewide_query );
+		$result   = AcrossAI_Ability_Registry_Query::query( $registry_params, $this->abilities_query );
 		$response = rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_collection( $result['abilities'] ) );
 		$response->header( 'X-WP-Total', (string) $result['total'] );
 		$response->header( 'X-WP-TotalPages', (string) $result['pages'] );

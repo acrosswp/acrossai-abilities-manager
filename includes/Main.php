@@ -274,22 +274,18 @@ final class Main {
 		$logs_menu = \AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu::instance();
 		$this->loader->add_action( 'admin_menu', $logs_menu, 'register_submenu' );
 
-		// Sitewide Ability Manager — DB table setup and REST routes via singleton pattern.
-		// Table instance call makes the class available; BerlinDB hooks maybe_upgrade() to admin_init.
-		\AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Table::instance();
-
-		// Register REST routes on rest_api_init.
-		$rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Rest_Controller::instance();
-		$this->loader->add_action( 'rest_api_init', $rest_controller, 'register_routes' );
+		// Abilities DB table setup — BerlinDB hooks maybe_upgrade() to admin_init.
+		// Named variable before Loader call — Boot Flow Rule variable-first pattern (AC-HOOKS-MAIN).
+		$abilities_table = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Table::instance();
 
 		// Collect MCP servers at priority 20, after McpAdapter initialises at priority 15.
 		$mcp_servers_list = \WPBoilerplate\McpServersList\McpServersList::instance();
 		$this->loader->add_action( 'rest_api_init', $mcp_servers_list, 'collect', 20 );
 
 		// Register Access Control REST routes and admin notice for absent library (SAC-01).
-		$sitewide_ac = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Access_Control::instance();
-		$this->loader->add_action( 'rest_api_init', $sitewide_ac, 'register_rest_api' );
-		$this->loader->add_action( 'admin_notices', $sitewide_ac, 'maybe_show_library_notice' );
+		$abilities_ac = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Abilities_Access_Control::instance();
+		$this->loader->add_action( 'rest_api_init', $abilities_ac, 'register_rest_api' );
+		$this->loader->add_action( 'admin_notices', $abilities_ac, 'maybe_show_library_notice' );
 
 		// Abilities module REST routes (Spec 009).
 		// Named variable before Loader call — Boot Flow Rule variable-first pattern.
@@ -314,9 +310,12 @@ final class Main {
 
 		// Ability Override Processor — boot at plugins_loaded P20 and bust cache on override save.
 		// Named variable before Loader calls satisfies the Boot Flow Rule (SEC-PLAN-002).
-		$override_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Ability_Override_Processor::instance();
+		$override_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Ability_Override_Processor::instance();
 		$this->loader->add_action( 'plugins_loaded', $override_processor, 'boot_hook', 20 );
-		$this->loader->add_action( 'acrossai_abilities_sitewide_after_save', $override_processor, 'bust_cache_hook' );
+		// CRITICAL-01 fix (sub-change 11d): wire bust_cache_hook to all three Abilities lifecycle hooks.
+		$this->loader->add_action( 'acrossai_abilities_after_create', $override_processor, 'bust_cache_hook' );
+		$this->loader->add_action( 'acrossai_abilities_after_update', $override_processor, 'bust_cache_hook' );
+		$this->loader->add_action( 'acrossai_abilities_after_delete', $override_processor, 'bust_cache_hook' );
 
 		// Ability Execution Logger — create DB table, boot logger at P20, register REST routes.
 		\AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Table::instance();

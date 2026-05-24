@@ -154,7 +154,7 @@ class AcrossAI_Sanitizer {
 	 *   0 / '0'       → false  (explicit No override)
 	 *   null / ''     → null   (Inherit — no override for this field)
 	 *
-	 * Used by AcrossAI_Sitewide_Row and any future Row classes.
+	 * Used by AcrossAI_Abilities_Row and any future Row classes.
 	 * Do NOT duplicate this method on individual Row classes (RF-02).
 	 *
 	 * @since  0.1.0

@@ -9,7 +9,7 @@
 
 namespace AcrossAI_Abilities_Manager\Includes\Utilities;
 
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Query;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
 
 // Self-import: AcrossAI_Protected_Abilities is in the same namespace.
 
@@ -29,7 +29,7 @@ class AcrossAI_Ability_Registry_Query {
 	 * Query, filter, sort, and paginate abilities from the registry.
 	 *
 	 * @since  0.1.0
-	 * @param  array                   $params   Query parameters.
+	 * @param  array                    $params   Query parameters.
 	 *   - string      $search      Optional full-text search term.
 	 *   - string      $orderby     Field to sort by (slug|provider|source|status). Default 'slug'.
 	 *   - string      $order       Sort direction (asc|desc). Default 'asc'.
@@ -37,10 +37,10 @@ class AcrossAI_Ability_Registry_Query {
 	 *   - bool|null   $has_override Filter to only overridden or non-overridden abilities.
 	 *   - int         $page        1-based page number. Default 1.
 	 *   - int         $per_page    Items per page (1–100). Default 20.
-	 * @param  AcrossAI_Sitewide_Query $db_query BerlinDB Query instance.
+	 * @param  AcrossAI_Abilities_Query $db_query BerlinDB Query instance.
 	 * @return array{abilities: array, total: int, pages: int}
 	 */
-	public static function query( array $params, AcrossAI_Sitewide_Query $db_query ): array {
+	public static function query( array $params, AcrossAI_Abilities_Query $db_query ): array {
 		$search       = isset( $params['search'] ) ? (string) $params['search'] : '';
 		$orderby      = isset( $params['orderby'] ) ? (string) $params['orderby'] : 'slug';
 		$order        = isset( $params['order'] ) && 'desc' === strtolower( $params['order'] ) ? 'desc' : 'asc';

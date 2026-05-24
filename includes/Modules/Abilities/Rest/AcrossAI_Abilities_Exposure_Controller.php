@@ -143,9 +143,9 @@ class AcrossAI_Abilities_Exposure_Controller {
 	 *   - Row with non-empty mcp_servers + empty/unknown server_id → EXCLUDED (fail-closed).
 	 *
 	 * @since  0.1.0
-	 * @param  \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row[] $rows      Rows to filter.
-	 * @param  string                                                                                 $server_id Resolved current server ID (may be empty).
-	 * @return \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row[]
+	 * @param  \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row[] $rows      Rows to filter.
+	 * @param  string                                                                                   $server_id Resolved current server ID (may be empty).
+	 * @return \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row[]
 	 */
 	private function filter_by_server( array $rows, string $server_id ): array {
 		return array_values(

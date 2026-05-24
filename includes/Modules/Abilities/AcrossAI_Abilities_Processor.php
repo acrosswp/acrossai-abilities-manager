@@ -22,7 +22,7 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Formatter;
 
 // Exit if accessed directly.
@@ -114,10 +114,10 @@ class AcrossAI_Abilities_Processor {
 	 * (required by the WP Abilities API).
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row Row to check.
+	 * @param  AcrossAI_Abilities_Row $row Row to check.
 	 * @return bool
 	 */
-	private function is_row_registrable( AcrossAI_Sitewide_Row $row ): bool {
+	private function is_row_registrable( AcrossAI_Abilities_Row $row ): bool {
 		if ( '' === $row->ability_slug ) {
 			return false;
 		}
@@ -134,10 +134,10 @@ class AcrossAI_Abilities_Processor {
 	 * Build a callable execute_callback for the given row's callback_type.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row Ability row.
+	 * @param  AcrossAI_Abilities_Row $row Ability row.
 	 * @return callable
 	 */
-	private function build_execute_callback( AcrossAI_Sitewide_Row $row ): callable {
+	private function build_execute_callback( AcrossAI_Abilities_Row $row ): callable {
 		switch ( $row->callback_type ) {
 			case 'filter_hook':
 				return $this->make_filter_hook_callback( $row );
@@ -160,10 +160,10 @@ class AcrossAI_Abilities_Processor {
 	 * Build a filter_hook execute callback.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row Ability row.
+	 * @param  AcrossAI_Abilities_Row $row Ability row.
 	 * @return callable
 	 */
-	private function make_filter_hook_callback( AcrossAI_Sitewide_Row $row ): callable {
+	private function make_filter_hook_callback( AcrossAI_Abilities_Row $row ): callable {
 		$hook_name = isset( $row->callback_config['hook_name'] )
 			? (string) $row->callback_config['hook_name']
 			: '';
@@ -182,10 +182,10 @@ class AcrossAI_Abilities_Processor {
 	 * HTTPS-only, no redirects, 30 s timeout cap, no caller header propagation.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row Ability row.
+	 * @param  AcrossAI_Abilities_Row $row Ability row.
 	 * @return callable
 	 */
-	private function make_wp_remote_post_callback( AcrossAI_Sitewide_Row $row ): callable {
+	private function make_wp_remote_post_callback( AcrossAI_Abilities_Row $row ): callable {
 		$url     = isset( $row->callback_config['url'] ) ? (string) $row->callback_config['url'] : '';
 		$timeout = isset( $row->callback_config['timeout'] ) ? (int) $row->callback_config['timeout'] : 15;
 
@@ -226,10 +226,10 @@ class AcrossAI_Abilities_Processor {
 	 * Audit logging on each execution (slug + outcome, no input/output data).
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row Ability row.
+	 * @param  AcrossAI_Abilities_Row $row Ability row.
 	 * @return callable
 	 */
-	private function make_php_code_callback( AcrossAI_Sitewide_Row $row ): callable {
+	private function make_php_code_callback( AcrossAI_Abilities_Row $row ): callable {
 		$code = isset( $row->callback_config['code'] ) ? (string) $row->callback_config['code'] : '';
 		$slug = $row->ability_slug;
 

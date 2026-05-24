@@ -3,11 +3,11 @@
  * BerlinDB Row class for a single ability record.
  *
  * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Sitewide/Database
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Abilities/Database
  * @since      0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
 
 use BerlinDB\Database\Row;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
@@ -48,7 +48,7 @@ defined( 'ABSPATH' ) || exit;
  * @property int|null    $created_by
  * @property int|null    $updated_by
  */
-class AcrossAI_Sitewide_Row extends Row {
+class AcrossAI_Abilities_Row extends Row {
 
 	/**
 	 * Primary key.

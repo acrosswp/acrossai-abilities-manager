@@ -140,7 +140,6 @@ admin/
 includes/
 ├── Utilities/      # Shared utility functions, helpers, formatters
 └── Modules/        # One subdirectory per feature module (self-contained)
-    ├── Sitewide/
     ├── PerUser/
     ├── McpServer/
     ├── Abilities/
@@ -158,7 +157,6 @@ tests/
 - `includes/Modules/Logger/AcrossAI_Ability_Logger.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger`
 - `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Query.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database`
 - `includes/Modules/Logger/Rest/AcrossAI_Logger_Controller.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest`
-- `includes/Modules/Sitewide/AcrossAI_Sitewide_Rest_Controller.php` → `AcrossAI_Abilities_Manager\Includes\Modules\Sitewide`
 - `includes/Utilities/AcrossAI_Logger_Formatter.php` → `AcrossAI_Abilities_Manager\Includes\Utilities`
 - `admin/Partials/Menu.php` → `AcrossAI_Abilities_Manager\Admin\Partials`
 Never invent short namespaces like `AcrossAI\Abilities\Logger` — always derive from the full path.
@@ -189,14 +187,14 @@ No hook-registering code MAY run inside `load_dependencies()`.
 **REST Controller Pattern**: A feature module's REST controller MUST be split into per-domain
 sub-controllers whenever it would otherwise exceed roughly 400 lines or own more than one user
 story's handlers. The split places sub-controllers in a `Rest/` subdirectory inside the module
-directory (e.g. `includes/Modules/Sitewide/Rest/`). The module's top-level controller becomes
+directory (e.g. `includes/Modules/Abilities/Rest/`). The module's top-level controller becomes
 a thin **orchestrator** responsible for exactly three things: (a) the `REST_NAMESPACE` constant,
 (b) a `register_routes()` method that calls each sub-controller's `register_routes()`, and (c)
 the shared `check_permission()` callback. Sub-controllers MUST use the singleton pattern, MUST
 reference the orchestrator's `check_permission` as:
 `array( MyOrchestrator::instance(), 'check_permission' )`, and MUST NOT register any WordPress
 hooks themselves — only the orchestrator is wired in `Main.php` via the Loader. This is the
-canonical decomposition for the four planned sibling modules (`PerUser`, `McpServer`,
+canonical decomposition for the planned sibling modules (`PerUser`, `McpServer`,
 `CustomAbility`, `Webmcp`). See `specs/002-rest-controller-modularization/` for reference.
 
 **Module Contract**: Every feature class MUST:

@@ -192,7 +192,7 @@ class AcrossAI_Abilities_Write_Controller {
 		 * Fires after creating an ability — receives the full persisted row (BUG-PARTIAL-HOOK-FIELDS).
 		 *
 		 * @since 0.1.0
-		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row $saved_row Full persisted row.
+		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row $saved_row Full persisted row.
 		 */
 		do_action( 'acrossai_abilities_after_create', $saved_row );
 
@@ -262,7 +262,7 @@ class AcrossAI_Abilities_Write_Controller {
 		 * Fires after updating an ability — receives the full persisted row (BUG-PARTIAL-HOOK-FIELDS).
 		 *
 		 * @since 0.1.0
-		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row $saved_row Full persisted row.
+		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row $saved_row Full persisted row.
 		 */
 		do_action( 'acrossai_abilities_after_update', $saved_row );
 
@@ -299,7 +299,7 @@ class AcrossAI_Abilities_Write_Controller {
 		 * Fires before deleting an ability.
 		 *
 		 * @since 0.1.0
-		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row $existing Row about to be deleted.
+		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row $existing Row about to be deleted.
 		 */
 		do_action( 'acrossai_abilities_before_delete', $existing );
 

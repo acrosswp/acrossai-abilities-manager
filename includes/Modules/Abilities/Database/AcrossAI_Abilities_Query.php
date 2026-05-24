@@ -2,17 +2,17 @@
 /**
  * BerlinDB Query class for the unified abilities table (Abilities module view).
  *
- * This is the single new BerlinDB-layer file in Spec 009. It targets the same
- * wp_acrossai_abilities table as AcrossAI_Sitewide_Query but exposes the CRUD,
- * browse, and runtime-publication helpers needed by the Abilities module.
+ * Self-contained query class for the Abilities module. Owns all DB interactions
+ * with the acrossai_abilities table. Supersedes the Spec 009 design decision that
+ * reused the Sitewide module Schema and Row classes (Feature 012 clarification Q3).
  *
  * Architecture contract:
  *   $table_name   = 'acrossai_abilities'
- *   $table_schema = AcrossAI_Sitewide_Schema::class  ← reused, no duplication
- *   $item_shape   = AcrossAI_Sitewide_Row::class     ← reused, no duplication
+ *   $table_schema = AcrossAI_Abilities_Schema::class  ← reused, no duplication
+ *   $item_shape   = AcrossAI_Abilities_Row::class     ← reused, no duplication
  *
  * No new Row, Schema, or Table classes are created. JSON encode/decode uses
- * AcrossAI_Sitewide_Row::get_json_fields() — shared registry, zero duplication.
+ * AcrossAI_Abilities_Row::get_json_fields() — shared registry, zero duplication.
  *
  * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
  * All public methods here are authorization-free DB helpers.
@@ -27,8 +27,9 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
 
 use BerlinDB\Database\Query;
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Schema;
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Schema;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -45,14 +46,14 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @var string
 	 */
-	protected $table_schema = AcrossAI_Sitewide_Schema::class;
+	protected $table_schema = AcrossAI_Abilities_Schema::class;
 
 	/**
 	 * Row class for query results.
 	 *
 	 * @var string
 	 */
-	protected $item_shape = AcrossAI_Sitewide_Row::class;
+	protected $item_shape = AcrossAI_Abilities_Row::class;
 
 	/**
 	 * Table name (without WordPress table prefix).
@@ -147,9 +148,9 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @since  0.1.0
 	 * @param  int $id Row primary key.
-	 * @return AcrossAI_Sitewide_Row|null
+	 * @return AcrossAI_Abilities_Row|null
 	 */
-	public function get_ability_by_id( int $id ): ?AcrossAI_Sitewide_Row {
+	public function get_ability_by_id( int $id ): ?AcrossAI_Abilities_Row {
 		$results = $this->query(
 			array(
 				'id'     => $id,
@@ -157,7 +158,7 @@ class AcrossAI_Abilities_Query extends Query {
 			)
 		);
 
-		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Sitewide_Row ) {
+		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Abilities_Row ) {
 			return null;
 		}
 		return $results[0];
@@ -168,9 +169,9 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @since  0.1.0
 	 * @param  string $slug Full ability slug (e.g. 'acrossai-abilities/my-ability').
-	 * @return AcrossAI_Sitewide_Row|null
+	 * @return AcrossAI_Abilities_Row|null
 	 */
-	public function get_ability_by_slug( string $slug ): ?AcrossAI_Sitewide_Row {
+	public function get_ability_by_slug( string $slug ): ?AcrossAI_Abilities_Row {
 		$results = $this->query(
 			array(
 				'ability_slug' => $slug,
@@ -178,7 +179,7 @@ class AcrossAI_Abilities_Query extends Query {
 			)
 		);
 
-		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Sitewide_Row ) {
+		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Abilities_Row ) {
 			return null;
 		}
 		return $results[0];
@@ -231,6 +232,136 @@ class AcrossAI_Abilities_Query extends Query {
 		return null !== $this->get_ability_by_slug( $slug );
 	}
 
+
+	// -------------------------------------------------------------------------
+	// Override CRUD helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Retrieve an override row by ability slug.
+	 *
+	 * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
+	 * This is a raw DB-layer helper. It performs no capability check.
+	 * Every caller that surfaces results to a HTTP response or admin screen
+	 * MUST call current_user_can( 'manage_options' ) before invoking this method.
+	 * REST controller permission_callback is the canonical gate.
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug Ability slug.
+	 * @return AcrossAI_Abilities_Row|null
+	 */
+	public function get_override_by_slug( string $slug ): ?AcrossAI_Abilities_Row {
+		$slug    = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
+		$results = $this->query(
+			array(
+				'ability_slug' => $slug,
+				'number'       => 1,
+			)
+		);
+
+		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Abilities_Row ) {
+			return null;
+		}
+
+		return $results[0];
+	}
+
+	/**
+	 * Insert or update an override record for the given slug.
+	 *
+	 * On INSERT: sets created_at and created_by.
+	 * On UPDATE: sets updated_at and updated_by only — does NOT overwrite created_at/created_by (A1/A2).
+	 *
+	 * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
+	 * This is a raw DB-layer helper. It performs no capability check.
+	 * Every caller that surfaces results to a HTTP response or admin screen
+	 * MUST call current_user_can( 'manage_options' ) before invoking this method.
+	 * REST controller permission_callback is the canonical gate.
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug   Ability slug.
+	 * @param  array  $fields Field values to save.
+	 * @return bool
+	 */
+	public function save_override( string $slug, array $fields ): bool {
+		$slug   = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
+		$fields = $this->prepare_fields_for_write( $fields );
+
+		$existing = $this->get_override_by_slug( $slug );
+		$now      = current_time( 'mysql', true );
+		$user_id  = get_current_user_id();
+
+		if ( null === $existing ) {
+			// INSERT path — add_item() returns the new integer ID on success or false.
+			$fields['ability_slug'] = $slug;
+			$fields['created_at']   = $now;
+			$fields['created_by']   = $user_id;
+			$fields['updated_at']   = $now;
+
+			$result = $this->add_item( $fields );
+			return false !== $result && (int) $result > 0;
+		}
+
+		// UPDATE path — update_item() returns the updated item object or false.
+		$fields['updated_at'] = $now;
+		$fields['updated_by'] = $user_id;
+
+		// Explicitly do NOT set created_at or created_by on update (A1/A2).
+		unset( $fields['created_at'], $fields['created_by'] );
+
+		$result = $this->update_item( $existing->id, $fields );
+		return false !== $result;
+	}
+
+	/**
+	 * Delete an override record by ability slug.
+	 *
+	 * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
+	 * This is a raw DB-layer helper. It performs no capability check.
+	 * Every caller that surfaces results to a HTTP response or admin screen
+	 * MUST call current_user_can( 'manage_options' ) before invoking this method.
+	 * REST controller permission_callback is the canonical gate.
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug Ability slug.
+	 * @return bool True if a record was deleted, false otherwise.
+	 */
+	public function delete_override_by_slug( string $slug ): bool {
+		$slug     = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
+		$existing = $this->get_override_by_slug( $slug );
+		if ( null === $existing ) {
+			return false;
+		}
+		$result = $this->delete_item( $existing->id );
+		return false !== $result;
+	}
+
+	/**
+	 * Retrieve all override rows indexed by ability_slug.
+	 *
+	 * Passes number => 0 to BerlinDB which signals no LIMIT clause (unlimited rows).
+	 * Returns an associative array keyed by ability_slug.
+	 *
+	 * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
+	 * This is a raw DB-layer helper. It performs no capability check.
+	 * Every caller that surfaces results to a HTTP response or admin screen
+	 * MUST call current_user_can( 'manage_options' ) before invoking this method.
+	 * REST controller permission_callback is the canonical gate.
+	 *
+	 * @since  0.1.0
+	 * @return AcrossAI_Abilities_Row[]  Indexed by ability_slug string.
+	 */
+	public function get_all_overrides(): array {
+		$results = $this->query( array( 'number' => 0 ) );
+		$indexed = array();
+		foreach ( $results as $row ) {
+			if ( $row instanceof AcrossAI_Abilities_Row ) {
+				$indexed[ $row->ability_slug ] = $row;
+			}
+		}
+		return $indexed;
+	}
+
 	// -------------------------------------------------------------------------
 	// Filter / browse helpers
 	// -------------------------------------------------------------------------
@@ -240,7 +371,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @since  0.1.0
 	 * @param  string $source Source value (e.g. 'db', 'plugin', 'core', 'theme').
-	 * @return AcrossAI_Sitewide_Row[]
+	 * @return AcrossAI_Abilities_Row[]
 	 */
 	public function by_source( string $source ): array {
 		if ( '' === $source ) {
@@ -260,7 +391,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 * Used by AcrossAI_Abilities_Processor at wp_abilities_api_init.
 	 *
 	 * @since  0.1.0
-	 * @return AcrossAI_Sitewide_Row[]
+	 * @return AcrossAI_Abilities_Row[]
 	 */
 	public function published_db_abilities(): array {
 		return $this->collect(
@@ -278,7 +409,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 * @since  0.1.0
 	 * @param  string $mcp_type  One of 'tool', 'resource', 'prompt'.
 	 * @param  bool   $mcp_only  When true, restrict to show_in_mcp = 1 rows.
-	 * @return AcrossAI_Sitewide_Row[]
+	 * @return AcrossAI_Abilities_Row[]
 	 */
 	public function by_mcp_type( string $mcp_type, bool $mcp_only = true ): array {
 		$args = array(
@@ -299,7 +430,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @since  0.1.0
 	 * @param  array $params Query parameters: page, per_page (1-100), search, orderby, order (ASC|DESC), source, status, category, editable.
-	 * @return array{ items: AcrossAI_Sitewide_Row[], total: int, pages: int }
+	 * @return array{ items: AcrossAI_Abilities_Row[], total: int, pages: int }
 	 */
 	public function get_paginated( array $params ): array {
 		$page     = max( 1, (int) ( $params['page'] ?? 1 ) );
@@ -345,7 +476,7 @@ class AcrossAI_Abilities_Query extends Query {
 			$items = array_values(
 				array_filter(
 					$items,
-					static function ( AcrossAI_Sitewide_Row $row ) {
+					static function ( AcrossAI_Abilities_Row $row ) {
 						return 'db' !== $row->source;
 					}
 				)
@@ -363,7 +494,7 @@ class AcrossAI_Abilities_Query extends Query {
 			$total    = count(
 				array_filter(
 					$all_rows,
-					static function ( AcrossAI_Sitewide_Row $row ) {
+					static function ( AcrossAI_Abilities_Row $row ) {
 						return 'db' !== $row->source;
 					}
 				)
@@ -384,17 +515,17 @@ class AcrossAI_Abilities_Query extends Query {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Run a query and return only AcrossAI_Sitewide_Row instances.
+	 * Run a query and return only AcrossAI_Abilities_Row instances.
 	 *
 	 * @since  0.1.0
 	 * @param  array $args BerlinDB query args.
-	 * @return AcrossAI_Sitewide_Row[]
+	 * @return AcrossAI_Abilities_Row[]
 	 */
 	private function collect( array $args ): array {
 		$results = $this->query( $args );
 		$rows    = array();
 		foreach ( $results as $row ) {
-			if ( $row instanceof AcrossAI_Sitewide_Row ) {
+			if ( $row instanceof AcrossAI_Abilities_Row ) {
 				$rows[] = $row;
 			}
 		}
@@ -455,7 +586,7 @@ class AcrossAI_Abilities_Query extends Query {
 		}
 
 		// 3. JSON encode registry fields with 64 KB size guard.
-		foreach ( AcrossAI_Sitewide_Row::get_json_fields() as $json_field ) {
+		foreach ( AcrossAI_Abilities_Row::get_json_fields() as $json_field ) {
 			if ( isset( $fields[ $json_field ] ) && is_array( $fields[ $json_field ] ) ) {
 				$encoded = wp_json_encode( $fields[ $json_field ] );
 				if ( false === $encoded || strlen( $encoded ) > self::MAX_JSON_BYTES ) {

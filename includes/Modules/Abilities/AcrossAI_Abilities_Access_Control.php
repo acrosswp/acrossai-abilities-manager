@@ -1,12 +1,12 @@
 <?php
 /**
- * Sitewide access-control integration wrapper.
+ * Abilities access-control integration wrapper.
  *
  * @package AcrossAI_Abilities_Manager
  * @since   0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Sitewide;
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities;
 
 use WPBoilerplate\AccessControl\AccessControlManager;
 
@@ -15,11 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Sitewide access-control integration wrapper.
+ * Abilities access-control integration wrapper.
  *
  * @since 0.1.0
  */
-class AcrossAI_Sitewide_Access_Control {
+class AcrossAI_Abilities_Access_Control {
 
 	/**
 	 * Singleton instance.

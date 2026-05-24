@@ -2,7 +2,7 @@
 /**
  * Static formatting helpers for the Abilities module REST responses.
  *
- * Converts AcrossAI_Sitewide_Row objects to consistent REST response shapes
+ * Converts AcrossAI_Abilities_Row objects to consistent REST response shapes
  * and builds nested registry meta structures for wp_register_ability().
  *
  * @package    AcrossAI_Abilities_Manager
@@ -12,7 +12,7 @@
 
 namespace AcrossAI_Abilities_Manager\Includes\Utilities;
 
-use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -32,10 +32,10 @@ class AcrossAI_Abilities_Formatter {
 	 * and execution fields (true for source=db, false otherwise).
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row DB row to format.
+	 * @param  AcrossAI_Abilities_Row $row DB row to format.
 	 * @return array
 	 */
-	public static function format_for_response( AcrossAI_Sitewide_Row $row ): array {
+	public static function format_for_response( AcrossAI_Abilities_Row $row ): array {
 		return array(
 			'id'              => $row->id,
 			'ability_slug'    => $row->ability_slug,
@@ -69,7 +69,7 @@ class AcrossAI_Abilities_Formatter {
 	 * Format a collection of ability rows for a paginated list response.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row[] $rows  Array of rows.
+	 * @param  AcrossAI_Abilities_Row[] $rows  Array of rows.
 	 * @return array[]
 	 */
 	public static function format_collection( array $rows ): array {
@@ -84,10 +84,10 @@ class AcrossAI_Abilities_Formatter {
 	 * excluded to minimize metadata exposure.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row DB row to format.
+	 * @param  AcrossAI_Abilities_Row $row DB row to format.
 	 * @return array
 	 */
-	public static function format_for_exposure( AcrossAI_Sitewide_Row $row ): array {
+	public static function format_for_exposure( AcrossAI_Abilities_Row $row ): array {
 		return array(
 			'ability_slug'  => $row->ability_slug,
 			'label'         => $row->label,
@@ -107,7 +107,7 @@ class AcrossAI_Abilities_Formatter {
 	 * Format an exposure collection.
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row[] $rows  Array of rows.
+	 * @param  AcrossAI_Abilities_Row[] $rows  Array of rows.
 	 * @return array[]
 	 */
 	public static function format_exposure_collection( array $rows ): array {
@@ -175,10 +175,10 @@ class AcrossAI_Abilities_Formatter {
 	 * not at the top level of the args array (BUG-FLAT-ARGS-PATH prevention).
 	 *
 	 * @since  0.1.0
-	 * @param  AcrossAI_Sitewide_Row $row DB row.
+	 * @param  AcrossAI_Abilities_Row $row DB row.
 	 * @return array Registry args suitable for wp_register_ability().
 	 */
-	public static function build_registry_args( AcrossAI_Sitewide_Row $row ): array {
+	public static function build_registry_args( AcrossAI_Abilities_Row $row ): array {
 		$meta = array(
 			'source'        => $row->source,
 			'provider'      => $row->provider,
