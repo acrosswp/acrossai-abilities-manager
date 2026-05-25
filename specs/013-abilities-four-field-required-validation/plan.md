@@ -81,7 +81,7 @@ From [memory-synthesis.md](memory-synthesis.md):
 | `AcrossAI_Abilities_Validator:L207` | `validate_label()` null-pass is present; no empty-string rejection — add `'' === trim($label)` after `is_string` check |
 | `AcrossAI_Abilities_Validator:L225` | `validate_category()` same gap; `null` and format checked but not `trim()` empty |
 | `AcrossAI_Abilities_Validator:L392` | `$simple_validators` array has `label`, `category` keys — add `description` key here |
-| `AcrossAI_Abilities_Processor:L122` | `is_row_registrable()` checks slug + label + category — add `empty(trim((string)$row->description))` after category check |
+| `AcrossAI_Abilities_Processor:L122` | `is_row_registrable()` checks slug + label + category — add `'' === trim( (string) $row->description )` guard after category check (SEC-04: never `empty()` on string fields) |
 | `AcrossAI_Abilities_Write_Controller:L142` | `create_ability()` calls `sanitize_create_request()` then `validate_ability()` — insert three presence guards between these two calls |
 | `admin.scss:L1258` | `.field-error` exists with correct values — **no SCSS change required** |
 | `admin.scss:L433` | `.req` class exists — use it for description label |
@@ -299,7 +299,7 @@ function validateRequiredFields(draft, slugSuffix) {
         slug_suffix: (slugSuffix || '').trim() ? '' : REQUIRED,
         label:       (draft.label || '').trim() ? '' : REQUIRED,
         description: (draft.description || '').trim() ? '' : REQUIRED,
-        category:    (draft.category || '') ? '' : REQUIRED,
+        category:    (draft.category || '').trim() ? '' : REQUIRED,
     };
 }
 ```
@@ -361,7 +361,7 @@ function handleDescriptionBlur() {
 }
 
 function handleCategoryBlur() {
-    if (!(draftAbility.category || '')) {
+    if (!(draftAbility.category || '').trim()) {
         setFormErrors((prev) => ({
             ...prev,
             category: __('This field is required.', 'acrossai-abilities-manager'),
@@ -392,7 +392,7 @@ const hasRequiredErrors =
         ? !slugSuffix.trim() ||
           !(draftAbility.label || '').trim() ||
           !(draftAbility.description || '').trim() ||
-          !(draftAbility.category || '')
+          !(draftAbility.category || '').trim()
         : false;
 ```
 
@@ -605,7 +605,7 @@ All must pass with zero errors before the feature is complete.
 | Type a character into the Label field after error shows | Label error clears immediately | FR-003 |
 | Open Add New, fill all four fields, click "Add Ability" | Form submits, no errors | FR-001 |
 | Open Edit, clear Label, click "Save Changes" | Label error; no PATCH sent | FR-001, FR-002 |
-| Open Add New, click "Save as Draft" with all fields empty | Draft saves successfully, no validation errors shown | SC-005, FR-005 |
+| Open Add New, click "Save as Draft" with all fields empty | Inline field-level errors appear for all empty required fields; no API request made (same as clicking primary save button — forceDraft bypass removed per CLARIFY-Q5/A) | SC-005, FR-005, T010 |
 | Open Override form | No errors visible, save button fully enabled | SC-006, FR-006 |
 | `POST /abilities` without `description` | HTTP 400, `code: missing_description` | SC-003, FR-013 |
 | `POST /abilities` without `label` | HTTP 400, `code: missing_label` | SC-003, FR-013 |
@@ -614,7 +614,7 @@ All must pass with zero errors before the feature is complete.
 | `is_row_registrable()` with empty description row | Returns false; ability not registered | SC-004, FR-008 |
 | Description field label in Add New form | Shows red `*` (not "optional") | FR-007 |
 | Primary save button when any required field is empty | Visually dimmed (opacity 0.5); click has no effect | FR-004 |
-| "Save as Draft" button when required fields are empty | Fully clickable and functional | FR-005 |
+| "Save as Draft" button when required fields are empty | Button remains visually enabled (not dimmed) — FR-005. Clicking it with empty fields shows inline errors and makes no API request (same gate as primary save). | FR-005, T010 |
 
 ---
 
@@ -628,8 +628,8 @@ No new WordPress hooks are introduced by this feature. The existing hooks (`acro
 
 | Risk | Mitigation |
 |------|-----------|
-| Existing abilities saved before this feature have empty descriptions — edit form shows error on load | Accepted per edge case in spec; admin must fill description before "Save Changes" works; "Save as Draft" always available |
+| Existing abilities saved before this feature have empty descriptions — edit form loads without errors (CLARIFY-Q2/B) | No errors shown on page load; errors appear only on blur or save attempt. Admin must fill description before "Save Changes" works. "Save as Draft" button visually enabled but gate applies. |
 | `validate_description(null)` must remain true for partial-update PATCH flows | The null early-return is explicit in T004; UPDATE path in write controller is untouched |
-| `trim()` on `$row->description` in Processor may trip if `description` is not a string in the Row object | Cast to `(string)` before trim: `empty(trim((string) $row->description))` — handles null and non-string values safely |
+| `trim()` on `$row->description` in Processor may trip if `description` is not a string in the Row object | Cast to `(string)` before trim: `'' === trim( (string) $row->description )` — SEC-04 compliant; handles null and non-string values safely |
 | CSS-only disable on primary button: keyboard users can still tab to button (pointer-events only blocks mouse) | Acceptable for this iteration; the `handleSave()` gate provides the actual enforcement |
 | PHPStan: `$fields['label'] ?? ''` with nullable string type | Nullish coalescing to `''` + explicit cast `(string)` satisfies PHPStan strict typing |
