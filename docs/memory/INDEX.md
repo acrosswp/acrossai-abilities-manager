@@ -23,6 +23,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-ABILITIES-DUAL-MODE-LIST | GET /abilities branches source=db→DB query, else→registry merge; format_merged_ability() normalises shape | Abilities REST | rest, registry, merge, formatter | Active | DECISIONS.md |
 | DEC-NODE-20-BUILD-REQUIRED | npm run build requires Node ≥ 20; toSorted dependency fails silently on Node 16 | Build | node, nvm, build, toSorted | Active | DECISIONS.md |
 | DEC-MENU-HOOK-SUFFIX | Hardcode `toplevel_page_{slug}`; avoid `get_hook_suffix()` coupling | Admin/Enqueue | hook-suffix, enqueue, menu, yoda | Active | DECISIONS.md |
+| DEC-DESCRIPTION-VALIDATION-PATTERN | Description: DESCRIPTION_MAX_LENGTH=1000, validate_description(), maxLength={1000} | Abilities/Validator | description, validation, max-length, sec-04 | Active | DECISIONS.md |
+| DEC-HACTIONS-BUTTON-DEPTH | AbilityForm.jsx: .hactions button=5-tab, sbox button=9-tab | React/UI | abilityform, button, tabs, str_replace | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -80,15 +82,21 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | 2026-05-24 | Specs 008-010 delivered: unified table, REST CRUD, React admin UI (custom page live) | Abilities | spec-008, spec-009, spec-010, unified-table | WORKLOG.md |
 | 2026-05-20 | Feature 006 logger establishes hook parameter adaptation patterns | Logger | patterns, reusability, hook-adaption | WORKLOG.md |
 | 2026-05-25 | Feature 012: Sitewide module decommissioned; Abilities module is sole override owner (T001-T030 complete) | Abilities | feature-012, decommission, berlinddb, phpcs | WORKLOG.md |
+| 2026-05-25 | Feature 013: Four-field required validation complete (slug/label/description/category) | Abilities | feature-013, validation, sec-04, react | WORKLOG.md |
 
 | DEC-STABLE-UPGRADE-WINDOW | Prioritize first stable releases (v1.0.0, v1.0.1) when upgrading from dev branches | Dependencies | stable-release, upgrade, risk-mitigation | DECISIONS.md |
 | DEC-REVALIDATE-SECURITY-POST-UPGRADE | Re-validate security constraints (SEC-04, SEC-03, DEC-PERM-CB, DEC-FAIL-OPEN-NOTICE) after library upgrades | Dependencies, Security | security-constraints, validation, post-upgrade | DECISIONS.md |
 
 ## Architecture Patterns (continued)
 | ARCH-ZERO-CODE-DEPENDENCY-UPGRADE | Singleton + service locator pattern enables dependency upgrades without plugin code changes | Dependencies | architecture, singleton, service-locator, upgrades | ARCHITECTURE.md |
+| PATTERN-NAMED-EXPORT-JEST | Named export of pure helper from JSX component enables Jest unit tests without rendering | React/JS | jest, named-export, pure-helper, testability | ARCHITECTURE.md |
 
 ## Bug Patterns (continued)
 | BUG-AC-NULL-RETURN-SILENT-FAIL | Access control permission checks silently fail when library returns null instead of false | Access Control | type-safety, null-return, silent-fail | BUGS.md |
+| BUG-PYTHON-STRREPLACE-PARTIAL-WRITE | Python str_replace scripts: write per-step, not once at end | Build/Tooling | python, str_replace, write, partial | BUGS.md |
+| BUG-ABILITYFORM-JSX-MIXED-DEPTHS | AbilityForm.jsx: inconsistent tab depths by element — verify before str_replace | React/UI | jsx, tabs, str_replace, abilityform | BUGS.md |
+| BUG-SEC04-EMPTY-AUDIT-MISS | Adding SEC-04 guard: audit same method for pre-existing empty() violations | Plugin-wide | sec-04, empty, trim, strict | BUGS.md |
+| BUG-PHPSTAN-SILENT-PASS | PHPStan: exit 0 + no output = clean pass; exit 1 = failure | PHP/Tooling | phpstan, exit-code, silent, pass | BUGS.md |
 
 ## Worklog Milestones (continued)
 | 2026-05-20 | 4-Phase library upgrade workflow validated; zero-code dependency upgrade with 100% test pass rate | Feature 007 | workflow, library-upgrade, zero-code, testing | WORKLOG.md |

@@ -430,3 +430,26 @@ When porting a BerlinDB Query class to a renamed module, do not create new Row/S
 The renamed DB classes are sufficient; no logic changes needed beyond the above three areas.
 
 **Reference**: Feature 012 T005 — `AcrossAI_Abilities_Query.php` ported from Sitewide to Abilities without new Row/Schema classes (commit `56139de`).
+
+---
+
+## PATTERN-NAMED-EXPORT-JEST
+
+To unit-test a pure helper embedded in a React component module without rendering the component, export the helper as a named `export function` alongside the default component export. Jest imports it with `const { helper } = require('../path/Component.jsx')`. The default export is unaffected.
+
+**Rules**:
+- The helper must be side-effect free and stateless (no hook calls, no closure over component state).
+- Named exports from JSX component files are approved for testability only — not for shared business logic (use `src/js/utilities/` for that).
+- The Jest test file must mock all `@wordpress/*` imports used by the module (`@wordpress/i18n`, `@wordpress/data`, etc.).
+
+**Example**:
+```js
+// AbilityForm.jsx
+export function validateRequiredFields(ability, slugSuffix) { /* pure logic */ }
+export default function AbilityForm(props) { /* component */ }
+
+// validateRequiredFields.test.js
+const { validateRequiredFields } = require('../../../src/js/abilities/components/AbilityForm.jsx');
+```
+
+**Reference**: Feature 013 — `export function validateRequiredFields(ability, slugSuffix)` in `src/js/abilities/components/AbilityForm.jsx`, tested in `tests/jest/abilities/validateRequiredFields.test.js` (15 tests). Commit `35e9003`.

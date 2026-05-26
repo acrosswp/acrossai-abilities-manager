@@ -106,6 +106,7 @@ Run only if `spec.md` has ambiguous requirements. Asks up to 5 targeted question
 
 ### Phase 2 — Per-Feature: Planning
 
+
 #### Step 5: `/speckit.plan` or `/speckit.memory-md.plan-with-memory`
 
 Prefer `plan-with-memory` on features 002+ — it injects prior memory context so the planner knows existing patterns (singleton, REST namespace, DB schema, etc.).

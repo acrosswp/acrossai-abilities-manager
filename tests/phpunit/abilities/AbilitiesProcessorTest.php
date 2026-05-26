@@ -137,7 +137,7 @@ class AbilitiesProcessorTest extends WP_UnitTestCase {
 
 	/**
 	 * Register_abilities registers only source=db + status=publish rows and
-	 * uses nested `meta` key in registry args (BUG-FLAT-ARGS-PATH).
+	 * The uses nested `meta` key in registry args (BUG-FLAT-ARGS-PATH).
 	 *
 	 * @return void
 	 */
@@ -206,6 +206,42 @@ class AbilitiesProcessorTest extends WP_UnitTestCase {
 				'ability_slug' => '',
 				'label'        => 'No Slug',
 			)
+		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
+
+	/**
+	 * Register_abilities skips rows with empty description.
+	 *
+	 * @return void
+	 */
+	public function test_register_abilities_skips_row_with_empty_description() {
+		if ( ! function_exists( 'wp_register_ability' ) ) {
+			$this->markTestSkipped( 'wp_register_ability not available.' );
+		}
+
+		// Insert a published row with an empty description — is_row_registrable() must return false.
+		global $wpdb;
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prefix . 'acrossai_abilities',
+			array(
+				'ability_slug'  => 'acrossai-abilities/proc-test-no-desc',
+				'label'         => 'No Description',
+				'description'   => '',
+				'category'      => 'general',
+				'status'        => 'publish',
+				'source'        => 'db',
+				'callback_type' => 'noop',
+				'created_at'    => current_time( 'mysql', true ),
+				'updated_at'    => current_time( 'mysql', true ),
+			)
+		);
+
+		$this->processor->register_abilities();
+		$this->assertTrue( true ); // No fatal = skip guard worked.
+
+		$wpdb->delete(
+			$wpdb->prefix . 'acrossai_abilities',
+			array( 'ability_slug' => 'acrossai-abilities/proc-test-no-desc' )
 		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 

@@ -357,3 +357,105 @@ Before Python str_replace on any PHP file: read the raw bytes of one line (e.g. 
 
 **Where to look next**
 Any PHP test file that phpcbf has processed.
+
+---
+
+### 2026-05-25 — Python str_replace scripts: write per-step, not once at end (BUG-PYTHON-STRREPLACE-PARTIAL-WRITE)
+
+**Status**: Active
+
+**Symptoms**
+A Python str_replace script completes earlier steps successfully but all edits are lost when an assertion later in the script raises before the final `f.write(c)` call.
+
+**Root Cause**
+Scripts that read the file into memory, perform all transformations, then write once at the end discard every in-memory edit if any assert raises before reaching the write. The file on disk is unchanged despite apparently successful earlier steps.
+
+**Future mistake prevented**
+Write to disk after each successful transformation step, or verify all assertions on the immutable original content before making any edits. Never defer the single write to the end of a multi-step script.
+
+**Evidence**
+Feature 013 — multiple T015/T017 scripts lost edits due to late write; mid-script assertion failures left the target files unmodified.
+
+**Prevention / Detection**
+Pattern to avoid: `with open(path, 'w') as f: f.write(c)` at end of a script that mutates `c` across multiple steps with assertions between them. Prefer: write after each step, or restructure so all assertions run on the original file before modifications begin.
+
+**Where to look next**
+Any multi-step Python str_replace automation script targeting JSX or PHP files.
+
+---
+
+### 2026-05-25 — AbilityForm.jsx has inconsistent tab depths by element type (BUG-ABILITYFORM-JSX-MIXED-DEPTHS)
+
+**Status**: Active
+
+**Symptoms**
+Python str_replace on `AbilityForm.jsx` fails with "not found" even when the target string looks correct, because the actual indentation depth differs from what was assumed.
+
+**Root Cause**
+`AbilityForm.jsx` has inconsistent tab depths by element type:
+- Label/description inputs: 11-tab attrs + 10-tab `/>`
+- Category select: 11-tab attrs + 10-tab `>`
+- Slug input: 12-tab attrs + 11-tab `/>`
+
+There is no single uniform depth. Each element must be verified individually before str_replace.
+
+**Future mistake prevented**
+Always read the actual raw tab depth of the target element in `AbilityForm.jsx` before constructing a str_replace string. Do not assume uniform depth.
+
+**Evidence**
+Feature 013 T009–T016 — multiple str_replace mismatches caused by incorrect assumed tab depths.
+
+**Prevention / Detection**
+Before any str_replace on `AbilityForm.jsx`: read the relevant section with `read_file` and count tabs (or hexdump a target line) to confirm actual indentation.
+
+**Where to look next**
+`src/js/abilities/components/AbilityForm.jsx` (any form field addition or modification).
+
+---
+
+### 2026-05-25 — Adding a SEC-04 guard: audit same method for pre-existing empty() calls (BUG-SEC04-EMPTY-AUDIT-MISS)
+
+**Status**: Active
+
+**Symptoms**
+Security review flags pre-existing `empty()` calls in the same method that just received a new `'' === trim()` guard — meaning the SEC-04 violation was present before the feature and was missed during implementation.
+
+**Root Cause**
+When adding a new strict-comparison guard (`'' === trim()`) to a method for SEC-04 compliance, the implementer focused on the new field and did not audit the same method for pre-existing `empty()` calls on other fields that also violate SEC-04.
+
+**Future mistake prevented**
+On any SEC-04 guard addition, grep the same method for `empty(` and replace every `empty($row->field)` call with `'' === trim((string) $row->field)` in the same commit.
+
+**Evidence**
+Feature 013 T007 added a description guard to `is_row_registrable()` but pre-existing `empty($row->label)` and `empty($row->category)` were not updated until the security review caught them (finding SEC-04-P1).
+
+**Prevention / Detection**
+After adding any `'' === trim()` guard: `grep -n 'empty(' FILE.php` — if any `empty(` remains in the same method, fix it before submitting.
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Abilities_Validator.php` (is_row_registrable, all field guards),
+Feature 013 security review finding SEC-04-P1.
+
+---
+
+### 2026-05-25 — PHPStan exits 0 with no output when clean; silence is a pass (BUG-PHPSTAN-SILENT-PASS)
+
+**Status**: Active
+
+**Symptoms**
+PHPStan runs and produces no stdout output. Developer interprets silence as an error or a failed execution.
+
+**Root Cause**
+PHPStan's default output on a clean run is no output (or only a brief "no errors" line depending on version/formatter). An empty stdout with exit code 0 means the analysis passed with zero errors — it is not a failure.
+
+**Future mistake prevented**
+Do not interpret empty PHPStan stdout as a failure. Check the exit code: exit 0 = clean pass, exit 1 = errors found.
+
+**Evidence**
+Feature 013 — confusion arose when PHPStan returned exit 0 with empty stdout; the run was clean but was initially misread as broken.
+
+**Prevention / Detection**
+Always capture and check the exit code: `./vendor/bin/phpstan analyse ... ; echo "Exit: $?"`. Exit 0 with no output is a clean pass.
+
+**Where to look next**
+Any PHPStan run in CI scripts or manual verification steps.

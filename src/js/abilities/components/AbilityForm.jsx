@@ -80,6 +80,26 @@ function formatDate(iso) {
 	}
 }
 
+/**
+ * Validate all four required fields for create/edit mode.
+ *
+ * Returns an error-string object; empty string means no error.
+ * This is a pure module-level helper with no side-effects.
+ *
+ * @param {Object} ability    Current draftAbility store value.
+ * @param {string} slugSuffix Current slug suffix local state.
+ * @return {Object} Error map for slug_suffix, label, description, category.
+ */
+export function validateRequiredFields(ability, slugSuffix) {
+	const required = __('This field is required.', 'acrossai-abilities-manager');
+	return {
+		slug_suffix: (slugSuffix || '').trim() ? '' : required,
+		label: (ability.label || '').trim() ? '' : required,
+		description: (ability.description || '').trim() ? '' : required,
+		category: (ability.category || '').trim() ? '' : required,
+	};
+}
+
 // ---------------------------------------------------------------------------
 // Locked banner for Variant B (inherited identity)
 // Matches wireframe .locked-banner structure
@@ -293,6 +313,12 @@ export default function AbilityForm({ mode, id }) {
 	// Local state for slug suffix (strips prefix for display)
 	const [slugSuffix, setSlugSuffix] = useState('');
 	const [slugError, setSlugError] = useState('');
+	const [formErrors, setFormErrors] = useState({
+		slug_suffix: '',
+		label: '',
+		description: '',
+		category: '',
+	});
 
 	// JSON validation states for schema fields
 	const [inputSchemaError, setInputSchemaError] = useState('');
@@ -321,6 +347,9 @@ export default function AbilityForm({ mode, id }) {
 
 	// Sync slug suffix when savedAbility changes (edit/override: pre-populate)
 	useEffect(() => {
+		// Reset stale validation errors when ability loads or after a successful save
+		// (FR-016, CLARIFY-Q2/B: no errors on page load).
+		setFormErrors({ slug_suffix: '', label: '', description: '', category: '' });
 		if (savedAbility?.ability_slug) {
 			const slug = savedAbility.ability_slug;
 			setSlugSuffix(
@@ -361,6 +390,9 @@ export default function AbilityForm({ mode, id }) {
 	function handleSlugChange(e) {
 		const raw = e.target.value;
 		setSlugSuffix(raw);
+		if (raw.trim()) {
+			setFormErrors((prev) => ({ ...prev, slug_suffix: '' }));
+		}
 		if (raw && !SLUG_PATTERN.test(raw)) {
 			setSlugError(
 				__(
@@ -412,9 +444,67 @@ export default function AbilityForm({ mode, id }) {
 	}
 
 	// ---------------------------------------------------------------------------
+	// Required-field blur validators
+	// ---------------------------------------------------------------------------
+	function handleSlugBlur() {
+		if ('create' !== mode && 'edit' !== mode) {
+			return;
+		}
+		setFormErrors((prev) => ({
+			...prev,
+			slug_suffix: (slugSuffix || '').trim()
+				? ''
+				: __('This field is required.', 'acrossai-abilities-manager'),
+		}));
+	}
+	function handleLabelBlur() {
+		if ('create' !== mode && 'edit' !== mode) {
+			return;
+		}
+		setFormErrors((prev) => ({
+			...prev,
+			label: (draftAbility.label || '').trim()
+				? ''
+				: __('This field is required.', 'acrossai-abilities-manager'),
+		}));
+	}
+	function handleDescriptionBlur() {
+		if ('create' !== mode && 'edit' !== mode) {
+			return;
+		}
+		setFormErrors((prev) => ({
+			...prev,
+			description: (draftAbility.description || '').trim()
+				? ''
+				: __('This field is required.', 'acrossai-abilities-manager'),
+		}));
+	}
+	function handleCategoryBlur() {
+		if ('create' !== mode && 'edit' !== mode) {
+			return;
+		}
+		setFormErrors((prev) => ({
+			...prev,
+			category: (draftAbility.category || '').trim()
+				? ''
+				: __('This field is required.', 'acrossai-abilities-manager'),
+		}));
+	}
+
+	// ---------------------------------------------------------------------------
 	// Save handlers
 	// ---------------------------------------------------------------------------
 	async function handleSave(forceDraft = false) {
+		// Required-field gate — applies to ALL save paths in create/edit mode,
+		// including forceDraft=true (CLARIFY-Q5/A: no bypass).
+		if ('create' === mode || 'edit' === mode) {
+			const errors = validateRequiredFields(draftAbility, slugSuffix);
+			setFormErrors(errors);
+			if (Object.values(errors).some(Boolean)) {
+				return;
+			}
+		}
+
 		const data = { ...draftAbility };
 		if (forceDraft) {
 			data.status = 'draft';
@@ -498,6 +588,18 @@ export default function AbilityForm({ mode, id }) {
 	const isEdit = 'edit' === mode;
 	const isOverride = 'override' === mode;
 
+	// True when any required field is missing — used for CSS-only button dimming.
+	// Always false in override mode (FR-006: override has no identity fields).
+	const hasRequiredErrors =
+		('create' === mode || 'edit' === mode)
+			? (
+				!slugSuffix.trim() ||
+				!(draftAbility.label || '').trim() ||
+				!(draftAbility.description || '').trim() ||
+				!(draftAbility.category || '').trim()
+			  )
+			: false;
+
 	// Save button label
 	let saveBtnLabel;
 	if (isSaving) {
@@ -562,6 +664,8 @@ export default function AbilityForm({ mode, id }) {
 					<button
 						type="button"
 						className="button button-primary"
+						style={hasRequiredErrors ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+						aria-disabled={hasRequiredErrors}
 						disabled={isSaving || (!isCreate && !isDirty)}
 						onClick={() => handleSave(false)}
 					>
@@ -652,12 +756,18 @@ export default function AbilityForm({ mode, id }) {
 													'acrossai-abilities-manager'
 												)}
 												onChange={handleSlugChange}
+												onBlur={handleSlugBlur}
 												readOnly={isEdit}
 											/>
 										</div>
 										{slugError && (
 											<div className="field-error">
 												{slugError}
+											</div>
+										)}
+										{('create' === mode || 'edit' === mode) && formErrors.slug_suffix && (
+											<div className="field-error" role="alert" aria-live="polite">
+												{formErrors.slug_suffix}
 											</div>
 										)}
 										{isEdit ? (
@@ -695,10 +805,17 @@ export default function AbilityForm({ mode, id }) {
 												'acrossai-abilities-manager'
 											)}
 											value={draftAbility.label || ''}
-											onChange={(e) =>
-												patch({ label: e.target.value })
-											}
+											onChange={(e) => {
+												patch({ label: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, label: '' }));
+											}}
+											onBlur={handleLabelBlur}
 										/>
+										{('create' === mode || 'edit' === mode) && formErrors.label && (
+											<div className="field-error" role="alert" aria-live="polite">
+												{formErrors.label}
+											</div>
+										)}
 									</div>
 								</div>
 
@@ -714,9 +831,11 @@ export default function AbilityForm({ mode, id }) {
 											className="rs"
 											style={{ maxWidth: '280px' }}
 											value={draftAbility.category || ''}
-											onChange={(e) =>
-												patch({ category: e.target.value })
-											}
+											onChange={(e) => {
+												patch({ category: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, category: '' }));
+											}}
+											onBlur={handleCategoryBlur}
 										>
 											<option value="">
 												{__('— choose —', 'acrossai-abilities-manager')}
@@ -727,6 +846,11 @@ export default function AbilityForm({ mode, id }) {
 												</option>
 											))}
 										</select>
+										{('create' === mode || 'edit' === mode) && formErrors.category && (
+											<div className="field-error" role="alert" aria-live="polite">
+												{formErrors.category}
+											</div>
+										)}
 									</div>
 								</div>
 
@@ -734,24 +858,30 @@ export default function AbilityForm({ mode, id }) {
 								<div className="fr">
 									<label htmlFor="ability-description" className="fl">
 										{__('Description', 'acrossai-abilities-manager')}
-										<span className="lopt">
-											{__('optional', 'acrossai-abilities-manager')}
-										</span>
+										<span className="req"> *</span>
 									</label>
 									<div className="ff">
 										<textarea
 											id="ability-description"
 											className="rt"
 											rows="3"
+											maxLength={1000}
 											placeholder={__(
 												'Describe what this ability does. This will appear to AI agents during discovery.',
 												'acrossai-abilities-manager'
 											)}
 											value={draftAbility.description || ''}
-											onChange={(e) =>
-												patch({ description: e.target.value })
-											}
+											onChange={(e) => {
+												patch({ description: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, description: '' }));
+											}}
+											onBlur={handleDescriptionBlur}
 										/>
+										{('create' === mode || 'edit' === mode) && formErrors.description && (
+											<div className="field-error" role="alert" aria-live="polite">
+												{formErrors.description}
+											</div>
+										)}
 									</div>
 								</div>
 
@@ -1216,8 +1346,9 @@ export default function AbilityForm({ mode, id }) {
 									<button
 										type="button"
 										className="button button-primary button-large"
-										style={{ width: '100%', justifyContent: 'center' }}
+										style={hasRequiredErrors ? { width: '100%', justifyContent: 'center', opacity: 0.5, pointerEvents: 'none' } : { width: '100%', justifyContent: 'center' }}
 										disabled={isSaving}
+										aria-disabled={hasRequiredErrors}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving
@@ -1250,8 +1381,9 @@ export default function AbilityForm({ mode, id }) {
 									<button
 										type="button"
 										className="button button-primary button-large"
-										style={{ width: '100%', justifyContent: 'center' }}
+										style={hasRequiredErrors ? { width: '100%', justifyContent: 'center', opacity: 0.5, pointerEvents: 'none' } : { width: '100%', justifyContent: 'center' }}
 										disabled={isSaving || !isDirty}
+										aria-disabled={hasRequiredErrors}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving

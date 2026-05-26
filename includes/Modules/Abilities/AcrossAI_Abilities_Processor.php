@@ -110,8 +110,9 @@ class AcrossAI_Abilities_Processor {
 	/**
 	 * Determine whether a row has the minimum required data to register.
 	 *
-	 * Skips rows with an empty slug, empty label (for UI clarity), or empty category
-	 * (required by the WP Abilities API).
+	 * The method skips rows with an empty slug, empty label (for UI clarity),
+	 * empty category (required by the WP Abilities API), or empty description
+	 * (required for all published DB abilities since Feature 013).
 	 *
 	 * @since  0.1.0
 	 * @param  AcrossAI_Abilities_Row $row Row to check.
@@ -121,10 +122,13 @@ class AcrossAI_Abilities_Processor {
 		if ( '' === $row->ability_slug ) {
 			return false;
 		}
-		if ( empty( $row->label ) ) {
+		if ( '' === trim( (string) $row->label ) ) {
 			return false;
 		}
-		if ( empty( $row->category ) ) {
+		if ( '' === trim( (string) $row->category ) ) {
+			return false;
+		}
+		if ( '' === trim( (string) $row->description ) ) {
 			return false;
 		}
 		return true;

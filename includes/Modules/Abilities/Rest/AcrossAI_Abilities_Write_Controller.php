@@ -141,6 +141,19 @@ class AcrossAI_Abilities_Write_Controller {
 		// Sanitize inputs.
 		$fields = AcrossAI_Abilities_Sanitizer::sanitize_create_request( $request );
 
+		// Presence guards — required fields must be non-empty on create (SEC-02, SEC-04).
+		// These fire on sanitized $fields, before the shared validator, to produce
+		// specific error codes for missing required identity fields (FR-013).
+		if ( '' === trim( (string) ( $fields['label'] ?? '' ) ) ) {
+			return new \WP_Error( 'missing_label', __( 'Ability label is required.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+		if ( '' === trim( (string) ( $fields['description'] ?? '' ) ) ) {
+			return new \WP_Error( 'missing_description', __( 'Ability description is required.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+		if ( '' === trim( (string) ( $fields['category'] ?? '' ) ) ) {
+			return new \WP_Error( 'missing_category', __( 'Ability category is required.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+
 		// Validate.
 		$valid = AcrossAI_Abilities_Validator::validate_ability( $fields, true );
 		if ( is_wp_error( $valid ) ) {

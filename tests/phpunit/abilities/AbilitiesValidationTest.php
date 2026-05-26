@@ -29,7 +29,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * validate_slug_suffix passes for a valid alphanumeric-hyphen suffix.
+	 * The validate_slug_suffix method passes for a valid alphanumeric-hyphen suffix.
 	 *
 	 * @return void
 	 */
@@ -39,7 +39,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_slug_suffix rejects empty string.
+	 * The validate_slug_suffix method rejects empty string.
 	 *
 	 * @return void
 	 */
@@ -49,7 +49,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_slug_suffix rejects a forward-slash (namespace separator).
+	 * The validate_slug_suffix method rejects a forward-slash (namespace separator).
 	 *
 	 * @return void
 	 */
@@ -59,7 +59,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_slug_suffix rejects invalid characters (e.g. spaces, dots).
+	 * The validate_slug_suffix method rejects invalid characters (e.g. spaces, dots).
 	 *
 	 * @return void
 	 */
@@ -69,7 +69,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_slug_suffix rejects a suffix that makes the full slug exceed 255 chars.
+	 * The validate_slug_suffix method rejects a suffix that makes the full slug exceed 255 chars.
 	 *
 	 * @return void
 	 */
@@ -83,7 +83,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * validate_php_code passes for innocuous code.
+	 * The validate_php_code method passes for innocuous code.
 	 *
 	 * @return void
 	 */
@@ -93,7 +93,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects exec() (T_STRING blocked function).
+	 * The validate_php_code method rejects exec() (T_STRING blocked function).
 	 *
 	 * @return void
 	 */
@@ -103,7 +103,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects system() (T_STRING blocked function).
+	 * The validate_php_code method rejects system() (T_STRING blocked function).
 	 *
 	 * @return void
 	 */
@@ -113,7 +113,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects shell_exec() (T_STRING blocked function).
+	 * The validate_php_code method rejects shell_exec() (T_STRING blocked function).
 	 *
 	 * @return void
 	 */
@@ -123,7 +123,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects eval (T_EVAL language construct — TASK-SEC-001).
+	 * The validate_php_code method rejects eval (T_EVAL language construct — TASK-SEC-001).
 	 *
 	 * @return void
 	 */
@@ -134,7 +134,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects call_user_func (indirect invocation — TASK-SEC-002).
+	 * The validate_php_code method rejects call_user_func (indirect invocation — TASK-SEC-002).
 	 *
 	 * @return void
 	 */
@@ -144,7 +144,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects call_user_func_array (indirect invocation — TASK-SEC-002).
+	 * The validate_php_code method rejects call_user_func_array (indirect invocation — TASK-SEC-002).
 	 *
 	 * @return void
 	 */
@@ -154,7 +154,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code rejects code exceeding the 64 KB limit.
+	 * The validate_php_code method rejects code exceeding the 64 KB limit.
 	 *
 	 * @return void
 	 */
@@ -164,7 +164,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_php_code returns a clean 400 WP_Error for a syntax error
+	 * The validate_php_code method returns a clean 400 WP_Error for a syntax error
 	 * (covers ParseError handling in PHP 8+  — TASK-SEC-003).
 	 *
 	 * @return void
@@ -181,112 +181,133 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * filter_hook config rejects unknown keys.
+	 * The filter_hook config rejects unknown keys.
 	 *
 	 * @return void
 	 */
 	public function test_filter_hook_config_rejects_unknown_keys() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'filter_hook', [
-			'hook_name'   => 'my_hook',
-			'extra_param' => 'bad',
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'filter_hook',
+			array(
+				'hook_name'   => 'my_hook',
+				'extra_param' => 'bad',
+			)
+		);
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * filter_hook config requires non-empty hook_name.
+	 * The filter_hook config requires non-empty hook_name.
 	 *
 	 * @return void
 	 */
 	public function test_filter_hook_config_requires_hook_name() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'filter_hook', [] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'filter_hook', array() );
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * filter_hook config passes with valid hook_name.
+	 * The filter_hook config passes with valid hook_name.
 	 *
 	 * @return void
 	 */
 	public function test_filter_hook_config_passes_with_valid_hook_name() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'filter_hook', [
-			'hook_name' => 'my_hook',
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'filter_hook',
+			array(
+				'hook_name' => 'my_hook',
+			)
+		);
 		$this->assertTrue( $result );
 	}
 
 	/**
-	 * wp_remote_post config rejects headers key (PD-002: no caller header propagation).
+	 * The wp_remote_post config rejects headers key (PD-002: no caller header propagation).
 	 *
 	 * @return void
 	 */
 	public function test_wp_remote_post_config_rejects_headers_key() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'wp_remote_post', [
-			'url'     => 'https://example.com/api',
-			'headers' => [ 'Authorization' => 'Bearer token' ],
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'wp_remote_post',
+			array(
+				'url'     => 'https://example.com/api',
+				'headers' => array( 'Authorization' => 'Bearer token' ),
+			)
+		);
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * wp_remote_post config rejects non-HTTPS URL.
+	 * The wp_remote_post config rejects non-HTTPS URL.
 	 *
 	 * @return void
 	 */
 	public function test_wp_remote_post_config_rejects_non_https_url() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'wp_remote_post', [
-			'url' => 'http://example.com/api',
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'wp_remote_post',
+			array(
+				'url' => 'http://example.com/api',
+			)
+		);
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * wp_remote_post config rejects unknown keys.
+	 * The wp_remote_post config rejects unknown keys.
 	 *
 	 * @return void
 	 */
 	public function test_wp_remote_post_config_rejects_unknown_keys() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'wp_remote_post', [
-			'url'    => 'https://example.com/api',
-			'method' => 'POST',
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'wp_remote_post',
+			array(
+				'url'    => 'https://example.com/api',
+				'method' => 'POST',
+			)
+		);
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * wp_remote_post config passes with valid url and optional timeout.
+	 * The wp_remote_post config passes with valid url and optional timeout.
 	 *
 	 * @return void
 	 */
 	public function test_wp_remote_post_config_passes_valid() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'wp_remote_post', [
-			'url'     => 'https://example.com/api',
-			'timeout' => 15,
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'wp_remote_post',
+			array(
+				'url'     => 'https://example.com/api',
+				'timeout' => 15,
+			)
+		);
 		$this->assertTrue( $result );
 	}
 
 	/**
-	 * php_code config rejects unknown keys.
+	 * The php_code config rejects unknown keys.
 	 *
 	 * @return void
 	 */
 	public function test_php_code_config_rejects_unknown_keys() {
-		$result = AcrossAI_Abilities_Validator::validate_callback_config( 'php_code', [
-			'code'  => 'return 1;',
-			'extra' => 'bad',
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_callback_config(
+			'php_code',
+			array(
+				'code'  => 'return 1;',
+				'extra' => 'bad',
+			)
+		);
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * noop callback_config always passes regardless of config value.
+	 * The noop callback_config always passes regardless of config value.
 	 *
 	 * @return void
 	 */
 	public function test_noop_config_always_passes() {
 		$this->assertTrue( AcrossAI_Abilities_Validator::validate_callback_config( 'noop', null ) );
-		$this->assertTrue( AcrossAI_Abilities_Validator::validate_callback_config( 'noop', [] ) );
+		$this->assertTrue( AcrossAI_Abilities_Validator::validate_callback_config( 'noop', array() ) );
 	}
 
 	// =========================================================================
@@ -294,30 +315,33 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * validate_schema rejects a payload exceeding 64 KB.
+	 * The validate_schema method rejects a payload exceeding 64 KB.
 	 *
 	 * @return void
 	 */
 	public function test_validate_schema_rejects_oversized_payload() {
 		// Build a schema array whose JSON encoding exceeds 64 KB.
-		$schema = [ 'properties' => [] ];
+		$schema = array( 'properties' => array() );
 		for ( $i = 0; $i < 3000; $i++ ) {
-			$schema['properties'][ 'field_' . $i ] = [ 'type' => 'string', 'description' => str_repeat( 'x', 10 ) ];
+			$schema['properties'][ 'field_' . $i ] = array(
+				'type'        => 'string',
+				'description' => str_repeat( 'x', 10 ),
+			);
 		}
 		$result = AcrossAI_Abilities_Validator::validate_schema( $schema );
 		$this->assertWPError( $result );
 	}
 
 	/**
-	 * validate_schema rejects a schema nested deeper than JSON_MAX_DEPTH (10).
+	 * The validate_schema method rejects a schema nested deeper than JSON_MAX_DEPTH (10).
 	 *
 	 * @return void
 	 */
 	public function test_validate_schema_rejects_excess_depth() {
-		$schema = [];
+		$schema = array();
 		$ref    = &$schema;
 		for ( $i = 0; $i <= 11; $i++ ) {
-			$ref['nested'] = [];
+			$ref['nested'] = array();
 			$ref           = &$ref['nested'];
 		}
 		$result = AcrossAI_Abilities_Validator::validate_schema( $schema );
@@ -325,7 +349,7 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_schema passes for null (optional field).
+	 * The validate_schema method passes for null (optional field).
 	 *
 	 * @return void
 	 */
@@ -334,15 +358,17 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * validate_schema passes for a small valid schema.
+	 * The validate_schema method passes for a small valid schema.
 	 *
 	 * @return void
 	 */
 	public function test_validate_schema_passes_valid() {
-		$result = AcrossAI_Abilities_Validator::validate_schema( [
-			'type'       => 'object',
-			'properties' => [ 'name' => [ 'type' => 'string' ] ],
-		] );
+		$result = AcrossAI_Abilities_Validator::validate_schema(
+			array(
+				'type'       => 'object',
+				'properties' => array( 'name' => array( 'type' => 'string' ) ),
+			)
+		);
 		$this->assertTrue( $result );
 	}
 
@@ -351,54 +377,63 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * validate_ability requires slug_suffix on create.
+	 * The validate_ability method requires slug_suffix on create.
 	 *
 	 * @return void
 	 */
 	public function test_validate_ability_requires_slug_suffix_on_create() {
-		$result = AcrossAI_Abilities_Validator::validate_ability( [], true );
+		$result = AcrossAI_Abilities_Validator::validate_ability( array(), true );
 		$this->assertWPError( $result );
 		$this->assertSame( 'invalid_slug', $result->get_error_code() );
 	}
 
 	/**
-	 * validate_ability passes minimal valid create payload.
+	 * The validate_ability method passes minimal valid create payload.
 	 *
 	 * @return void
 	 */
 	public function test_validate_ability_passes_minimal_create() {
-		$result = AcrossAI_Abilities_Validator::validate_ability( [
-			'slug_suffix' => 'my-ability',
-		], true );
+		$result = AcrossAI_Abilities_Validator::validate_ability(
+			array(
+				'slug_suffix' => 'my-ability',
+			),
+			true
+		);
 		$this->assertTrue( $result );
 	}
 
 	/**
-	 * validate_ability rejects invalid status.
+	 * The validate_ability method rejects invalid status.
 	 *
 	 * @return void
 	 */
 	public function test_validate_ability_rejects_invalid_status() {
-		$result = AcrossAI_Abilities_Validator::validate_ability( [
-			'slug_suffix' => 'valid',
-			'status'      => 'archived',
-		], true );
+		$result = AcrossAI_Abilities_Validator::validate_ability(
+			array(
+				'slug_suffix' => 'valid',
+				'status'      => 'archived',
+			),
+			true
+		);
 		$this->assertWPError( $result );
 		$this->assertSame( 'invalid_status', $result->get_error_code() );
 	}
 
 	/**
-	 * validate_ability validates callback_config for the correct type.
+	 * The validate_ability method validates callback_config for the correct type.
 	 *
 	 * @return void
 	 */
 	public function test_validate_ability_validates_callback_config_for_type() {
 		// php_code with a blocked function in config should fail.
-		$result = AcrossAI_Abilities_Validator::validate_ability( [
-			'slug_suffix'     => 'valid',
-			'callback_type'   => 'php_code',
-			'callback_config' => [ 'code' => 'exec("ls");' ],
-		], true );
+		$result = AcrossAI_Abilities_Validator::validate_ability(
+			array(
+				'slug_suffix'     => 'valid',
+				'callback_type'   => 'php_code',
+				'callback_config' => array( 'code' => 'exec("ls");' ),
+			),
+			true
+		);
 		$this->assertWPError( $result );
 	}
 
@@ -407,19 +442,19 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * strip_protected_fields_for_non_db removes identity and execution fields.
+	 * The strip_protected_fields_for_non_db removes identity and execution fields.
 	 *
 	 * @return void
 	 */
 	public function test_strip_protected_fields_removes_identity_fields() {
-		$fields = [
+		$fields = array(
 			'label'           => 'Override Label',
 			'description'     => 'Override Desc',
 			'category'        => 'Override Cat',
 			'callback_type'   => 'php_code',
-			'callback_config' => [ 'code' => 'return 1;' ],
-			'input_schema'    => [ 'type' => 'object' ],
-			'output_schema'   => [ 'type' => 'object' ],
+			'callback_config' => array( 'code' => 'return 1;' ),
+			'input_schema'    => array( 'type' => 'object' ),
+			'output_schema'   => array( 'type' => 'object' ),
 			'status'          => 'publish',
 			'ability_slug'    => 'acrossai-abilities/override',
 			'slug_suffix'     => 'override',
@@ -427,37 +462,37 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 			'show_in_mcp'     => true,   // editable — must survive.
 			'readonly'        => false,  // editable — must survive.
 			'mcp_type'        => 'tool', // editable — must survive.
-		];
+		);
 
 		$result = AcrossAI_Abilities_Sanitizer::strip_protected_fields_for_non_db( $fields );
 
 		// Protected fields must be gone.
-		$this->assertArrayNotHasKey( 'label',           $result );
-		$this->assertArrayNotHasKey( 'description',     $result );
-		$this->assertArrayNotHasKey( 'category',        $result );
-		$this->assertArrayNotHasKey( 'callback_type',   $result );
+		$this->assertArrayNotHasKey( 'label', $result );
+		$this->assertArrayNotHasKey( 'description', $result );
+		$this->assertArrayNotHasKey( 'category', $result );
+		$this->assertArrayNotHasKey( 'callback_type', $result );
 		$this->assertArrayNotHasKey( 'callback_config', $result );
-		$this->assertArrayNotHasKey( 'input_schema',    $result );
-		$this->assertArrayNotHasKey( 'output_schema',   $result );
-		$this->assertArrayNotHasKey( 'status',          $result );
-		$this->assertArrayNotHasKey( 'ability_slug',    $result );
-		$this->assertArrayNotHasKey( 'slug_suffix',     $result );
-		$this->assertArrayNotHasKey( 'source',          $result );
+		$this->assertArrayNotHasKey( 'input_schema', $result );
+		$this->assertArrayNotHasKey( 'output_schema', $result );
+		$this->assertArrayNotHasKey( 'status', $result );
+		$this->assertArrayNotHasKey( 'ability_slug', $result );
+		$this->assertArrayNotHasKey( 'slug_suffix', $result );
+		$this->assertArrayNotHasKey( 'source', $result );
 
 		// Override-only fields must survive.
 		$this->assertArrayHasKey( 'show_in_mcp', $result );
-		$this->assertArrayHasKey( 'readonly',    $result );
-		$this->assertArrayHasKey( 'mcp_type',    $result );
+		$this->assertArrayHasKey( 'readonly', $result );
+		$this->assertArrayHasKey( 'mcp_type', $result );
 	}
 
 	/**
-	 * strip_protected_fields_for_non_db is a no-op for empty input.
+	 * The strip_protected_fields_for_non_db is a no-op for empty input.
 	 *
 	 * @return void
 	 */
 	public function test_strip_protected_fields_noop_for_empty() {
-		$result = AcrossAI_Abilities_Sanitizer::strip_protected_fields_for_non_db( [] );
-		$this->assertSame( [], $result );
+		$result = AcrossAI_Abilities_Sanitizer::strip_protected_fields_for_non_db( array() );
+		$this->assertSame( array(), $result );
 	}
 
 	// =========================================================================
@@ -465,42 +500,231 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 	// =========================================================================
 
 	/**
-	 * sanitize_callback_config for wp_remote_post clamps timeout to 1–30.
+	 * The sanitize_callback_config method for wp_remote_post clamps timeout to 1–30.
 	 *
 	 * @return void
 	 */
 	public function test_sanitize_callback_config_clamps_timeout() {
-		$result = AcrossAI_Abilities_Sanitizer::sanitize_callback_config( 'wp_remote_post', [
-			'url'     => 'https://example.com',
-			'timeout' => 999,
-		] );
+		$result = AcrossAI_Abilities_Sanitizer::sanitize_callback_config(
+			'wp_remote_post',
+			array(
+				'url'     => 'https://example.com',
+				'timeout' => 999,
+			)
+		);
 
 		$this->assertNotNull( $result );
 		$this->assertSame( 30, $result['timeout'] );
 	}
 
 	/**
-	 * sanitize_callback_config for wp_remote_post strips unknown keys including headers.
+	 * The sanitize_callback_config method for wp_remote_post strips unknown keys including headers.
 	 *
 	 * @return void
 	 */
 	public function test_sanitize_callback_config_strips_headers_key() {
-		$result = AcrossAI_Abilities_Sanitizer::sanitize_callback_config( 'wp_remote_post', [
-			'url'     => 'https://example.com',
-			'headers' => [ 'Authorization' => 'Bearer token' ],
-		] );
+		$result = AcrossAI_Abilities_Sanitizer::sanitize_callback_config(
+			'wp_remote_post',
+			array(
+				'url'     => 'https://example.com',
+				'headers' => array( 'Authorization' => 'Bearer token' ),
+			)
+		);
 
 		$this->assertNotNull( $result );
 		$this->assertArrayNotHasKey( 'headers', $result );
 	}
 
 	/**
-	 * sanitize_php_code strips PHP opening tags.
+	 * The sanitize_php_code method strips PHP opening tags.
 	 *
 	 * @return void
 	 */
 	public function test_sanitize_php_code_strips_opening_tags() {
 		$result = AcrossAI_Abilities_Sanitizer::sanitize_php_code( '<?php return 1;' );
 		$this->assertStringNotContainsString( '<?', $result );
+	}
+
+	// =========================================================================
+	// validate_label — Feature 013: empty-string guard
+	// =========================================================================
+
+	/**
+	 * The validate_label method passes for a valid non-empty label.
+	 *
+	 * @return void
+	 */
+	public function test_validate_label_passes_valid() {
+		$result = AcrossAI_Abilities_Validator::validate_label( 'My Ability Label' );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_label method accepts null (nullable for update/override flows).
+	 *
+	 * @return void
+	 */
+	public function test_validate_label_accepts_null() {
+		$result = AcrossAI_Abilities_Validator::validate_label( null );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_label method rejects empty string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_label_rejects_empty_string() {
+		$result = AcrossAI_Abilities_Validator::validate_label( '' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_label', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_label method rejects whitespace-only string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_label_rejects_whitespace_only() {
+		$result = AcrossAI_Abilities_Validator::validate_label( '   ' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_label', $result->get_error_code() );
+	}
+
+	// =========================================================================
+	// validate_category — Feature 013: empty-string guard
+	// =========================================================================
+
+	/**
+	 * The validate_category method passes for a valid non-empty category.
+	 *
+	 * @return void
+	 */
+	public function test_validate_category_passes_valid() {
+		$result = AcrossAI_Abilities_Validator::validate_category( 'general' );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_category method accepts null (nullable for update/override flows).
+	 *
+	 * @return void
+	 */
+	public function test_validate_category_accepts_null() {
+		$result = AcrossAI_Abilities_Validator::validate_category( null );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_category method rejects empty string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_category_rejects_empty_string() {
+		$result = AcrossAI_Abilities_Validator::validate_category( '' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_category', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_category method rejects whitespace-only string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_category_rejects_whitespace_only() {
+		$result = AcrossAI_Abilities_Validator::validate_category( '	' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_category', $result->get_error_code() );
+	}
+
+	// =========================================================================
+	// validate_description — Feature 013: new static method
+	// =========================================================================
+
+	/**
+	 * The validate_description method passes for a valid non-empty description.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_passes_valid() {
+		$result = AcrossAI_Abilities_Validator::validate_description( 'A clear description of the ability.' );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_description method accepts null (nullable for partial-update flows).
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_accepts_null() {
+		$result = AcrossAI_Abilities_Validator::validate_description( null );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_description method rejects empty string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_rejects_empty_string() {
+		$result = AcrossAI_Abilities_Validator::validate_description( '' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_description', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_description method rejects whitespace-only string.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_rejects_whitespace_only() {
+		$result = AcrossAI_Abilities_Validator::validate_description( '   ' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_description', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_description method rejects non-string value.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_rejects_non_string() {
+		$result = AcrossAI_Abilities_Validator::validate_description( 42 );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_description', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_description method rejects description exceeding 1000 characters.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_rejects_over_max_length() {
+		$result = AcrossAI_Abilities_Validator::validate_description( str_repeat( 'a', 1001 ) );
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_description', $result->get_error_code() );
+	}
+
+	/**
+	 * The validate_description method passes for a description at exactly the maximum length.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_passes_at_max_length() {
+		$result = AcrossAI_Abilities_Validator::validate_description( str_repeat( 'a', 1000 ) );
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * The validate_description method error data carries HTTP status 400.
+	 *
+	 * @return void
+	 */
+	public function test_validate_description_error_carries_400_status() {
+		$result = AcrossAI_Abilities_Validator::validate_description( '' );
+		$this->assertWPError( $result );
+		$data = $result->get_error_data( 'invalid_description' );
+		$this->assertArrayHasKey( 'status', $data );
+		$this->assertSame( 400, $data['status'] );
 	}
 }

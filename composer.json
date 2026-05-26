@@ -10,7 +10,7 @@
 		"automattic/jetpack-autoloader": "^5.0",
 		"wpboilerplate/wpb-access-control": "^1.0",
 		"berlindb/core": "^2.0",
-		"wpboilerplate/wpb-mcp-servers-list": "dev-main"
+		"wpboilerplate/wpb-mcp-servers-list": "^0.1"
 	},
 	"keywords": [
 		"wordpress",

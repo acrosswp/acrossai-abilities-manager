@@ -86,6 +86,49 @@ Every public method on `*_Query` classes is an authorization-free data accessor.
 
 ---
 
+---
+
+### 2026-05-25 — Description field validation: shared constant and method (DEC-DESCRIPTION-VALIDATION-PATTERN)
+
+**Context**
+Feature 013 introduced end-to-end required-field validation for the description field. The validation contract must be consistent between PHP (server) and React (client).
+
+**Decision**
+PHP: `DESCRIPTION_MAX_LENGTH = 1000` constant on `AcrossAI_Abilities_Validator` + `validate_description()` static method. Rules: `null` → return `true` (valid for PATCH; absence means no-op), empty/whitespace-only → `WP_Error`, length > 1000 → `WP_Error`. Client: `maxLength={1000}` on the description `<textarea>`. Server and client enforce the same 1000-char limit independently — if the limit changes, update both.
+
+**Rule**
+The constant `DESCRIPTION_MAX_LENGTH` is the single source of truth for the server limit. The matching `maxLength` attribute in `AbilityForm.jsx` must be kept in sync manually — there is no runtime link between them.
+
+**Evidence**
+Feature 013 T002–T005. `includes/Utilities/AcrossAI_Abilities_Validator.php` (validate_description), `src/js/abilities/components/AbilityForm.jsx` (description textarea maxLength).
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Abilities_Validator.php` (DESCRIPTION_MAX_LENGTH, validate_description),
+`src/js/abilities/components/AbilityForm.jsx` (description textarea, maxLength prop).
+
+---
+
+### 2026-05-25 — AbilityForm.jsx save button depths differ by context (DEC-HACTIONS-BUTTON-DEPTH)
+
+**Context**
+Feature 013 T015 required modifying the primary save button in `AbilityForm.jsx`. The button's indentation depth depends on which container it lives in.
+
+**Decision**
+Two distinct button depth conventions in `AbilityForm.jsx`:
+- `.hactions` primary save button: 5-tab `<button` indent + 6-tab attributes
+- `sbox` sidebar buttons: 9-tab `<button` indent + 10-tab attributes
+
+These are the verified depths. Always confirm the actual depth before constructing a str_replace for any save button in this file.
+
+**Rule**
+Do not assume button depth from context name alone. Read the target element's raw indentation before str_replace.
+
+**Evidence**
+Feature 013 T015 — str_replace mismatches on the `.hactions` save button resolved by reading actual depths.
+
+**Where to look next**
+`src/js/abilities/components/AbilityForm.jsx` (.hactions div, sbox containers).
+
 ## Entry Lifecycle
 
 Each decision follows this lifecycle:
@@ -647,10 +690,14 @@ Do not implement DataViews for a feature and then have to rewrite it to match a 
 **Evidence**
 Feature 010 (2026-05-24): commits `b39ef5e` (DataViews replaced by `.wptable`) and `248ab5d` (DataForm replaced by `.panel`/`.sect` wireframe layout). Noted in `specs/010-abilities-react-ui/tasks.md` T014 and T016 as "design requirement overrides Constitution §III."
 
+**Feature 013 deepening (2026-05-25)**
+Feature 013 adds five new custom validation touch-points on top of the existing custom form: `formErrors` state, `validateRequiredFields` helper, four `onBlur` handlers, `hasRequiredErrors` derived value, and four inline `.field-error` divs — all implemented independently of DataForm. This deepens the deviation but does not introduce it; the deviation origin is Feature 010. Accepted as technical debt (P2) per `/speckit.architecture-guard.governed-plan` session 2026-05-25. A future migration spec should migrate `AbilityForm.jsx` to DataForm's native validation API. Track via GitHub issue.
+
 **Where to look next**
 `src/js/abilities/components/AbilitiesList.jsx` (custom `.wptable` example),
 `src/js/abilities/components/AbilityForm.jsx` (plain HTML sections without DataForm),
-`specs/010-abilities-react-ui/tasks.md` (T014/T016 deviation notes).
+`specs/010-abilities-react-ui/tasks.md` (T014/T016 deviation notes),
+`specs/013-abilities-four-field-required-validation/plan.md` (T009–T013 custom validation, P2 tech-debt deepening).
 
 ---
 

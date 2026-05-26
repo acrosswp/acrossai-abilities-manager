@@ -55,6 +55,13 @@ class AcrossAI_Abilities_Validator {
 	const CATEGORY_MAX_LENGTH = 100;
 
 	/**
+	 * The maximum allowed length for a description (characters).
+	 *
+	 * @var int
+	 */
+	const DESCRIPTION_MAX_LENGTH = 1000;
+
+	/**
 	 * Maximum JSON payload size in bytes (64 KB).
 	 *
 	 * @var int
@@ -209,6 +216,9 @@ class AcrossAI_Abilities_Validator {
 		if ( ! is_string( $label ) ) {
 			return new \WP_Error( 'invalid_label', __( 'Ability label must be a string.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
+		if ( '' === trim( $label ) ) {
+			return new \WP_Error( 'invalid_label', __( 'Ability label cannot be empty.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
 		if ( mb_strlen( $label ) > self::LABEL_MAX_LENGTH ) {
 			return new \WP_Error( 'invalid_label', __( 'Ability label must not exceed 255 characters.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
@@ -229,11 +239,41 @@ class AcrossAI_Abilities_Validator {
 		if ( ! is_string( $category ) ) {
 			return new \WP_Error( 'invalid_category', __( 'Ability category must be a string.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
+		if ( '' === trim( $category ) ) {
+			return new \WP_Error( 'invalid_category', __( 'Ability category cannot be empty.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
 		if ( mb_strlen( $category ) > self::CATEGORY_MAX_LENGTH ) {
 			return new \WP_Error( 'invalid_category', __( 'Ability category must not exceed 100 characters.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
 		if ( ! preg_match( '/^[a-zA-Z0-9\-_]+$/', $category ) ) {
 			return new \WP_Error( 'invalid_category', __( 'Ability category contains invalid characters.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+		return true;
+	}
+
+	/**
+	 * Validate a description string.
+	 *
+	 * The description is optional on update (null passes) but required on create.
+	 * An empty or whitespace-only string is rejected. Maximum length is enforced via
+	 * DESCRIPTION_MAX_LENGTH.
+	 *
+	 * @since  0.1.0
+	 * @param  mixed $description Value to validate.
+	 * @return true|\WP_Error
+	 */
+	public static function validate_description( $description ) {
+		if ( null === $description ) {
+			return true; // nullable — PATCH flows omit description when not updating it.
+		}
+		if ( ! is_string( $description ) ) {
+			return new \WP_Error( 'invalid_description', __( 'Ability description must be a string.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+		if ( '' === trim( $description ) ) {
+			return new \WP_Error( 'invalid_description', __( 'Ability description cannot be empty.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		}
+		if ( mb_strlen( $description ) > self::DESCRIPTION_MAX_LENGTH ) {
+			return new \WP_Error( 'invalid_description', __( 'Ability description must not exceed 1000 characters.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
 		return true;
 	}
@@ -413,6 +453,7 @@ class AcrossAI_Abilities_Validator {
 
 		$simple_validators = array(
 			'label'         => array( self::class, 'validate_label' ),
+			'description'   => array( self::class, 'validate_description' ),
 			'category'      => array( self::class, 'validate_category' ),
 			'status'        => array( self::class, 'validate_status' ),
 			'source'        => array( self::class, 'validate_source' ),
