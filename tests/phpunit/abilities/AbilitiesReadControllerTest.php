@@ -107,7 +107,7 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 	 * @param  array $overrides Field overrides.
 	 * @return int  New row ID.
 	 */
-	private function insert_row( array $overrides = [] ): int {
+	private function insert_row( array $overrides = [] ): string {
 		static $counter = 0;
 		++$counter;
 
@@ -122,7 +122,8 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 
 		$id = AcrossAI_Abilities_Query::instance()->insert_ability( array_merge( $defaults, $overrides ) );
 		$this->assertIsInt( $id );
-		return $id;
+		$row = AcrossAI_Abilities_Query::instance()->get_ability_by_id( $id );
+		return rawurlencode( $row->ability_slug );
 	}
 
 	// -------------------------------------------------------------------------
@@ -145,7 +146,7 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Non-admin is rejected (403) on GET /abilities/{id}.
+	 * Non-admin is rejected (403) on GET /abilities/{slug}.
 	 *
 	 * @return void
 	 */
@@ -153,7 +154,7 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 		$subscriber_id = $this->factory->user->create( [ 'role' => 'subscriber' ] );
 		wp_set_current_user( $subscriber_id );
 
-		$request  = new WP_REST_Request( 'GET', '/acrossai-abilities-manager/v1/abilities/1' );
+		$request  = new WP_REST_Request( 'GET', '/acrossai-abilities-manager/v1/abilities/acrossai-abilities%2Ftest-slug' );
 		$response = $this->server->dispatch( $request );
 
 		$this->assertSame( 403, $response->get_status() );
@@ -319,7 +320,7 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * GET /abilities/{id} returns 200 with correct ability data.
+	 * GET /abilities/{slug} returns 200 with correct ability data.
 	 *
 	 * @return void
 	 */
@@ -335,13 +336,13 @@ class AbilitiesReadControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * GET /abilities/{nonexistent_id} returns 404.
+	 * GET /abilities/{nonexistent_slug} returns 404.
 	 *
 	 * @return void
 	 */
 	public function test_get_single_ability_not_found_returns_404() {
 		$response = $this->server->dispatch(
-			$this->get_request( '/acrossai-abilities-manager/v1/abilities/999999' )
+			$this->get_request( '/acrossai-abilities-manager/v1/abilities/acrossai-abilities%2Ftest-nonexistent-99' )
 		);
 		$this->assertSame( 404, $response->get_status() );
 	}

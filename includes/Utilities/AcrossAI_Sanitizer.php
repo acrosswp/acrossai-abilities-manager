@@ -33,6 +33,8 @@ class AcrossAI_Sanitizer {
 		$slug = sanitize_text_field( $slug );
 		// Allow alphanumeric, hyphens, underscores, forward-slashes (namespaced slugs).
 		$slug = preg_replace( '/[^a-zA-Z0-9\-_\/]/', '', $slug );
+		// SEC-001: collapse consecutive slashes that could arise after rawurldecode (e.g. %2F%2F).
+		$slug = preg_replace( '/\/+/', '/', $slug );
 		// Enforce maximum length to prevent oversized slugs reaching the DB (LOW-04).
 		return substr( $slug, 0, 255 );
 	}

@@ -25,6 +25,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-MENU-HOOK-SUFFIX | Hardcode `toplevel_page_{slug}`; avoid `get_hook_suffix()` coupling | Admin/Enqueue | hook-suffix, enqueue, menu, yoda | Active | DECISIONS.md |
 | DEC-DESCRIPTION-VALIDATION-PATTERN | Description: DESCRIPTION_MAX_LENGTH=1000, validate_description(), maxLength={1000} | Abilities/Validator | description, validation, max-length, sec-04 | Active | DECISIONS.md |
 | DEC-HACTIONS-BUTTON-DEPTH | AbilityForm.jsx: .hactions button=5-tab, sbox button=9-tab | React/UI | abilityform, button, tabs, str_replace | Active | DECISIONS.md |
+| DEC-DB-WRITE-BOUNDARY-GUARD | DB write methods must enforce source-discriminant guards at method level, not via caller ordering | DB/Security | db-write, source, boundary-guard, injection | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -97,6 +98,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-ABILITYFORM-JSX-MIXED-DEPTHS | AbilityForm.jsx: inconsistent tab depths by element — verify before str_replace | React/UI | jsx, tabs, str_replace, abilityform | BUGS.md |
 | BUG-SEC04-EMPTY-AUDIT-MISS | Adding SEC-04 guard: audit same method for pre-existing empty() violations | Plugin-wide | sec-04, empty, trim, strict | BUGS.md |
 | BUG-PHPSTAN-SILENT-PASS | PHPStan: exit 0 + no output = clean pass; exit 1 = failure | PHP/Tooling | phpstan, exit-code, silent, pass | BUGS.md |
+| BUG-RAWURLDECODE-CONSECUTIVE-SLASHES | rawurldecode + allowlist regex needs consecutive-slash normalization | Utilities/Security | slug, sanitize, rawurldecode, consecutive-slash | BUGS.md |
+| BUG-REST-ROUTE-ORDER-LITERAL-BEFORE-WILDCARD | WP REST API: literal-segment routes must register before wildcard `[^/]+` routes | REST/Routing | rest, route-order, literal, wildcard, shadowing | BUGS.md |
 
 ## Worklog Milestones (continued)
 | 2026-05-20 | 4-Phase library upgrade workflow validated; zero-code dependency upgrade with 100% test pass rate | Feature 007 | workflow, library-upgrade, zero-code, testing | WORKLOG.md |
+| 2026-05-26 | Feature 014: edit+override routing unified, REST split pattern validated, SEC-001/002/003 hardening | Feature 014 | feature-014, override, rest-split, security | WORKLOG.md |

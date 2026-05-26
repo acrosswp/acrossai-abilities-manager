@@ -508,6 +508,21 @@ $warn:    #dba617;
 		border-color: #e0e3e7;
 	}
 
+	// Read-only schema display for non-DB abilities
+	&.readonly-schema {
+		margin:      0;
+		padding:     8px 10px;
+		background:  #f5f5f5;
+		border:      1px solid #e0e3e7;
+		border-radius: 3px;
+		color:       #3c434a;
+		white-space: pre-wrap;
+		word-break:  break-word;
+		min-height:  unset;
+		resize:      none;
+		pointer-events: none;
+	}
+
 	// Dark code textarea (php_code)
 	&.dark {
 		background:  #1e1e1e;
@@ -667,6 +682,14 @@ $warn:    #dba617;
 			font-family: inherit;
 			font-size:   11px;
 		}
+	}
+
+	// Locked chip — non-DB "Keep as default" state
+	&--locked {
+		cursor:       default;
+		opacity:      0.85;
+		pointer-events: none;
+		border-style: dashed;
 	}
 }
 

@@ -155,25 +155,25 @@ export default function AbilitiesList() {
 
 	// ---- checkbox helpers ----
 	const dbAbilities = abilities.filter( ( a ) => 'db' === ( a.source || 'db' ) );
-	const allDbIds    = new Set( dbAbilities.map( ( a ) => String( a.id ) ) );
-	const allChecked  = allDbIds.size > 0 && [ ...allDbIds ].every( ( id ) => selected.has( id ) );
+	const allDbSlugs  = new Set( dbAbilities.map( ( a ) => a.ability_slug ) );
+	const allChecked  = allDbSlugs.size > 0 && [ ...allDbSlugs ].every( ( s ) => selected.has( s ) );
 
 	const toggleAll = useCallback( () => {
 		if ( allChecked ) {
 			setSelected( new Set() );
 		} else {
-			setSelected( new Set( allDbIds ) );
+			setSelected( new Set( allDbSlugs ) );
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ allChecked, JSON.stringify( [ ...allDbIds ] ) ] );
+	}, [ allChecked, JSON.stringify( [ ...allDbSlugs ] ) ] );
 
-	const toggleOne = useCallback( ( id ) => {
+	const toggleOne = useCallback( ( slug ) => {
 		setSelected( ( prev ) => {
 			const next = new Set( prev );
-			if ( next.has( id ) ) {
-				next.delete( id );
+			if ( next.has( slug ) ) {
+				next.delete( slug );
 			} else {
-				next.add( id );
+				next.add( slug );
 			}
 			return next;
 		} );
@@ -182,22 +182,29 @@ export default function AbilitiesList() {
 	// ---- inline status dropdown ----
 	function handleStatusDropdown( item, value ) {
 		const newStatus = 'e' === value ? 'publish' : 'draft';
-		dispatch.updateAbility( item.id, { status: newStatus } );
+		dispatch.updateAbility( item.ability_slug, { status: newStatus } );
 	}
 
 	// ---- bulk apply ----
 	function handleBulkApply() {
 		if ( ! bulkAction || ! selected.size ) return;
-		const ids = [ ...selected ].map( Number );
+		const slugs = [ ...selected ];
 
 		if ( 'publish' === bulkAction ) {
-			dispatch.bulkUpdateStatus( ids, 'publish' );
+			dispatch.bulkUpdateStatus( slugs, 'publish' );
 			setSelected( new Set() );
 		} else if ( 'unpublish' === bulkAction ) {
-			dispatch.bulkUpdateStatus( ids, 'draft' );
+			dispatch.bulkUpdateStatus( slugs, 'draft' );
 			setSelected( new Set() );
 		} else if ( 'delete' === bulkAction ) {
-			const count = ids.length;
+			// Block mixed-source bulk delete: only db-source abilities may be deleted.
+			const nonDbInSelection = slugs.filter( ( s ) => ! allDbSlugs.has( s ) );
+			if ( nonDbInSelection.length > 0 ) {
+				// eslint-disable-next-line no-alert
+				window.alert( __( 'Bulk delete is only available for custom (db) abilities. Deselect non-custom abilities and try again.', 'acrossai-abilities-manager' ) );
+				return;
+			}
+			const count = slugs.length;
 			// SEC-010-02: require explicit confirmation.
 			if (
 				// eslint-disable-next-line no-alert
@@ -207,7 +214,7 @@ export default function AbilitiesList() {
 						: `${ __( 'Delete', 'acrossai-abilities-manager' ) } ${ count } ${ __( 'abilities? This cannot be undone.', 'acrossai-abilities-manager' ) }`
 				)
 			) {
-				dispatch.bulkDeleteAbilities( ids );
+				dispatch.bulkDeleteAbilities( slugs );
 				setSelected( new Set() );
 			}
 		}
@@ -405,14 +412,14 @@ export default function AbilitiesList() {
 						</tr>
 					) }
 					{ abilities.map( ( item ) => {
-						const isCustom = 'db' === ( item.source || 'db' );
-						const itemId   = String( item.id );
-						const isChecked = selected.has( itemId );
+						const isCustom  = 'db' === ( item.source || 'db' );
+						const itemSlug  = item.ability_slug;
+						const isChecked = selected.has( itemSlug );
 						const statusCls = 'publish' === item.status ? 'e' : 'd';
 
 						return (
 							<tr
-								key={ item.id }
+								key={ item.ability_slug }
 								className={ isCustom ? '' : 'inh-row' }
 							>
 								<td className="chk-col">
@@ -420,7 +427,7 @@ export default function AbilitiesList() {
 										<input
 											type="checkbox"
 											checked={ isChecked }
-											onChange={ () => toggleOne( itemId ) }
+											onChange={ () => toggleOne( itemSlug ) }
 											aria-label={ `${ __( 'Select', 'acrossai-abilities-manager' ) } ${ item.ability_slug }` }
 										/>
 									) }
@@ -439,7 +446,7 @@ export default function AbilitiesList() {
 												<button
 													type="button"
 													className="ra"
-													onClick={ () => dispatch.setView( { mode: 'edit', id: item.id } ) }
+													onClick={ () => dispatch.setView( { mode: 'edit', slug: item.ability_slug, ability: item } ) }
 												>
 													{ __( 'Edit', 'acrossai-abilities-manager' ) }
 												</button>
@@ -464,7 +471,7 @@ export default function AbilitiesList() {
 																__( 'Delete this ability? This cannot be undone.', 'acrossai-abilities-manager' )
 															)
 														) {
-															dispatch.deleteAbility( item.id );
+															dispatch.deleteAbility( item.ability_slug );
 														}
 													} }
 												>
@@ -476,18 +483,11 @@ export default function AbilitiesList() {
 												<button
 													type="button"
 													className="ra"
-													onClick={ () => dispatch.setView( { mode: 'edit', id: item.id } ) }
+													onClick={ () => dispatch.setView( { mode: 'edit', slug: item.ability_slug, ability: item } ) }
 												>
 													{ __( 'Edit', 'acrossai-abilities-manager' ) }
 												</button>
-												<span className="ra-sep">|</span>
-												<button
-													type="button"
-													className="ra"
-													onClick={ () => dispatch.setView( { mode: 'override', id: item.id } ) }
-												>
-													{ __( 'Override', 'acrossai-abilities-manager' ) }
-												</button>
+												
 											</>
 										) }
 									</div>

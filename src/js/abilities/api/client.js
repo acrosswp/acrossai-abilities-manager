@@ -54,13 +54,13 @@ export async function getAbilities(params = {}) {
 }
 
 /**
- * Fetch a single ability by ID.
+ * Fetch a single ability by slug.
  *
- * @param {number} id Ability ID.
+ * @param {string} slug Ability slug.
  * @return {Promise<Object>}
  */
-export async function getAbility(id) {
-	return apiFetch({ path: `${BASE}/${id}` });
+export async function getAbility(slug) {
+	return apiFetch({ path: `${BASE}/${encodeURIComponent(slug)}` });
 }
 
 /**
@@ -76,22 +76,36 @@ export async function createAbility(data) {
 /**
  * Sparsely update an existing ability (only send changed fields).
  *
- * @param {number} id   Ability ID.
+ * @param {string} slug Ability slug.
  * @param {Object} data Changed fields only.
  * @return {Promise<Object>}
  */
-export async function updateAbility(id, data) {
-	return apiFetch({ path: `${BASE}/${id}`, method: 'POST', data });
+export async function updateAbility(slug, data) {
+	return apiFetch({ path: `${BASE}/${encodeURIComponent(slug)}`, method: 'POST', data });
 }
 
 /**
- * Delete an ability by ID.
+ * Delete an ability by slug.
  *
- * @param {number} id Ability ID.
+ * @param {string} slug Ability slug.
  * @return {Promise<void>}
  */
-export async function deleteAbility(id) {
-	return apiFetch({ path: `${BASE}/${id}`, method: 'DELETE' });
+export async function deleteAbility(slug) {
+	return apiFetch({ path: `${BASE}/${encodeURIComponent(slug)}`, method: 'DELETE' });
+}
+
+/**
+ * Delete the override row for a non-db (plugin/core/theme) ability,
+ * restoring it to its registry-declared defaults.
+ *
+ * @param {string} slug Ability slug.
+ * @return {Promise<Object>} Fresh merged ability data (registry values, no overrides).
+ */
+export async function deleteOverride(slug) {
+	return apiFetch({
+		path: `${BASE}/${encodeURIComponent(slug)}/override`,
+		method: 'DELETE',
+	});
 }
 
 /**

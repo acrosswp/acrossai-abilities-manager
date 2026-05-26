@@ -122,7 +122,9 @@ function reducer(state = DEFAULT_STATE, action) {
 		case REMOVE_ABILITY:
 			return {
 				...state,
-				abilities: state.abilities.filter((a) => a.id !== action.id),
+				abilities: state.abilities.filter(
+					(a) => a.ability_slug !== action.slug
+				),
 				total: Math.max(0, state.total - 1),
 				isSaving: false,
 			};
@@ -131,7 +133,9 @@ function reducer(state = DEFAULT_STATE, action) {
 			return {
 				...state,
 				abilities: state.abilities.map((a) =>
-					a.id === action.id ? { ...a, ...action.patch } : a
+					a.ability_slug === action.slug
+						? { ...a, ...action.patch }
+						: a
 				),
 				isSaving: false,
 			};
@@ -166,11 +170,11 @@ const actions = {
 		};
 	},
 
-	fetchAbility(id) {
+	fetchAbility(slug) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_LOADING, isLoading: true });
 			try {
-				const ability = await api.getAbility(id);
+				const ability = await api.getAbility(slug);
 				dispatch({ type: SET_LOADING, isLoading: false });
 				dispatch({ type: SET_SAVED, ability });
 			} catch (err) {
@@ -194,13 +198,17 @@ const actions = {
 		};
 	},
 
-	updateAbility(id, data) {
+	updateAbility(slug, data) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_SAVING, isSaving: true });
 			try {
-				const ability = await api.updateAbility(id, data);
+				const ability = await api.updateAbility(slug, data);
 				dispatch({ type: SET_SAVED, ability });
-				dispatch({ type: PATCH_ABILITY, id, patch: ability });
+				dispatch({
+					type: PATCH_ABILITY,
+					slug: ability.ability_slug,
+					patch: ability,
+				});
 				return ability;
 			} catch (err) {
 				// FR-037: form stays open, isDirty stays true
@@ -210,13 +218,13 @@ const actions = {
 		};
 	},
 
-	deleteAbility(id) {
+	deleteAbility(slug) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_SAVING, isSaving: true });
 			try {
-				await api.deleteAbility(id);
+				await api.deleteAbility(slug);
 				// Optimistic: remove from list
-				dispatch({ type: REMOVE_ABILITY, id });
+				dispatch({ type: REMOVE_ABILITY, slug });
 				dispatch({ type: SET_VIEW, view: 'list' });
 			} catch (err) {
 				dispatch({ type: SET_SAVE_ERROR, error: err.message });
@@ -224,11 +232,11 @@ const actions = {
 		};
 	},
 
-	bulkDeleteAbilities(ids) {
+	bulkDeleteAbilities(slugs) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_SAVING, isSaving: true });
 			try {
-				await Promise.all(ids.map((id) => api.deleteAbility(id)));
+				await Promise.all(slugs.map((slug) => api.deleteAbility(slug)));
 				// Re-fetch list after bulk delete
 				dispatch(actions.fetchAbilities());
 			} catch (err) {
@@ -239,12 +247,12 @@ const actions = {
 		};
 	},
 
-	bulkUpdateStatus(ids, status) {
+	bulkUpdateStatus(slugs, status) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_SAVING, isSaving: true });
 			try {
 				await Promise.all(
-					ids.map((id) => api.updateAbility(id, { status }))
+					slugs.map((slug) => api.updateAbility(slug, { status }))
 				);
 				// Re-fetch list after bulk status update
 				dispatch(actions.fetchAbilities());
@@ -256,25 +264,21 @@ const actions = {
 		};
 	},
 
-	clearOverrides(id) {
+	clearOverrides(slug) {
 		return async ({ dispatch }) => {
 			dispatch({ type: SET_SAVING, isSaving: true });
-			const nullOverrides = {
-				site_allowed: null,
-				show_in_rest: null,
-				show_in_mcp: null,
-				mcp_type: null,
-				mcp_servers: null,
-				readonly: null,
-				destructive: null,
-				idempotent: null,
-			};
 			try {
-				const ability = await api.updateAbility(id, nullOverrides);
+				const ability = await api.deleteOverride(slug);
 				dispatch({ type: SET_SAVED, ability });
-				dispatch({ type: PATCH_ABILITY, id, patch: ability });
+				dispatch({
+					type: PATCH_ABILITY,
+					slug: ability.ability_slug,
+					patch: ability,
+				});
 			} catch (err) {
 				dispatch({ type: SET_SAVE_ERROR, error: err.message });
+			} finally {
+				dispatch({ type: SET_SAVING, isSaving: false });
 			}
 		};
 	},

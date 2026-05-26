@@ -25,6 +25,11 @@ class AcrossAI_Ability_Merger {
 	 * @var string[]
 	 */
 	private static $overridable_fields = array(
+		'label',
+		'description',
+		'category',
+		'callback_type',
+		'callback_config',
 		'site_allowed',
 		'readonly',
 		'destructive',
@@ -52,7 +57,7 @@ class AcrossAI_Ability_Merger {
 		$has_override = null !== $override;
 
 		foreach ( self::$overridable_fields as $field ) {
-			if ( $has_override && null !== $override->{$field} ) {
+			if ( $has_override && null !== $override->{$field} && '' !== (string) $override->{$field} ) {
 				$result[ $field ] = $override->{$field};
 			} else {
 				// Fall back to registry value; use null if registry does not define it.
@@ -61,9 +66,12 @@ class AcrossAI_Ability_Merger {
 		}
 
 		$result['id']           = $has_override ? $override->id : null;
+		$has_override           = $has_override && self::has_any_non_null_field( $override );
 		$result['has_override'] = $has_override;
 		$result['updated_at']   = $has_override ? $override->updated_at : null;
 		$result['updated_by']   = $has_override ? $override->updated_by : null;
+		$result['created_at']   = $has_override ? $override->created_at : null;
+		$result['created_by']   = $has_override ? $override->created_by : null;
 		$result['_registry']    = $registry;
 
 		// Raw per-field override values (null = not set in DB / no row).
@@ -76,6 +84,25 @@ class AcrossAI_Ability_Merger {
 		$result['_override'] = $override_raw;
 
 		return $result;
+	}
+
+	/**
+	 * Check whether any overridable field on an override row holds a non-null, non-empty value.
+	 *
+	 * Used to compute has_override based on actual field content rather than row existence.
+	 *
+	 * @since  0.1.0
+	 * @param  object $override BerlinDB Row object — guaranteed non-null.
+	 * @return bool
+	 */
+	private static function has_any_non_null_field( object $override ): bool {
+		foreach ( self::$overridable_fields as $field ) {
+			// @phpstan-ignore-next-line (dynamic property access on BerlinDB row)
+			if ( null !== $override->{$field} && '' !== (string) $override->{$field} ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -115,7 +142,8 @@ class AcrossAI_Ability_Merger {
 	 * @since  0.1.0
 	 * @param  \WP_Ability|array $ability WP_Ability object or already-normalized array.
 	 * @return array Flat ability array with slug, label, description, category,
-	 *               provider, and all overridable fields defaulted to null.
+	 *               provider, source, callback_type, input_schema, output_schema,
+	 *               and all annotation/overridable fields read from WP_Ability meta.
 	 */
 	public static function normalize_registry( $ability ): array {
 		if ( is_array( $ability ) ) {
@@ -131,21 +159,33 @@ class AcrossAI_Ability_Merger {
 		$provider    = false !== $slash_pos ? substr( $name, 0, $slash_pos ) : '';
 		$annotations = $ability->get_meta_item( 'annotations', array() );
 
+		// Reads a field from the annotations array first (external plugin convention),
+		// then falls back to a top-level meta item (internal build_registry_args convention).
+		$ann_or_meta = static function ( string $key ) use ( $ability, $annotations ) {
+			return array_key_exists( $key, $annotations )
+				? $annotations[ $key ]
+				: $ability->get_meta_item( $key, null );
+		};
+
 		return array(
-			'slug'         => $name,
-			'label'        => $ability->get_label(),
-			'description'  => $ability->get_description(),
-			'category'     => $ability->get_category(),
-			'provider'     => $provider,
-			'show_in_rest' => $ability->get_meta_item( 'show_in_rest', false ),
-			'readonly'     => isset( $annotations['readonly'] ) ? $annotations['readonly'] : null,
-			'destructive'  => isset( $annotations['destructive'] ) ? $annotations['destructive'] : null,
-			'idempotent'   => isset( $annotations['idempotent'] ) ? $annotations['idempotent'] : null,
-			// Fields that only exist in the override table; null = "use registry default".
-			'site_allowed' => null,
-			'show_in_mcp'  => null,
-			'mcp_type'     => null,
-			'mcp_servers'  => null,
+			'slug'            => $name,
+			'label'           => $ability->get_label(),
+			'description'     => $ability->get_description(),
+			'category'        => $ability->get_category(),
+			'provider'        => $provider,
+			'source'          => (string) $ability->get_meta_item( 'source', 'plugin' ),
+			'show_in_rest'    => $ability->get_meta_item( 'show_in_rest', false ),
+			'callback_type'   => $ann_or_meta( 'callback_type' ),
+			'callback_config' => null, // execution config — not stored in WP_Ability.
+			'input_schema'    => $ability->get_meta_item( 'input_schema', null ),
+			'output_schema'   => $ability->get_meta_item( 'output_schema', null ),
+			'readonly'        => $ann_or_meta( 'readonly' ),
+			'destructive'     => $ann_or_meta( 'destructive' ),
+			'idempotent'      => $ann_or_meta( 'idempotent' ),
+			'show_in_mcp'     => $ann_or_meta( 'show_in_mcp' ),
+			'mcp_type'        => $ann_or_meta( 'mcp_type' ),
+			'mcp_servers'     => $ann_or_meta( 'mcp_servers' ),
+			'site_allowed'    => $ann_or_meta( 'site_allowed' ),
 		);
 	}
 }

@@ -459,3 +459,53 @@ Always capture and check the exit code: `./vendor/bin/phpstan analyse ... ; echo
 
 **Where to look next**
 Any PHPStan run in CI scripts or manual verification steps.
+
+---
+
+### 2026-05-26 — `rawurldecode` + allowlist regex needs consecutive-slash normalization (BUG-RAWURLDECODE-CONSECUTIVE-SLASHES)
+
+**Status**: Active
+
+**Symptoms**
+A slug like `acrossai-abilities%2F%2Fmy-ability` passes `sanitize_ability_slug()` with double slashes (`//`) intact, potentially reaching the DB or matching the wrong row.
+
+**Root Cause**
+`sanitize_ability_slug()` calls `rawurldecode()` then applies an allowlist regex `[^a-zA-Z0-9\-_\/]`. The forward-slash `/` is intentionally allowed for namespaced slugs. After decoding, `%2F%2F` becomes `//` — two consecutive slashes — which are not stripped by the allowlist regex. Without normalization, double-slash slugs pass through to the DB.
+
+**Future mistake prevented**
+Any sanitizer function that (a) calls `rawurldecode()` before an allowlist regex and (b) allows `/` in the allowlist MUST also add `preg_replace('/\/+/', '/', $slug)` immediately after the allowlist pass to collapse consecutive slashes. The max-length guard alone is insufficient to prevent this.
+
+**Evidence**
+SEC-001 guard added to `AcrossAI_Sanitizer::sanitize_ability_slug()` in Feature 014 (2026-05-26). The `preg_replace('/\/+/', '/', $slug)` line is placed between the allowlist `preg_replace` and the `substr` max-length guard.
+
+**Prevention / Detection**
+When adding a new `rawurldecode()` call anywhere in the sanitization pipeline, grep for the allowlist pattern and confirm a consecutive-slash normalization step follows it.
+
+**Where to look next**
+`includes/Utilities/AcrossAI_Sanitizer.php` (sanitize_ability_slug — SEC-001 comment),
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Write_Controller.php` (sanitize_callback usage — SEC-003 ordering comment).
+
+---
+
+### 2026-05-26 — WP REST API: literal-segment routes must register before wildcard `[^/]+` routes (BUG-REST-ROUTE-ORDER-LITERAL-BEFORE-WILDCARD)
+
+**Status**: Active
+
+**Symptoms**
+`GET /abilities/categories` returns a 404 or single-ability "not found" response instead of the categories list. The route resolves to the wrong controller.
+
+**Root Cause**
+WP REST API (`WP_REST_Server::match_request_to_handler`) iterates routes in insertion order and uses the first pattern that matches both path and method. A wildcard pattern like `/abilities/(?P<slug>[^/]+)` matches the literal path segment `categories` just as easily as a real slug. If the wildcard route is registered before the literal `/abilities/categories` route, any `GET /abilities/categories` request is silently hijacked by the slug handler.
+
+**Future mistake prevented**
+In the REST orchestrator `register_routes()`, always call `register_routes()` on the controller that owns **literal sub-paths** (e.g., `/abilities/categories`) **before** calling `register_routes()` on controllers that own wildcard `[^/]+` patterns under the same parent. Correct order in this plugin: Category → Write → Read → Exposure.
+
+**Evidence**
+Constitution §REST-ROUTE-ORDER constraint. Verified in `AcrossAI_Abilities_Rest_Controller::register_routes()` (Feature 014): Category is registered first (line 74), Write second (75), Read third (76), Exposure last (77).
+
+**Prevention / Detection**
+Architecture review checklist: for every REST orchestrator, confirm all literal-path sub-controllers are listed before wildcard-path sub-controllers in `register_routes()`.
+
+**Where to look next**
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Rest_Controller.php` (register_routes — correct insertion order),
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Category_Controller.php` (/abilities/categories — must register first).

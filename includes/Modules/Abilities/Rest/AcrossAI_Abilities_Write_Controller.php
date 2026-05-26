@@ -6,6 +6,7 @@
  *   POST /abilities          — create a new db-managed ability (slug prefix injected)
  *   POST /abilities/{id}     — sparse update
  *   DELETE /abilities/{id}   — delete (db source only)
+ *   DELETE /abilities/{slug}/override — delete the override row for a non-db ability
  *
  * Security contract:
  *   - All endpoints gate on manage_options via the shared orchestrator check_permission().
@@ -23,9 +24,14 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Rest;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Ability_Override_Processor;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Validator;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Sanitizer;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Merger;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Source_Detector;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Protected_Abilities;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -95,21 +101,57 @@ class AcrossAI_Abilities_Write_Controller {
 			)
 		);
 
-		// Update + Delete by integer ID.
+		// Delete override row for non-db ability.
+		// Three-segment path /abilities/{slug}/override is naturally distinct from two-segment /abilities/{slug}.
 		register_rest_route(
 			AcrossAI_Abilities_Rest_Controller::REST_NAMESPACE,
-			'/abilities/(?P<id>\d+)',
+			'/abilities/(?P<slug>[^/]+)/override',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::DELETABLE,
+					'callback'            => array( $this, 'delete_override' ),
+					'permission_callback' => $permission,
+					'args'                => array(
+						'slug' => array(
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => function ( $slug ) {
+								// SEC-003: rawurldecode runs before sanitize_ability_slug so %2F-encoded
+								// slashes in namespaced slugs are handled correctly. The allowlist regex
+								// in sanitize_ability_slug strips all non-whitelisted chars post-decode.
+								return AcrossAI_Sanitizer::sanitize_ability_slug( rawurldecode( (string) $slug ) );
+							},
+							'validate_callback' => function ( $slug ) {
+								return is_string( $slug ) && '' !== trim( $slug );
+							},
+						),
+					),
+				),
+			)
+		);
+
+		// Update + Delete by slug.
+		register_rest_route(
+			AcrossAI_Abilities_Rest_Controller::REST_NAMESPACE,
+			'/abilities/(?P<slug>[^/]+)',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'update_ability' ),
 					'permission_callback' => $permission,
 					'args'                => array(
-						'id' => array(
-							'type'              => 'integer',
+						'slug' => array(
+							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => 'absint',
-							'minimum'           => 1,
+							'sanitize_callback' => function ( $slug ) {
+								// SEC-003: rawurldecode runs before sanitize_ability_slug so %2F-encoded
+								// slashes in namespaced slugs are handled correctly. The allowlist regex
+								// in sanitize_ability_slug strips all non-whitelisted chars post-decode.
+								return AcrossAI_Sanitizer::sanitize_ability_slug( rawurldecode( (string) $slug ) );
+							},
+							'validate_callback' => function ( $slug ) {
+								return is_string( $slug ) && '' !== trim( $slug );
+							},
 						),
 					),
 				),
@@ -118,11 +160,18 @@ class AcrossAI_Abilities_Write_Controller {
 					'callback'            => array( $this, 'delete_ability' ),
 					'permission_callback' => $permission,
 					'args'                => array(
-						'id' => array(
-							'type'              => 'integer',
+						'slug' => array(
+							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => 'absint',
-							'minimum'           => 1,
+							'sanitize_callback' => function ( $slug ) {
+								// SEC-003: rawurldecode runs before sanitize_ability_slug so %2F-encoded
+								// slashes in namespaced slugs are handled correctly. The allowlist regex
+								// in sanitize_ability_slug strips all non-whitelisted chars post-decode.
+								return AcrossAI_Sanitizer::sanitize_ability_slug( rawurldecode( (string) $slug ) );
+							},
+							'validate_callback' => function ( $slug ) {
+								return is_string( $slug ) && '' !== trim( $slug );
+							},
 						),
 					),
 				),
@@ -215,91 +264,119 @@ class AcrossAI_Abilities_Write_Controller {
 	}
 
 	/**
-	 * Handle POST /abilities/{id} — sparse update.
+	 * Handle POST /abilities/{slug} — sparse update (db) or override upsert (non-db).
+	 *
+	 * For source=db abilities, performs a sparse column update.
+	 * For registry abilities (source≠db), saves overridable fields only via save_override().
+	 * SEC-ADVISORY-02: sequence is sanitize → strip_protected → save_override.
 	 *
 	 * @since  0.1.0
 	 * @param  \WP_REST_Request $request REST request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function update_ability( \WP_REST_Request $request ) {
-		$id = (int) $request->get_param( 'id' );
+		$slug = (string) $request->get_param( 'slug' ); // Pre-sanitized via route arg sanitize_callback.
 
-		// Verify row exists.
-		$existing = $this->db_query->get_ability_by_id( $id );
-		if ( null === $existing ) {
+		// RT-5 / V8: Reject modifications to protected abilities.
+		if ( in_array( $slug, AcrossAI_Protected_Abilities::get_protected_slugs(), true ) ) {
+			return new \WP_Error( 'rest_protected_ability', __( 'This ability cannot be modified.', 'acrossai-abilities-manager' ), array( 'status' => 403 ) );
+		}
+
+		// SEC-ADVISORY-02: sanitize first, before any branching.
+		$fields = AcrossAI_Abilities_Sanitizer::sanitize_update_request( $request );
+
+		// Try DB-managed ability first.
+		$existing = $this->db_query->get_ability_by_slug( $slug );
+
+		if ( null !== $existing && 'db' === $existing->source ) {
+			// ── DB update path ───────────────────────────────────────────────
+			if ( empty( $fields ) ) {
+				return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $existing ) );
+			}
+
+			$validate_context                  = $fields;
+			$validate_context['callback_type'] = $fields['callback_type'] ?? $existing->callback_type;
+			$valid                             = AcrossAI_Abilities_Validator::validate_ability( $validate_context, false );
+			if ( is_wp_error( $valid ) ) {
+				return $valid;
+			}
+
+			do_action( 'acrossai_abilities_before_update', $existing->id, $fields );
+
+			$updated = $this->db_query->update_ability( $existing->id, $fields );
+			if ( ! $updated ) {
+				return new \WP_Error( 'rest_update_failed', __( 'Failed to update ability.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
+			}
+
+			$saved_row = $this->db_query->get_ability_by_slug( $slug );
+			if ( null === $saved_row ) {
+				return new \WP_Error( 'rest_update_failed', __( 'Ability was updated but could not be retrieved.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
+			}
+
+			do_action( 'acrossai_abilities_after_update', $saved_row );
+			AcrossAI_Ability_Override_Processor::bust_cache(); // SEC-GUARDRAIL-01: bust_cache after DB update.
+
+			return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $saved_row ) );
+		}
+
+		// ── Non-db (registry) override upsert path ───────────────────────
+		// wp_get_ability() returns null if the slug is not registered in WP 6.9+.
+		$registry_raw = function_exists( 'wp_get_ability' ) ? wp_get_ability( $slug ) : null;
+		if ( null === $registry_raw ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
 
-		// Sanitize inputs (sparse — only submitted fields are returned).
-		$fields = AcrossAI_Abilities_Sanitizer::sanitize_update_request( $request );
-
-		// For source≠db rows, strip identity/execution fields.
-		if ( 'db' !== $existing->source ) {
-			$fields = AcrossAI_Abilities_Sanitizer::strip_protected_fields_for_non_db( $fields );
-		}
+		// SEC-ADVISORY-02: strip_protected after sanitize, before save.
+		$fields = AcrossAI_Abilities_Sanitizer::strip_protected_fields_for_non_db( $fields );
 
 		if ( empty( $fields ) ) {
-			// Nothing to write — return current row.
-			return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $existing ) );
+			$override_row = $this->db_query->get_override_by_slug( $slug );
+			$registry     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+			$merged       = AcrossAI_Ability_Merger::merge( $registry, $override_row );
+			do_action( 'acrossai_abilities_after_update', $merged );
+			return rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_ability( $merged ) );
 		}
 
-		// Validate submitted fields.
-		$validate_context                  = $fields;
-		$validate_context['callback_type'] = $fields['callback_type'] ?? $existing->callback_type;
-		$valid                             = AcrossAI_Abilities_Validator::validate_ability( $validate_context, false );
-		if ( is_wp_error( $valid ) ) {
-			return $valid;
+		// RF-04: source is server-controlled — detect from registry, never from request body.
+		$registry_arr     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+		$fields['source'] = AcrossAI_Ability_Source_Detector::detect( $registry_arr );
+
+		$saved = $this->db_query->save_override( $slug, $fields );
+		if ( ! $saved ) {
+			return new \WP_Error( 'rest_update_failed', __( 'Failed to save override.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
 		}
 
-		/**
-		 * Fires before updating an ability — receives sanitized submitted fields only (SEC-02).
-		 *
-		 * @since 0.1.0
-		 * @param int   $id     Ability row ID.
-		 * @param array $fields Sanitized fields to update.
-		 */
-		do_action( 'acrossai_abilities_before_update', $id, $fields );
+		// SEC-GUARDRAIL-01: bust_cache() only — do not call other methods on Override Processor.
+		AcrossAI_Ability_Override_Processor::bust_cache();
 
-		$updated = $this->db_query->update_ability( $id, $fields );
-		if ( ! $updated ) {
-			return new \WP_Error( 'rest_update_failed', __( 'Failed to update ability.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
-		}
-
-		// Re-read the full saved row before after-save hook (BUG-PARTIAL-HOOK-FIELDS).
-		$saved_row = $this->db_query->get_ability_by_id( $id );
-		if ( null === $saved_row ) {
-			return new \WP_Error( 'rest_update_failed', __( 'Ability was updated but could not be retrieved.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
-		}
-
-		/**
-		 * Fires after updating an ability — receives the full persisted row (BUG-PARTIAL-HOOK-FIELDS).
-		 *
-		 * @since 0.1.0
-		 * @param \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Row $saved_row Full persisted row.
-		 */
-		do_action( 'acrossai_abilities_after_update', $saved_row );
-
-		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $saved_row ) );
+		$override_row = $this->db_query->get_override_by_slug( $slug );
+		$registry     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+		$merged       = AcrossAI_Ability_Merger::merge( $registry, $override_row );
+		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_ability( $merged ) );
 	}
 
+
 	/**
-	 * Handle DELETE /abilities/{id}.
+	 * Handle DELETE /abilities/{slug}.
 	 *
 	 * Only source=db rows may be deleted (FR-006).
+	 * SEC-ADVISORY-01: authorization check uses $existing->source from DB row,
+	 * never from registry — the DB row is authoritative.
 	 *
 	 * @since  0.1.0
 	 * @param  \WP_REST_Request $request REST request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function delete_ability( \WP_REST_Request $request ) {
-		$id = (int) $request->get_param( 'id' );
+		$slug = (string) $request->get_param( 'slug' ); // Pre-sanitized via route arg sanitize_callback.
 
-		$existing = $this->db_query->get_ability_by_id( $id );
+		// SEC-ADVISORY-01: look up from DB row — $existing->source is authoritative.
+		$existing = $this->db_query->get_ability_by_slug( $slug );
 		if ( null === $existing ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
 
-		// Reject delete for non-db rows (FR-006).
+		// Reject delete for non-db rows (FR-006); SEC-ADVISORY-01: use $existing->source.
 		if ( 'db' !== $existing->source ) {
 			return new \WP_Error(
 				'rest_delete_forbidden',
@@ -316,7 +393,7 @@ class AcrossAI_Abilities_Write_Controller {
 		 */
 		do_action( 'acrossai_abilities_before_delete', $existing );
 
-		$deleted = $this->db_query->delete_ability( $id );
+		$deleted = $this->db_query->delete_ability( $existing->id );
 		if ( ! $deleted ) {
 			return new \WP_Error( 'rest_delete_failed', __( 'Failed to delete ability.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
 		}
@@ -328,15 +405,83 @@ class AcrossAI_Abilities_Write_Controller {
 		 * @param int    $id   Deleted ability row ID.
 		 * @param string $slug Deleted ability slug.
 		 */
-		do_action( 'acrossai_abilities_after_delete', $id, $existing->ability_slug );
+		do_action( 'acrossai_abilities_after_delete', $existing->ability_slug ); // T011/SEC-GUARDRAIL-01: single slug arg.
+		AcrossAI_Ability_Override_Processor::bust_cache(); // SEC-GUARDRAIL-01: bust_cache after delete.
 
-		$response = rest_ensure_response(
+		// V14/RT-10: return 200 with body instead of 204 for client confirmation.
+		return new \WP_REST_Response(
 			array(
 				'deleted' => true,
-				'id'      => $id,
-			)
+				'slug'    => $slug,
+			),
+			200
 		);
-		$response->set_status( 204 );
-		return $response;
+	}
+	/**
+	 * Handle DELETE /abilities/{slug}/override — delete the override DB row for a non-db ability.
+	 *
+	 * Removes the stored override record, restoring the ability to its registry defaults.
+	 * Only valid for non-db (plugin/core/theme) abilities that have a saved override row.
+	 * db-source abilities ARE their row and cannot use this endpoint.
+	 *
+	 * @since  0.1.0
+	 * @param  \WP_REST_Request $request REST request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function delete_override( \WP_REST_Request $request ) {
+		$slug = (string) $request->get_param( 'slug' ); // Pre-sanitized via route arg sanitize_callback.
+
+		// Reject modifications to protected abilities.
+		if ( in_array( $slug, AcrossAI_Protected_Abilities::get_protected_slugs(), true ) ) {
+			return new \WP_Error( 'rest_protected_ability', __( 'This ability cannot be modified.', 'acrossai-abilities-manager' ), array( 'status' => 403 ) );
+		}
+
+		$override_row = $this->db_query->get_override_by_slug( $slug );
+		if ( null === $override_row ) {
+			return new \WP_Error( 'rest_no_override', __( 'No override record found for this ability.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
+		}
+
+		// db-source rows ARE the ability — they have no "override" to clear.
+		if ( 'db' === $override_row->source ) {
+			return new \WP_Error(
+				'rest_delete_forbidden',
+				__( 'Custom abilities do not have an override record to clear.', 'acrossai-abilities-manager' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$deleted = $this->db_query->delete_ability( $override_row->id );
+		if ( ! $deleted ) {
+			return new \WP_Error( 'rest_delete_failed', __( 'Failed to delete override record.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
+		}
+
+		// SEC-GUARDRAIL-01: bust_cache() only.
+		AcrossAI_Ability_Override_Processor::bust_cache();
+
+		// Return the fresh merged registry view (no override row now).
+		$registry_raw = function_exists( 'wp_get_ability' ) ? wp_get_ability( $slug ) : null;
+		if ( null === $registry_raw ) {
+			// Ability was removed from registry after the override was saved — return minimal payload.
+			return new \WP_REST_Response(
+				array(
+					'deleted' => true,
+					'slug'    => $slug,
+				),
+				200
+			);
+		}
+
+		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+		$merged   = AcrossAI_Ability_Merger::merge( $registry, null );
+
+		/**
+		 * Fires after clearing all overrides for a non-db ability.
+		 *
+		 * @since 0.1.0
+		 * @param array $merged Merged ability data after override removal.
+		 */
+		do_action( 'acrossai_abilities_after_update', $merged );
+
+		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_ability( $merged ) );
 	}
 }

@@ -20,7 +20,9 @@ namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Rest;
 
 use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Abilities_Formatter;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Merger;
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Ability_Registry_Query;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -47,13 +49,6 @@ class AcrossAI_Abilities_Read_Controller {
 	private $db_query;
 
 	/**
-	 * Abilities DB query instance (used for override lookups in registry merge).
-	 *
-	 * @var AcrossAI_Abilities_Query
-	 */
-	private $abilities_query;
-
-	/**
 	 * Retrieve the singleton instance.
 	 *
 	 * @since  0.1.0
@@ -72,8 +67,7 @@ class AcrossAI_Abilities_Read_Controller {
 	 * @since 0.1.0
 	 */
 	private function __construct() {
-		$this->db_query       = AcrossAI_Abilities_Query::instance();
-		$this->abilities_query = AcrossAI_Abilities_Query::instance();
+		$this->db_query        = AcrossAI_Abilities_Query::instance();
 	}
 
 	/**
@@ -148,18 +142,25 @@ class AcrossAI_Abilities_Read_Controller {
 		// Single item.
 		register_rest_route(
 			AcrossAI_Abilities_Rest_Controller::REST_NAMESPACE,
-			'/abilities/(?P<id>\d+)',
+			'/abilities/(?P<slug>[^/]+)',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_ability' ),
 					'permission_callback' => $permission,
 					'args'                => array(
-						'id' => array(
-							'type'              => 'integer',
+						'slug' => array(
+							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => 'absint',
-							'minimum'           => 1,
+							'sanitize_callback' => function ( $slug ) {
+								// SEC-003: rawurldecode runs before sanitize_ability_slug so %2F-encoded
+								// slashes in namespaced slugs are handled correctly. The allowlist regex
+								// in sanitize_ability_slug strips all non-whitelisted chars post-decode.
+								return AcrossAI_Sanitizer::sanitize_ability_slug( rawurldecode( (string) $slug ) );
+							},
+							'validate_callback' => function ( $slug ) {
+								return is_string( $slug ) && '' !== trim( $slug );
+							},
 						),
 					),
 				),
@@ -209,7 +210,7 @@ class AcrossAI_Abilities_Read_Controller {
 			'per_page' => (int) ( $request->get_param( 'per_page' ) ?? 20 ),
 		);
 
-		$result   = AcrossAI_Ability_Registry_Query::query( $registry_params, $this->abilities_query );
+		$result   = AcrossAI_Ability_Registry_Query::query( $registry_params, $this->db_query );
 		$response = rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_collection( $result['abilities'] ) );
 		$response->header( 'X-WP-Total', (string) $result['total'] );
 		$response->header( 'X-WP-TotalPages', (string) $result['pages'] );
@@ -218,20 +219,32 @@ class AcrossAI_Abilities_Read_Controller {
 	}
 
 	/**
-	 * Handle GET /abilities/{id} — single ability.
+	 * Handle GET /abilities/{slug} — single ability by slug.
+	 *
+	 * Tries source=db row first; falls back to WP registry + override merge.
 	 *
 	 * @since  0.1.0
 	 * @param  \WP_REST_Request $request REST request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_ability( \WP_REST_Request $request ) {
-		$id  = (int) $request->get_param( 'id' );
-		$row = $this->db_query->get_ability_by_id( $id );
+		$slug = (string) $request->get_param( 'slug' ); // Pre-sanitized via route arg sanitize_callback.
 
-		if ( null === $row ) {
+		// Try DB-managed ability first.
+		$row = $this->db_query->get_ability_by_slug( $slug );
+		if ( null !== $row && 'db' === $row->source ) {
+			return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $row ) );
+		}
+
+		// Fall back to WP registry + override merge.
+		$registry_raw = function_exists( 'wp_get_ability' ) ? wp_get_ability( $slug ) : null;
+		if ( null === $registry_raw ) {
 			return new \WP_Error( 'rest_not_found', __( 'Ability not found.', 'acrossai-abilities-manager' ), array( 'status' => 404 ) );
 		}
 
-		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_for_response( $row ) );
+		$override_row = $this->db_query->get_override_by_slug( $slug );
+		$registry     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+		$merged       = AcrossAI_Ability_Merger::merge( $registry, $override_row );
+		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_ability( $merged ) );
 	}
 }

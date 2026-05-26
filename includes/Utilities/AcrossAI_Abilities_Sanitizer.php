@@ -352,11 +352,6 @@ class AcrossAI_Abilities_Sanitizer {
 	 */
 	public static function strip_protected_fields_for_non_db( array $fields ): array {
 		$protected = array(
-			'label',
-			'description',
-			'category',
-			'callback_type',
-			'callback_config',
 			'input_schema',
 			'output_schema',
 			'status',

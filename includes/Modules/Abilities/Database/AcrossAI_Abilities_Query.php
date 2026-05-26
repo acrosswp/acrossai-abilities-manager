@@ -283,7 +283,13 @@ class AcrossAI_Abilities_Query extends Query {
 	 * @return bool
 	 */
 	public function save_override( string $slug, array $fields ): bool {
-		$slug   = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
+		$slug = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
+		// SEC-002: save_override is exclusively for non-db (registry) abilities.
+		// Strip source='db' to prevent source-injection via call-site ordering errors
+		// (e.g., if strip_protected_fields_for_non_db is ever skipped upstream).
+		if ( array_key_exists( 'source', $fields ) && 'db' === $fields['source'] ) {
+			unset( $fields['source'] );
+		}
 		$fields = $this->prepare_fields_for_write( $fields );
 
 		$existing = $this->get_override_by_slug( $slug );

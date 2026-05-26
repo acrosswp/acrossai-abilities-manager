@@ -76,11 +76,13 @@ export default function AbilitiesManager() {
 	}
 
 	if (view && view.mode === 'edit') {
-		return <AbilityForm mode="edit" id={view.id} />;
-	}
-
-	if (view && view.mode === 'override') {
-		return <AbilityForm mode="override" id={view.id} />;
+		return (
+			<AbilityForm
+				mode="edit"
+				slug={view.slug}
+				initialAbility={view.ability}
+			/>
+		);
 	}
 
 	return <AbilitiesList />;

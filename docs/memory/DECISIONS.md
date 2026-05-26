@@ -824,3 +824,29 @@ Feature 011 (2026-05-24): `is_abilities_custom_page()` called `AcrossAI_Abilitie
 WordPress docs: `add_menu_page()` return value (hook suffix),
 `specs/011-merge-abilities-ui/tasks.md` (T011 — is_manager_page implementation).
 
+
+---
+
+### 2026-05-26 — DB write methods must enforce source-discriminant guards at the method boundary (DEC-DB-WRITE-BOUNDARY-GUARD)
+
+**Context**
+Feature 014 (SEC-002): `AcrossAI_Abilities_Query::save_override()` is exclusively for non-db (registry) abilities. Prior to this decision, the protection relied on a call-site convention: callers were expected to run `strip_protected_fields_for_non_db()` before calling `save_override()`. A new call site that skipped that step could silently write `source='db'` through the override path, corrupting the source semantics of the row.
+
+**Decision**
+Any DB write method that enforces a source-based (or other semantic discriminant-based) invariant MUST enforce that invariant unconditionally at the top of the method itself, not via a caller convention. Relying on caller ordering is invisible to future call sites and will be silently violated when a new caller is added. `save_override()` now strips `source='db'` unconditionally before `prepare_fields_for_write()`, regardless of what the caller did upstream.
+
+**Rule**
+The method-level guard is belt-and-suspenders: upstream callers may also strip protected fields, and that is good. But the method must not depend on it. If a semantic discriminant (e.g., source type) determines what writes are legal, the enforcement lives in the write method, not in the read path above it.
+
+**Evidence**
+SEC-002 guard in `AcrossAI_Abilities_Query::save_override()` — Feature 014, 2026-05-26:
+```php
+if ( array_key_exists( 'source', $fields ) && 'db' === $fields['source'] ) {
+    unset( $fields['source'] );
+}
+```
+Placed before `$this->prepare_fields_for_write( $fields )`.
+
+**Where to look next**
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php` (save_override — SEC-002 comment),
+`includes/Utilities/AcrossAI_Abilities_Sanitizer.php` (strip_protected_fields_for_non_db — upstream caller).
