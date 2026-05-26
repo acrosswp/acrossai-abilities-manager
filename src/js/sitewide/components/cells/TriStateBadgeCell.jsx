@@ -14,31 +14,39 @@ import { __ } from '@wordpress/i18n';
  * @param {boolean|null} props.registryValue Registry default for this field.
  * @return {JSX.Element}
  */
-export default function TriStateBadgeCell( { value, hasOverride, registryValue } ) {
-	if ( null === value || undefined === value ) {
-		return <span className="acrossai-tri-badge acrossai-tri-badge--null">{ '—' }</span>;
+export default function TriStateBadgeCell({
+	value,
+	hasOverride,
+	registryValue,
+}) {
+	if (null === value || undefined === value) {
+		return (
+			<span className="acrossai-tri-badge acrossai-tri-badge--null">
+				{'—'}
+			</span>
+		);
 	}
 
 	// A field originates from the registry when there is no override, or when
 	// the stored override value equals the registry default.
-	const isDefault = ! hasOverride || value === registryValue;
+	const isDefault = !hasOverride || value === registryValue;
 
 	const className = value
 		? 'acrossai-tri-badge acrossai-tri-badge--yes'
 		: 'acrossai-tri-badge acrossai-tri-badge--no';
 
 	const label = value
-		? __( 'Yes', 'acrossai-abilities-manager' )
-		: __( 'No', 'acrossai-abilities-manager' );
+		? __('Yes', 'acrossai-abilities-manager')
+		: __('No', 'acrossai-abilities-manager');
 
 	return (
-		<span className={ className }>
-			{ label }
-			{ isDefault && (
+		<span className={className}>
+			{label}
+			{isDefault && (
 				<em className="acrossai-tri-badge__default">
-					{ ' ' + __( '(Default)', 'acrossai-abilities-manager' ) }
+					{' ' + __('(Default)', 'acrossai-abilities-manager')}
 				</em>
-			) }
+			)}
 		</span>
 	);
 }

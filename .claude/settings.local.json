@@ -5,7 +5,19 @@
       "Bash(npm run *)",
       "Bash(xargs ls *)",
       "Bash(php *)",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "Skill(speckit-architecture-guard-governed-implement)",
+      "Skill(speckit-architecture-guard-governed-implement:*)",
+      "Skill(speckit-memory-md-plan-with-memory)",
+      "Skill(speckit-memory-md-plan-with-memory:*)",
+      "Bash(grep -n '\\\\$name' /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/acrossai-abilities-manager/includes/Modules/Sitewide/Database/AcrossAI_Sitewide_Table.php)",
+      "Bash(wp db *)",
+      "Bash(awk '{print $1}')",
+      "Bash(awk '{print NR\": \"$1}')",
+      "Bash(gh issue create --title 'Spec 010: Manual QA verification tasks \\(T007, T021–T027\\)' --body ' *)",
+      "Bash(gh issue *)",
+      "Bash(bash .specify/scripts/bash/detect-changed-files.sh --json)",
+      "Bash(grep -E '\\\\.\\(php|js|jsx|scss|json\\)$')"
     ]
   }
 }

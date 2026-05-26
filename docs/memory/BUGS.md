@@ -142,6 +142,40 @@ class for `json_decode` to confirm whether the field is already decoded.
 
 
 
+---
+
+### 2026-05-24 — REST create receives `ability_slug` but endpoint expects `slug_suffix` (BUG-SLUG-SUFFIX-MISMATCH)
+
+**Status**: Active
+
+**Symptoms**
+`POST /abilities` returns 422 with *"Slug suffix is required when creating an ability."* even though the form has a slug value. No visible error in the form state.
+
+**Root Cause**
+The React form stores the full slug (e.g. `acrossai-abilities/my-ability`) in the `ability_slug` field for display purposes. The REST write controller expects only the user-typed suffix (`my-ability`) in a field called `slug_suffix` — it prepends `acrossai-abilities/` server-side. Sending `ability_slug` causes the validator to find `slug_suffix` empty and reject the request.
+
+**Future mistake prevented**
+Any form that has a read-only prefix display + editable suffix input MUST extract the suffix before submit, send it as `slug_suffix`, and omit `ability_slug` from the create payload.
+
+**Evidence**
+Fixed in `ee8892e` — `AbilityForm.jsx::handleSave()`:
+```js
+const fullSlug = data.ability_slug || '';
+data.slug_suffix = fullSlug.startsWith(SLUG_PREFIX)
+    ? fullSlug.slice(SLUG_PREFIX.length) : fullSlug;
+delete data.ability_slug;
+```
+
+**Prevention / Detection**
+On any REST create form with a prefix+suffix slug: grep the payload for `ability_slug` — if present on a create call, it is wrong.
+
+**Where to look next**
+`src/js/abilities/components/AbilityForm.jsx` (handleSave — create branch),
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Write_Controller.php` (create_ability — slug_suffix validation),
+`includes/Utilities/AcrossAI_Abilities_Validator.php` (validate_slug).
+
+---
+
 ## Template
 ### YYYY-MM-DD - Bug / Failure Pattern
 **Status**

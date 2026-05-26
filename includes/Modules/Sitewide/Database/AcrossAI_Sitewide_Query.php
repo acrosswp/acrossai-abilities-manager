@@ -147,7 +147,7 @@ class AcrossAI_Sitewide_Query extends Query {
 		$max_json_bytes = 65536; // 64 KB — consistent with php_code field limit (spec).
 		foreach ( AcrossAI_Sitewide_Row::get_json_fields() as $json_field ) {
 			if ( isset( $fields[ $json_field ] ) && is_array( $fields[ $json_field ] ) ) {
-				$encoded = wp_json_encode( $fields[ $json_field ] );
+				$encoded = \wp_json_encode( $fields[ $json_field ] );
 				if ( false === $encoded || strlen( $encoded ) > $max_json_bytes ) {
 					$fields[ $json_field ] = null;
 				} else {
@@ -178,8 +178,8 @@ class AcrossAI_Sitewide_Query extends Query {
 		}
 
 		$existing = $this->get_override_by_slug( $slug );
-		$now      = current_time( 'mysql', true );
-		$user_id  = get_current_user_id();
+		$now      = \current_time( 'mysql', true );
+		$user_id  = \get_current_user_id();
 
 		if ( null === $existing ) {
 			// INSERT path — add_item() returns the new integer ID on success or false.

@@ -28,7 +28,9 @@ const TARGETS = [
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const HR = '━'.repeat(67);
-function banner(text) { console.log(`\n${HR}\n${text}\n${HR}\n`); }
+function banner(text) {
+	console.log(`\n${HR}\n${text}\n${HR}\n`);
+}
 
 function copyDir(src, dest) {
 	fs.mkdirSync(dest, { recursive: true });
@@ -58,16 +60,21 @@ function main() {
 
 	if (!fs.existsSync(SKILLPACK_DIR)) {
 		console.error(`❌  Skillpack not found at .agents/skills/`);
-		console.error('   Run  npm run skillpack  first to install upstream skills.');
+		console.error(
+			'   Run  npm run skillpack  first to install upstream skills.'
+		);
 		process.exit(1);
 	}
 
-	const skills = fs.readdirSync(SKILLPACK_DIR, { withFileTypes: true })
+	const skills = fs
+		.readdirSync(SKILLPACK_DIR, { withFileTypes: true })
 		.filter(isSkillDir)
-		.map(d => d.name);
+		.map((d) => d.name);
 
 	if (skills.length === 0) {
-		console.warn('⚠️   No skills found in .agents/skills/ — nothing to push.');
+		console.warn(
+			'⚠️   No skills found in .agents/skills/ — nothing to push.'
+		);
 		process.exit(0);
 	}
 

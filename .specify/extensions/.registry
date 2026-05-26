@@ -22,7 +22,7 @@
           "speckit.git.initialize",
           "speckit.git.commit"
         ],
-        "copilot": [
+        "claude": [
           "speckit.git.feature",
           "speckit.git.validate",
           "speckit.git.remote",
@@ -58,7 +58,7 @@
           "speckit.security-review.followup",
           "speckit.security-review.apply"
         ],
-        "copilot": [
+        "claude": [
           "speckit.security-review.audit",
           "speckit.security-review.staged",
           "speckit.security-review.branch",
@@ -94,7 +94,7 @@
           "speckit.memory-md.audit",
           "speckit.memory-md.log-finding"
         ],
-        "copilot": [
+        "claude": [
           "speckit.memory-md.bootstrap",
           "speckit.memory-md.plan-with-memory",
           "speckit.memory-md.capture",
@@ -135,7 +135,7 @@
           "speckit.architecture-guard.architecture-apply",
           "speckit.architecture-guard.init"
         ],
-        "copilot": [
+        "claude": [
           "speckit.architecture-guard.governed-plan",
           "speckit.architecture-guard.governed-tasks",
           "speckit.architecture-guard.governed-implement",

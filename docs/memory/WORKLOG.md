@@ -32,6 +32,15 @@ This is a changelog entry, not a durable lesson. It records what happened, not w
 
 ---
 
+### 2026-05-24 - Specs 008–010 delivered: unified abilities table, REST CRUD, React admin UI
+
+- **Why durable**: These three specs establish the entire Custom Abilities module from DB schema through REST API to React admin UI. The patterns introduced (dual-mode REST, design-overrides-constitution, slug prefix split) will apply to any future abilities admin feature.
+- **Future mistake prevented**: Three new bug/decision patterns captured — slug_suffix vs ability_slug on create (BUG-SLUG-SUFFIX-MISMATCH), DataViews/DataForm mandate defeatable by design file (DEC-DESIGN-OVERRIDES-DATAVIEWS), Node ≥ 20 required for build (DEC-NODE-20-BUILD-REQUIRED). Next developer won't repeat these.
+- **Evidence**: Commits `37c3767` (008), `c5a1f80`–`36aea43` (009+010 implementation), `ee8892e` (slug fix), `b39ef5e` (Final Design), `248ab5d` (wireframe), `a206106` (registry merge). Branch `010-abilities-react-ui` pushed to `origin`. GitHub issue #14 tracks 7 remaining manual QA tasks.
+- **Where to look**: `specs/008-unified-abilities-table/`, `specs/009-abilities-business-logic-rest/`, `specs/010-abilities-react-ui/` for design rationale. `includes/Modules/Abilities/` for PHP implementation. `src/js/abilities/` for React UI.
+
+---
+
 ### 2026-05-20 - Feature 006 logger establishes hook parameter adaptation and duration measurement patterns
 
 - **Why durable**: Future modules that hook into WordPress execution flows will encounter parameter signature changes and timing requirements. The logger's solutions are reusable.

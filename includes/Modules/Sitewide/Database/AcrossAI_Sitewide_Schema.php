@@ -15,7 +15,7 @@ use BerlinDB\Database\Schema;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Schema class defining all 25 columns of the acrossai_abilities table.
+ * Schema class defining all 24 columns of the acrossai_abilities table.
  *
  * @since 0.1.0
  */

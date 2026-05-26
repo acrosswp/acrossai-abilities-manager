@@ -60,6 +60,7 @@ class AcrossAI_Ability_Merger {
 			}
 		}
 
+		$result['id']           = $has_override ? $override->id : null;
 		$result['has_override'] = $has_override;
 		$result['updated_at']   = $has_override ? $override->updated_at : null;
 		$result['updated_by']   = $has_override ? $override->updated_by : null;

@@ -270,9 +270,13 @@ final class Main {
 		$main_menu = new \AcrossAI_Abilities_Manager\Admin\Partials\Menu( $this->get_plugin_name(), $this->get_version() );
 		$this->loader->add_action( 'admin_menu', $main_menu, 'main_menu' );
 
-		// Execution Logs submenu page (Feature 006: T014)
+		// Execution Logs submenu page (Feature 006: T014).
 		$logs_menu = \AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu::instance();
 		$this->loader->add_action( 'admin_menu', $logs_menu, 'register_submenu' );
+
+		// Custom Abilities submenu page (Feature 010).
+		$abilities_menu = \AcrossAI_Abilities_Manager\Admin\Partials\AcrossAI_Abilities_Menu::instance();
+		$this->loader->add_action( 'admin_menu', $abilities_menu, 'register_submenu' );
 
 		// Sitewide Ability Manager — DB table setup and REST routes via singleton pattern.
 		// Table instance call makes the class available; BerlinDB hooks maybe_upgrade() to admin_init.
@@ -290,6 +294,11 @@ final class Main {
 		$sitewide_ac = \AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\AcrossAI_Sitewide_Access_Control::instance();
 		$this->loader->add_action( 'rest_api_init', $sitewide_ac, 'register_rest_api' );
 		$this->loader->add_action( 'admin_notices', $sitewide_ac, 'maybe_show_library_notice' );
+
+		// Abilities module REST routes (Spec 009).
+		// Named variable before Loader call — Boot Flow Rule variable-first pattern.
+		$abilities_rest = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Rest\AcrossAI_Abilities_Rest_Controller::instance();
+		$this->loader->add_action( 'rest_api_init', $abilities_rest, 'register_routes' );
 	}
 
 	/**
@@ -321,6 +330,11 @@ final class Main {
 
 		$logger_rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest\AcrossAI_Logger_Controller::instance();
 		$this->loader->add_action( 'rest_api_init', $logger_rest_controller, 'register_routes' );
+
+		// Abilities Processor — registers published source=db abilities at wp_abilities_api_init P10 (Spec 009).
+		// Named variable before Loader call — Boot Flow Rule variable-first pattern.
+		$abilities_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Abilities_Processor::instance();
+		$this->loader->add_action( 'wp_abilities_api_init', $abilities_processor, 'register_abilities', 10 );
 	}
 
 	/**

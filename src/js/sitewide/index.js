@@ -10,12 +10,12 @@ import AbilityManager from './components/AbilityManager';
 
 // Register nonce middleware for all apiFetch requests.
 const config = window.acrossaiAbilitiesSitewide || {};
-if ( config.nonce ) {
-	apiFetch.use( apiFetch.createNonceMiddleware( config.nonce ) );
+if (config.nonce) {
+	apiFetch.use(apiFetch.createNonceMiddleware(config.nonce));
 }
 
 // Mount the React app.
-const rootEl = document.getElementById( 'acrossai-abilities-manager-root' );
-if ( rootEl ) {
-	createRoot( rootEl ).render( <AbilityManager /> );
+const rootEl = document.getElementById('acrossai-abilities-manager-root');
+if (rootEl) {
+	createRoot(rootEl).render(<AbilityManager />);
 }

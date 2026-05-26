@@ -17,38 +17,52 @@ import BulkActionToolbar from './BulkActionToolbar';
 const LOCAL_STORAGE_KEY_PREFIX = 'acrossai_ability_table_view_';
 
 function getStorageKey() {
-	const config  = window.acrossaiAbilitiesSitewide || {};
-	const userId  = config.current_user_id || 0;
+	const config = window.acrossaiAbilitiesSitewide || {};
+	const userId = config.current_user_id || 0;
 	return LOCAL_STORAGE_KEY_PREFIX + userId;
 }
 
 const DEFAULT_VIEW = {
-	type:    'table',
-	search:  '',
-	page:    1,
+	type: 'table',
+	search: '',
+	page: 1,
 	perPage: 20,
-	sort:    { field: 'slug', direction: 'asc' },
+	sort: { field: 'slug', direction: 'asc' },
 	filters: [],
-	fields:  [ 'slug', 'provider', 'source', 'status', 'show_in_rest', 'show_in_mcp', 'mcp_type', 'mcp_servers', 'destructive', 'updated_at', 'allow_toggle' ],
+	fields: [
+		'slug',
+		'provider',
+		'source',
+		'status',
+		'show_in_rest',
+		'show_in_mcp',
+		'mcp_type',
+		'mcp_servers',
+		'destructive',
+		'updated_at',
+		'allow_toggle',
+	],
 };
 
 function loadView() {
 	try {
-		const stored = localStorage.getItem( getStorageKey() );
-		if ( stored ) {
-			const parsed = JSON.parse( stored ) || {};
+		const stored = localStorage.getItem(getStorageKey());
+		if (stored) {
+			const parsed = JSON.parse(stored) || {};
 			// Restore layout preferences only — never restore transient
 			// query state (filters/search/page). A stale `filters` entry
 			// would silently hide rows on every load.
 			return {
 				...DEFAULT_VIEW,
-				...( parsed.type    !== undefined && { type:    parsed.type } ),
-				...( parsed.sort    !== undefined && { sort:    parsed.sort } ),
-				...( parsed.perPage !== undefined && { perPage: parsed.perPage } ),
-				...( parsed.fields  !== undefined && { fields:  parsed.fields } ),
+				...(parsed.type !== undefined && { type: parsed.type }),
+				...(parsed.sort !== undefined && { sort: parsed.sort }),
+				...(parsed.perPage !== undefined && {
+					perPage: parsed.perPage,
+				}),
+				...(parsed.fields !== undefined && { fields: parsed.fields }),
 			};
 		}
-	} catch ( e ) {
+	} catch (e) {
 		// Ignore parse errors.
 	}
 	return DEFAULT_VIEW;
@@ -60,113 +74,116 @@ function loadView() {
  * @return {JSX.Element}
  */
 export default function AbilityManager() {
-	const [ view, setView ]               = useState( loadView );
-	const [ selectedSlugs, setSelectedSlugs ] = useState( [] );
+	const [view, setView] = useState(loadView);
+	const [selectedSlugs, setSelectedSlugs] = useState([]);
 
-	const { abilities, total, pages, isLoading, error, editingSlug } = useSelect(
-		( select ) => {
-			const store = select( STORE_NAME );
+	const { abilities, total, pages, isLoading, error, editingSlug } =
+		useSelect((select) => {
+			const store = select(STORE_NAME);
 			return {
-				abilities:   store.getAbilities(),
-				total:       store.getTotal(),
-				pages:       store.getPages(),
-				isLoading:   store.isLoading(),
-				error:       store.getError(),
+				abilities: store.getAbilities(),
+				total: store.getTotal(),
+				pages: store.getPages(),
+				isLoading: store.isLoading(),
+				error: store.getError(),
 				editingSlug: store.getEditingSlug(),
 			};
-		},
-		[]
-	);
+		}, []);
 
-	const dispatch = useDispatch( STORE_NAME );
+	const dispatch = useDispatch(STORE_NAME);
 
 	// Persist view changes to localStorage.
-	useEffect( () => {
+	useEffect(() => {
 		try {
-			localStorage.setItem( getStorageKey(), JSON.stringify( view ) );
-		} catch ( e ) {
+			localStorage.setItem(getStorageKey(), JSON.stringify(view));
+		} catch (e) {
 			// Ignore storage errors.
 		}
-	}, [ view ] );
+	}, [view]);
 
 	// Fetch abilities whenever view changes.
-	useEffect( () => {
+	useEffect(() => {
 		const params = {
-			page:     view.page,
+			page: view.page,
 			per_page: view.perPage,
-			search:   view.search || '',
-			orderby:  view.sort?.field || 'slug',
-			order:    view.sort?.direction || 'asc',
+			search: view.search || '',
+			orderby: view.sort?.field || 'slug',
+			order: view.sort?.direction || 'asc',
 		};
 
 		// Apply source/has_override filters from view.filters.
-		if ( view.filters ) {
-			view.filters.forEach( ( filter ) => {
-				if ( filter.field === 'source' && filter.value ) {
+		if (view.filters) {
+			view.filters.forEach((filter) => {
+				if (filter.field === 'source' && filter.value) {
 					params.source = filter.value;
 				}
-				if ( filter.field === 'has_override' && filter.value !== undefined ) {
+				if (
+					filter.field === 'has_override' &&
+					filter.value !== undefined
+				) {
 					params.has_override = filter.value;
 				}
-			} );
+			});
 		}
 
-		dispatch.fetchAbilities( params );
-	}, [ view ] ); // eslint-disable-line react-hooks/exhaustive-deps
+		dispatch.fetchAbilities(params);
+	}, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	const handleViewChange = useCallback( ( newView ) => {
-		setView( ( prev ) => ( { ...prev, ...newView } ) );
-	}, [] );
+	const handleViewChange = useCallback((newView) => {
+		setView((prev) => ({ ...prev, ...newView }));
+	}, []);
 
-	const handleBulkComplete = useCallback( () => {
-		setSelectedSlugs( [] );
-	}, [] );
+	const handleBulkComplete = useCallback(() => {
+		setSelectedSlugs([]);
+	}, []);
 
 	// Lazy-import AbilityEditPanel only when an ability is being edited.
-	const [ EditPanel, setEditPanel ] = useState( null );
-	useEffect( () => {
-		if ( editingSlug && ! EditPanel ) {
-			import( './AbilityEditPanel' ).then( ( mod ) => setEditPanel( () => mod.default ) );
+	const [EditPanel, setEditPanel] = useState(null);
+	useEffect(() => {
+		if (editingSlug && !EditPanel) {
+			import('./AbilityEditPanel').then((mod) =>
+				setEditPanel(() => mod.default)
+			);
 		}
-	}, [ editingSlug ] ); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [editingSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const editingAbility = editingSlug
-		? abilities.find( ( a ) => a.slug === editingSlug ) || null
+		? abilities.find((a) => a.slug === editingSlug) || null
 		: null;
 
 	return (
 		<div className="acrossai-abilities-manager">
-			<h1>{ __( 'Abilities Manager', 'acrossai-abilities-manager' ) }</h1>
+			<h1>{__('Abilities Manager', 'acrossai-abilities-manager')}</h1>
 
-			{ error && (
-				<Notice status="error" isDismissible={ false }>
-					{ error }
+			{error && (
+				<Notice status="error" isDismissible={false}>
+					{error}
 				</Notice>
-			) }
+			)}
 
 			<BulkActionToolbar
-				selectedSlugs={ selectedSlugs }
-				onComplete={ handleBulkComplete }
+				selectedSlugs={selectedSlugs}
+				onComplete={handleBulkComplete}
 			/>
 
 			<AbilityTable
-				abilities={ abilities }
-				total={ total }
-				pages={ pages }
-				isLoading={ isLoading }
-				view={ view }
-				onViewChange={ handleViewChange }
-				selectedSlugs={ selectedSlugs }
-				onSelectionChange={ setSelectedSlugs }
+				abilities={abilities}
+				total={total}
+				pages={pages}
+				isLoading={isLoading}
+				view={view}
+				onViewChange={handleViewChange}
+				selectedSlugs={selectedSlugs}
+				onSelectionChange={setSelectedSlugs}
 			/>
 
-			{ editingSlug && EditPanel && (
+			{editingSlug && EditPanel && (
 				<EditPanel
-					slug={ editingSlug }
-					ability={ editingAbility }
-					onClose={ () => dispatch.closeEditPanel() }
+					slug={editingSlug}
+					ability={editingAbility}
+					onClose={() => dispatch.closeEditPanel()}
 				/>
-			) }
+			)}
 		</div>
 	);
 }

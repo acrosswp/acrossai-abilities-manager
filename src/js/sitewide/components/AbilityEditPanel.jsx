@@ -31,12 +31,16 @@ import { DataForm } from '@wordpress/dataviews';
 
 /**
  * PHP tri-state value → radio string.
- * @param {*} v  null | true | false
+ * @param {*} v null | true | false
  * @return {'null'|'true'|'false'}
  */
 function ts2s(v) {
-	if (true === v) return 'true';
-	if (false === v) return 'false';
+	if (true === v) {
+		return 'true';
+	}
+	if (false === v) {
+		return 'false';
+	}
 	return 'null';
 }
 
@@ -46,18 +50,32 @@ function ts2s(v) {
  * @return {null|true|false}
  */
 function s2ts(s) {
-	if ('true' === s) return true;
-	if ('false' === s) return false;
+	if ('true' === s) {
+		return true;
+	}
+	if ('false' === s) {
+		return false;
+	}
 	return null;
 }
 
 const TRI_STATE_OPTIONS = [
-	{ value: 'null', label: __('Inherit (use ability default)', 'acrossai-abilities-manager') },
+	{
+		value: 'null',
+		label: __(
+			'Inherit (use ability default)',
+			'acrossai-abilities-manager'
+		),
+	},
 	{ value: 'true', label: __('Yes', 'acrossai-abilities-manager') },
 	{ value: 'false', label: __('No', 'acrossai-abilities-manager') },
 ];
 
-const HINT_LABELS = { null: __('Inherit', 'acrossai-abilities-manager'), 'true': __('Yes', 'acrossai-abilities-manager'), 'false': __('No', 'acrossai-abilities-manager') };
+const HINT_LABELS = {
+	null: __('Inherit', 'acrossai-abilities-manager'),
+	true: __('Yes', 'acrossai-abilities-manager'),
+	false: __('No', 'acrossai-abilities-manager'),
+};
 
 function TriStateControl({ label, value, registryValue, onChange }) {
 	return (
@@ -117,27 +135,41 @@ function draftsEqual(a, b) {
 //   onChange       — must receive the full updated data object
 // ---------------------------------------------------------------------------
 
-function TriStateEditField( { data, field, onChange } ) {
+function TriStateEditField({ data, field, onChange }) {
 	return (
 		<TriStateControl
-			label={ field.label }
-			value={ data[ field.id ] }
-			registryValue={ field.registryValue }
-			onChange={ ( newValue ) => onChange( { ...data, [ field.id ]: newValue } ) }
+			label={field.label}
+			value={data[field.id]}
+			registryValue={field.registryValue}
+			onChange={(newValue) => onChange({ ...data, [field.id]: newValue })}
 		/>
 	);
 }
 
 const GENERAL_FORM = {
 	type: 'regular',
-	fields: [ 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest' ],
+	fields: [
+		'site_allowed',
+		'readonly',
+		'destructive',
+		'idempotent',
+		'show_in_rest',
+	],
 };
 
 // ---------------------------------------------------------------------------
 // TabFooter — Save + Reset buttons with inline notice
 // ---------------------------------------------------------------------------
 
-function TabFooter({ draft, savedDraft, onSave, onReset, isSaving, notice, onDismissNotice }) {
+function TabFooter({
+	draft,
+	savedDraft,
+	onSave,
+	onReset,
+	isSaving,
+	notice,
+	onDismissNotice,
+}) {
 	return (
 		<div className="acrossai-ability-edit-panel__tab-footer">
 			{notice && (
@@ -180,18 +212,22 @@ function TabFooter({ draft, savedDraft, onSave, onReset, isSaving, notice, onDis
  * AbilityEditPanel — slide-in drawer component.
  *
  * @param {Object}   props
- * @param {string}   props.slug      Ability slug.
- * @param {Object}   props.ability   Merged ability data (may be null).
- * @param {Object}   props.registry  Raw registry ability (for default hints).
- * @param {Function} props.onClose   Close handler.
+ * @param {string}   props.slug     Ability slug.
+ * @param {Object}   props.ability  Merged ability data (may be null).
+ * @param {Object}   props.registry Raw registry ability (for default hints).
+ * @param {Function} props.onClose  Close handler.
  * @return {JSX.Element|null}
  */
 export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 	const dispatch = useDispatch(STORE_NAME);
 
 	// General tab
-	const [generalDraft, setGeneralDraft] = useState(() => buildGeneralDraft(ability));
-	const [generalSaved, setGeneralSaved] = useState(() => buildGeneralDraft(ability));
+	const [generalDraft, setGeneralDraft] = useState(() =>
+		buildGeneralDraft(ability)
+	);
+	const [generalSaved, setGeneralSaved] = useState(() =>
+		buildGeneralDraft(ability)
+	);
 	const [generalSaving, setGeneralSaving] = useState(false);
 	const [generalNotice, setGeneralNotice] = useState(null);
 
@@ -214,12 +250,20 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 	}, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Unsaved check
-	const hasUnsaved = !draftsEqual(generalDraft, generalSaved) || !draftsEqual(mcpDraft, mcpSaved);
+	const hasUnsaved =
+		!draftsEqual(generalDraft, generalSaved) ||
+		!draftsEqual(mcpDraft, mcpSaved);
 
 	const handleClose = useCallback(() => {
 		if (hasUnsaved) {
-			// eslint-disable-next-line no-alert
-			if (!window.confirm(__('You have unsaved changes. Close without saving?', 'acrossai-abilities-manager'))) {
+			if (
+				!window.confirm(
+					__(
+						'You have unsaved changes. Close without saving?',
+						'acrossai-abilities-manager'
+					)
+				)
+			) {
 				return;
 			}
 		}
@@ -229,7 +273,9 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 	// Escape key
 	useEffect(() => {
 		function onKey(e) {
-			if ('Escape' === e.key) handleClose();
+			if ('Escape' === e.key) {
+				handleClose();
+			}
 		}
 		document.addEventListener('keydown', onKey);
 		return () => document.removeEventListener('keydown', onKey);
@@ -247,7 +293,10 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 			setGeneralNotice({ status: 'success', message: msg });
 			setGeneralSaved({ ...generalDraft });
 		} catch (err) {
-			setGeneralNotice({ status: 'error', message: err.message || String(err) });
+			setGeneralNotice({
+				status: 'error',
+				message: err.message || String(err),
+			});
 		} finally {
 			setGeneralSaving(false);
 		}
@@ -264,7 +313,10 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 			setMcpNotice({ status: 'success', message: msg });
 			setMcpSaved({ ...mcpDraft });
 		} catch (err) {
-			setMcpNotice({ status: 'error', message: err.message || String(err) });
+			setMcpNotice({
+				status: 'error',
+				message: err.message || String(err),
+			});
 		} finally {
 			setMcpSaving(false);
 		}
@@ -275,13 +327,41 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 	// Field definitions for the General tab DataForm.
 	// Defined inside the component so registry values are captured when registry changes.
 	// TriStateEditField is module-level (stable ref) so DataForm does not remount controls.
-	const generalFields = useMemo( () => [
-		{ id: 'site_allowed', label: __( 'Site Allowed',  'acrossai-abilities-manager' ), registryValue: regVal( 'site_allowed' ), Edit: TriStateEditField },
-		{ id: 'readonly',     label: __( 'Read Only',     'acrossai-abilities-manager' ), registryValue: regVal( 'readonly' ),     Edit: TriStateEditField },
-		{ id: 'destructive',  label: __( 'Destructive',   'acrossai-abilities-manager' ), registryValue: regVal( 'destructive' ),  Edit: TriStateEditField },
-		{ id: 'idempotent',   label: __( 'Idempotent',    'acrossai-abilities-manager' ), registryValue: regVal( 'idempotent' ),   Edit: TriStateEditField },
-		{ id: 'show_in_rest', label: __( 'Show in REST',  'acrossai-abilities-manager' ), registryValue: regVal( 'show_in_rest' ), Edit: TriStateEditField },
-	], [ registry ] ); // eslint-disable-line react-hooks/exhaustive-deps
+	const generalFields = useMemo(
+		() => [
+			{
+				id: 'site_allowed',
+				label: __('Site Allowed', 'acrossai-abilities-manager'),
+				registryValue: regVal('site_allowed'),
+				Edit: TriStateEditField,
+			},
+			{
+				id: 'readonly',
+				label: __('Read Only', 'acrossai-abilities-manager'),
+				registryValue: regVal('readonly'),
+				Edit: TriStateEditField,
+			},
+			{
+				id: 'destructive',
+				label: __('Destructive', 'acrossai-abilities-manager'),
+				registryValue: regVal('destructive'),
+				Edit: TriStateEditField,
+			},
+			{
+				id: 'idempotent',
+				label: __('Idempotent', 'acrossai-abilities-manager'),
+				registryValue: regVal('idempotent'),
+				Edit: TriStateEditField,
+			},
+			{
+				id: 'show_in_rest',
+				label: __('Show in REST', 'acrossai-abilities-manager'),
+				registryValue: regVal('show_in_rest'),
+				Edit: TriStateEditField,
+			},
+		],
+		[registry]
+	);
 
 	// ---------------------------------------------------------------------------
 	// Tab content
@@ -290,10 +370,10 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 	const generalTab = (
 		<div className="acrossai-ability-edit-panel__tab-content">
 			<DataForm
-				data={ generalDraft }
-				fields={ generalFields }
-				form={ GENERAL_FORM }
-				onChange={ setGeneralDraft }
+				data={generalDraft}
+				fields={generalFields}
+				form={GENERAL_FORM}
+				onChange={setGeneralDraft}
 			/>
 
 			<TabFooter
@@ -315,7 +395,9 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 				showInMcp={mcpDraft.show_in_mcp}
 				mcpType={mcpDraft.mcp_type}
 				mcpServers={mcpDraft.mcp_servers}
-				onChange={(partial) => setMcpDraft((p) => ({ ...p, ...partial }))}
+				onChange={(partial) =>
+					setMcpDraft((p) => ({ ...p, ...partial }))
+				}
 			/>
 
 			<TabFooter
@@ -358,14 +440,22 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 				className="acrossai-ability-edit-panel"
 				role="dialog"
 				aria-modal="true"
-				aria-label={__('Edit Ability Override', 'acrossai-abilities-manager')}
+				aria-label={__(
+					'Edit Ability Override',
+					'acrossai-abilities-manager'
+				)}
 			>
 				<div className="acrossai-ability-edit-panel__header">
 					<div className="acrossai-ability-edit-panel__header-text">
 						<h2 className="acrossai-ability-edit-panel__title">
-							{__('Edit Ability Override', 'acrossai-abilities-manager')}
+							{__(
+								'Edit Ability Override',
+								'acrossai-abilities-manager'
+							)}
 						</h2>
-						<p className="acrossai-ability-edit-panel__slug description">{slug}</p>
+						<p className="acrossai-ability-edit-panel__slug description">
+							{slug}
+						</p>
 					</div>
 					<Button
 						icon="no-alt"
@@ -378,14 +468,30 @@ export default function AbilityEditPanel({ slug, ability, registry, onClose }) {
 				<TabPanel
 					className="acrossai-ability-edit-panel__tabs"
 					tabs={[
-						{ name: 'general', title: __('General', 'acrossai-abilities-manager') },
-						{ name: 'mcp', title: __('MCP', 'acrossai-abilities-manager') },
-						{ name: 'access-control', title: __('Access Control', 'acrossai-abilities-manager') },
+						{
+							name: 'general',
+							title: __('General', 'acrossai-abilities-manager'),
+						},
+						{
+							name: 'mcp',
+							title: __('MCP', 'acrossai-abilities-manager'),
+						},
+						{
+							name: 'access-control',
+							title: __(
+								'Access Control',
+								'acrossai-abilities-manager'
+							),
+						},
 					]}
 				>
 					{(tab) => {
-						if ('general' === tab.name) return generalTab;
-						if ('mcp' === tab.name) return mcpTab;
+						if ('general' === tab.name) {
+							return generalTab;
+						}
+						if ('mcp' === tab.name) {
+							return mcpTab;
+						}
 						return accessControlTab;
 					}}
 				</TabPanel>

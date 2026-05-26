@@ -261,7 +261,7 @@ class AcrossAI_Sitewide_Row extends Row {
 		 * @since 0.1.0
 		 * @param string[] $fields Base list of JSON column names.
 		 */
-		$json_fields = (array) apply_filters( 'acrossai_abilities_json_fields', $base_json_fields );
+		$json_fields = (array) \apply_filters( 'acrossai_abilities_json_fields', $base_json_fields );
 
 		// Blocklist guard: remove any column that is a known scalar to prevent
 		// accidental decode of non-JSON columns (N1 security correction).

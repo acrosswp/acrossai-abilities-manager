@@ -1,0 +1,478 @@
+<?php
+/**
+ * BerlinDB Query class for the unified abilities table (Abilities module view).
+ *
+ * This is the single new BerlinDB-layer file in Spec 009. It targets the same
+ * wp_acrossai_abilities table as AcrossAI_Sitewide_Query but exposes the CRUD,
+ * browse, and runtime-publication helpers needed by the Abilities module.
+ *
+ * Architecture contract:
+ *   $table_name   = 'acrossai_abilities'
+ *   $table_schema = AcrossAI_Sitewide_Schema::class  ← reused, no duplication
+ *   $item_shape   = AcrossAI_Sitewide_Row::class     ← reused, no duplication
+ *
+ * No new Row, Schema, or Table classes are created. JSON encode/decode uses
+ * AcrossAI_Sitewide_Row::get_json_fields() — shared registry, zero duplication.
+ *
+ * AUTHORIZATION CONTRACT (DEC-BY-SOURCE-AUTHZ):
+ * All public methods here are authorization-free DB helpers.
+ * Every caller that surfaces results to a HTTP response MUST enforce
+ * current_user_can( 'manage_options' ) before invoking these methods.
+ *
+ * @package    AcrossAI_Abilities_Manager
+ * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Abilities/Database
+ * @since      0.1.0
+ */
+
+namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
+
+use BerlinDB\Database\Query;
+use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Schema;
+use AcrossAI_Abilities_Manager\Includes\Modules\Sitewide\Database\AcrossAI_Sitewide_Row;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * CRUD, browse, and runtime-publication query helpers for the unified abilities table.
+ *
+ * @since 0.1.0
+ */
+class AcrossAI_Abilities_Query extends Query {
+
+	/**
+	 * Schema class for this query.
+	 *
+	 * @var string
+	 */
+	protected $table_schema = AcrossAI_Sitewide_Schema::class;
+
+	/**
+	 * Row class for query results.
+	 *
+	 * @var string
+	 */
+	protected $item_shape = AcrossAI_Sitewide_Row::class;
+
+	/**
+	 * Table name (without WordPress table prefix).
+	 *
+	 * @var string
+	 */
+	protected $table_name = 'acrossai_abilities';
+
+	/**
+	 * Singleton instance.
+	 *
+	 * @var AcrossAI_Abilities_Query|null
+	 */
+	protected static $_instance = null;
+
+	/**
+	 * Maximum JSON field size in bytes (64 KB — consistent with Sitewide Query guard).
+	 *
+	 * @var int
+	 */
+	const MAX_JSON_BYTES = 65536;
+
+	/**
+	 * Protected fields that must not be overwritten for source≠db rows.
+	 *
+	 * @var string[]
+	 */
+	const PROTECTED_FIELDS = array(
+		'label',
+		'description',
+		'category',
+		'callback_type',
+		'callback_config',
+		'input_schema',
+		'output_schema',
+		'source',
+		'ability_slug',
+	);
+
+	/**
+	 * Private constructor — enforces singleton pattern.
+	 *
+	 * @since  0.1.0
+	 */
+	private function __construct() {
+		parent::__construct();
+	}
+
+	/**
+	 * Get the singleton instance.
+	 *
+	 * @since  0.1.0
+	 * @return AcrossAI_Abilities_Query
+	 */
+	public static function instance(): self {
+		if ( null === self::$_instance ) {
+			self::$_instance = new self();
+		}
+		return self::$_instance;
+	}
+
+	// -------------------------------------------------------------------------
+	// CRUD helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Insert a new ability row.
+	 *
+	 * @since  0.1.0
+	 * @param  array $fields Column values. `ability_slug`, `source`, `created_at`, `created_by` are set here.
+	 * @return int|false  New row ID on success, false on failure.
+	 */
+	public function insert_ability( array $fields ) {
+		$fields = $this->prepare_fields_for_write( $fields );
+
+		$now = current_time( 'mysql', true );
+		$uid = get_current_user_id();
+
+		$fields['created_at'] = $now;
+		$fields['updated_at'] = $now;
+		$fields['created_by'] = $uid;
+
+		$result = $this->add_item( $fields );
+		if ( false === $result || (int) $result <= 0 ) {
+			return false;
+		}
+		return (int) $result;
+	}
+
+	/**
+	 * Retrieve a single ability row by integer ID.
+	 *
+	 * @since  0.1.0
+	 * @param  int $id Row primary key.
+	 * @return AcrossAI_Sitewide_Row|null
+	 */
+	public function get_ability_by_id( int $id ): ?AcrossAI_Sitewide_Row {
+		$results = $this->query(
+			array(
+				'id'     => $id,
+				'number' => 1,
+			)
+		);
+
+		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Sitewide_Row ) {
+			return null;
+		}
+		return $results[0];
+	}
+
+	/**
+	 * Retrieve a single ability row by slug.
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug Full ability slug (e.g. 'acrossai-abilities/my-ability').
+	 * @return AcrossAI_Sitewide_Row|null
+	 */
+	public function get_ability_by_slug( string $slug ): ?AcrossAI_Sitewide_Row {
+		$results = $this->query(
+			array(
+				'ability_slug' => $slug,
+				'number'       => 1,
+			)
+		);
+
+		if ( empty( $results ) || ! $results[0] instanceof AcrossAI_Sitewide_Row ) {
+			return null;
+		}
+		return $results[0];
+	}
+
+	/**
+	 * Sparse-update an existing ability row.
+	 *
+	 * Only the columns present in $fields are written. Protected fields are
+	 * automatically stripped for source≠db rows by the caller (Write controller).
+	 *
+	 * @since  0.1.0
+	 * @param  int   $id     Row primary key.
+	 * @param  array $fields Column values to update.
+	 * @return bool
+	 */
+	public function update_ability( int $id, array $fields ): bool {
+		$fields = $this->prepare_fields_for_write( $fields );
+
+		$fields['updated_at'] = current_time( 'mysql', true );
+		$fields['updated_by'] = get_current_user_id();
+
+		// Ensure created_at/created_by are never overwritten on update (A1/A2).
+		unset( $fields['created_at'], $fields['created_by'] );
+
+		$result = $this->update_item( $id, $fields );
+		return false !== $result;
+	}
+
+	/**
+	 * Delete an ability row by integer ID.
+	 *
+	 * @since  0.1.0
+	 * @param  int $id Row primary key.
+	 * @return bool
+	 */
+	public function delete_ability( int $id ): bool {
+		$result = $this->delete_item( $id );
+		return false !== $result;
+	}
+
+	/**
+	 * Check whether a given slug already exists in the table.
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug Full ability slug.
+	 * @return bool
+	 */
+	public function slug_exists( string $slug ): bool {
+		return null !== $this->get_ability_by_slug( $slug );
+	}
+
+	// -------------------------------------------------------------------------
+	// Filter / browse helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Retrieve all rows from a given source.
+	 *
+	 * @since  0.1.0
+	 * @param  string $source Source value (e.g. 'db', 'plugin', 'core', 'theme').
+	 * @return AcrossAI_Sitewide_Row[]
+	 */
+	public function by_source( string $source ): array {
+		if ( '' === $source ) {
+			return array();
+		}
+		return $this->collect(
+			array(
+				'source' => $source,
+				'number' => 0,
+			)
+		);
+	}
+
+	/**
+	 * Retrieve all published, source=db rows for runtime registration.
+	 *
+	 * Used by AcrossAI_Abilities_Processor at wp_abilities_api_init.
+	 *
+	 * @since  0.1.0
+	 * @return AcrossAI_Sitewide_Row[]
+	 */
+	public function published_db_abilities(): array {
+		return $this->collect(
+			array(
+				'source' => 'db',
+				'status' => 'publish',
+				'number' => 0,
+			)
+		);
+	}
+
+	/**
+	 * Retrieve all published rows of a given mcp_type for exposure collections.
+	 *
+	 * @since  0.1.0
+	 * @param  string $mcp_type  One of 'tool', 'resource', 'prompt'.
+	 * @param  bool   $mcp_only  When true, restrict to show_in_mcp = 1 rows.
+	 * @return AcrossAI_Sitewide_Row[]
+	 */
+	public function by_mcp_type( string $mcp_type, bool $mcp_only = true ): array {
+		$args = array(
+			'status'   => 'publish',
+			'mcp_type' => $mcp_type,
+			'number'   => 0,
+		);
+		if ( $mcp_only ) {
+			$args['show_in_mcp'] = 1;
+		}
+		return $this->collect( $args );
+	}
+
+	/**
+	 * Return a paginated result set with total/pages metadata.
+	 *
+	 * All filtering, searching, and sorting stays in this method — not in REST controllers.
+	 *
+	 * @since  0.1.0
+	 * @param  array $params Query parameters: page, per_page (1-100), search, orderby, order (ASC|DESC), source, status, category, editable.
+	 * @return array{ items: AcrossAI_Sitewide_Row[], total: int, pages: int }
+	 */
+	public function get_paginated( array $params ): array {
+		$page     = max( 1, (int) ( $params['page'] ?? 1 ) );
+		$per_page = min( 100, max( 1, (int) ( $params['per_page'] ?? 20 ) ) );
+		$search   = isset( $params['search'] ) ? sanitize_text_field( (string) $params['search'] ) : '';
+		$orderby  = isset( $params['orderby'] ) ? sanitize_key( (string) $params['orderby'] ) : 'ability_slug';
+		$order    = strtoupper( (string) ( $params['order'] ?? 'ASC' ) );
+		$order    = in_array( $order, array( 'ASC', 'DESC' ), true ) ? $order : 'ASC';
+
+		$query_args = array(
+			'number'  => $per_page,
+			'offset'  => ( $page - 1 ) * $per_page,
+			'orderby' => $orderby,
+			'order'   => $order,
+		);
+
+		if ( '' !== $search ) {
+			$query_args['search'] = $search;
+		}
+		if ( ! empty( $params['source'] ) ) {
+			$query_args['source'] = sanitize_text_field( (string) $params['source'] );
+		}
+		if ( ! empty( $params['status'] ) ) {
+			$query_args['status'] = sanitize_text_field( (string) $params['status'] );
+		}
+		if ( ! empty( $params['category'] ) ) {
+			$query_args['category'] = sanitize_text_field( (string) $params['category'] );
+		}
+		// editable=true → source=db rows only; editable=false → source≠db rows only.
+		if ( isset( $params['editable'] ) && '' !== $params['editable'] ) {
+			$editable = filter_var( $params['editable'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+			if ( true === $editable ) {
+				$query_args['source'] = 'db';
+			} elseif ( false === $editable ) {
+				// BerlinDB does not natively support "source != db"; apply post-collect filter.
+				$query_args['__editable_false'] = true;
+			}
+		}
+
+		$items = $this->collect( $query_args );
+		// Post-collect filter for editable=false (source≠db) — BerlinDB has no "!=" query arg.
+		if ( ! empty( $query_args['__editable_false'] ) ) {
+			$items = array_values(
+				array_filter(
+					$items,
+					static function ( AcrossAI_Sitewide_Row $row ) {
+						return 'db' !== $row->source;
+					}
+				)
+			);
+		}
+
+		$total = $this->count( $query_args );
+		// Recalculate total for post-collect-filtered queries.
+		if ( ! empty( $query_args['__editable_false'] ) ) {
+			$all_args           = $query_args;
+			$all_args['number'] = 0;
+			$all_args['offset'] = 0;
+			unset( $all_args['__editable_false'] );
+			$all_rows = $this->collect( $all_args );
+			$total    = count(
+				array_filter(
+					$all_rows,
+					static function ( AcrossAI_Sitewide_Row $row ) {
+						return 'db' !== $row->source;
+					}
+				)
+			);
+		}
+
+		$pages = $per_page > 0 ? (int) ceil( $total / $per_page ) : 1;
+
+		return array(
+			'items' => $items,
+			'total' => $total,
+			'pages' => max( 1, $pages ),
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Internal helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Run a query and return only AcrossAI_Sitewide_Row instances.
+	 *
+	 * @since  0.1.0
+	 * @param  array $args BerlinDB query args.
+	 * @return AcrossAI_Sitewide_Row[]
+	 */
+	private function collect( array $args ): array {
+		$results = $this->query( $args );
+		$rows    = array();
+		foreach ( $results as $row ) {
+			if ( $row instanceof AcrossAI_Sitewide_Row ) {
+				$rows[] = $row;
+			}
+		}
+		return $rows;
+	}
+
+	/**
+	 * Return the total count for the given (non-paginated) query args.
+	 *
+	 * @since  0.1.0
+	 * @param  array $args BerlinDB query args (number/offset are stripped).
+	 * @return int
+	 */
+	private function count( array $args ): int {
+		$count_args          = $args;
+		$count_args['count'] = true;
+		unset( $count_args['number'], $count_args['offset'] );
+		$count_args['number'] = 0; // unlimited for count pass.
+		$result               = $this->query( $count_args );
+		return is_numeric( $result ) ? (int) $result : count( (array) $result );
+	}
+
+	/**
+	 * Prepare fields for a BerlinDB write (insert or update).
+	 *
+	 * - Casts PHP booleans → int for tri-state tinyint columns.
+	 * - Validates and strips invalid enum values (callback_type, mcp_type, status).
+	 * - JSON-encodes array values for registered JSON longtext fields with 64 KB guard.
+	 *
+	 * @since  0.1.0
+	 * @param  array $fields Input field array.
+	 * @return array
+	 */
+	private function prepare_fields_for_write( array $fields ): array {
+		// 1. Tri-state bool → int cast (must come first — FR-018 block order).
+		$tri_state = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		foreach ( $tri_state as $col ) {
+			if ( array_key_exists( $col, $fields ) && is_bool( $fields[ $col ] ) ) {
+				$fields[ $col ] = (int) $fields[ $col ]; // true→1, false→0.
+			}
+		}
+
+		// 2. Enum guards.
+		if ( array_key_exists( 'status', $fields ) && null !== $fields['status'] ) {
+			if ( ! in_array( $fields['status'], array( 'draft', 'publish' ), true ) ) {
+				unset( $fields['status'] );
+			}
+		}
+		if ( array_key_exists( 'callback_type', $fields ) && null !== $fields['callback_type'] ) {
+			if ( ! in_array( $fields['callback_type'], array( 'noop', 'filter_hook', 'wp_remote_post', 'php_code' ), true ) ) {
+				unset( $fields['callback_type'] );
+			}
+		}
+		if ( array_key_exists( 'mcp_type', $fields ) && null !== $fields['mcp_type'] ) {
+			if ( ! in_array( $fields['mcp_type'], array( 'tool', 'resource', 'prompt' ), true ) ) {
+				unset( $fields['mcp_type'] );
+			}
+		}
+
+		// 3. JSON encode registry fields with 64 KB size guard.
+		foreach ( AcrossAI_Sitewide_Row::get_json_fields() as $json_field ) {
+			if ( isset( $fields[ $json_field ] ) && is_array( $fields[ $json_field ] ) ) {
+				$encoded = wp_json_encode( $fields[ $json_field ] );
+				if ( false === $encoded || strlen( $encoded ) > self::MAX_JSON_BYTES ) {
+					$fields[ $json_field ] = null;
+				} else {
+					$fields[ $json_field ] = $encoded;
+				}
+			}
+		}
+
+		// 4. mcp_servers non-string guard (must remain after encoding step).
+		if ( array_key_exists( 'mcp_servers', $fields ) && null !== $fields['mcp_servers'] ) {
+			if ( ! is_string( $fields['mcp_servers'] ) ) {
+				$fields['mcp_servers'] = null;
+			}
+		}
+
+		return $fields;
+	}
+}

@@ -19,6 +19,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-TABLE-SOFT-SINGLETON | BerlinDB Table subclasses stay soft-singleton when activation or tests instantiate them directly | Sitewide/DB | berlinddb, singleton, activator | Active | DECISIONS.md |
 | DEC-JSON-SIZE-GUARD | Registry-driven JSON fields get a 64 KB DB-layer guard in save paths | Sitewide/DB | json, berlinddb, size-guard | Active | DECISIONS.md |
 | DEC-BY-SOURCE-AUTHZ | Query-layer helpers remain auth-free; callers must gate before exposure | Sitewide/DB | query-layer, authz, separation-of-concerns | Active | DECISIONS.md |
+| DEC-DESIGN-OVERRIDES-DATAVIEWS | User design prototype overrides DataViews/DataForm Constitution §III mandate | Abilities/Admin | dataviews, dataform, constitution, design | Active | DECISIONS.md |
+| DEC-ABILITIES-DUAL-MODE-LIST | GET /abilities branches source=db→DB query, else→registry merge; format_merged_ability() normalises shape | Abilities REST | rest, registry, merge, formatter | Active | DECISIONS.md |
+| DEC-NODE-20-BUILD-REQUIRED | npm run build requires Node ≥ 20; toSorted dependency fails silently on Node 16 | Build | node, nvm, build, toSorted | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -47,6 +50,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-PARTIAL-HOOK-FIELDS | Partial-save paths fire after_save with incomplete $fields | Sitewide REST | hooks, after_save, partial-save | BUGS.md |
 | BUG-UNIMPLEMENTED-HOOK | apply_filters() declared in plan but missing from implementation | Sitewide REST | filter, apply_filters, extensibility | BUGS.md |
 | BUG-LOOSE-COMPARISON-BYPASS | Type coercion in loose equality access checks | Access Control | type-safety, security, injection | BUGS.md |
+| BUG-SLUG-SUFFIX-MISMATCH | REST create expects slug_suffix (suffix only), not ability_slug (full slug) | Abilities REST | slug, prefix, create, form | BUGS.md |
 
 ## Security Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -65,6 +69,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 ## Worklog Milestones
 | Date | Milestone | Scope | Tags | Source |
 |---|---|---|---|---|
+| 2026-05-24 | Specs 008-010 delivered: unified table, REST CRUD, React admin UI (custom page live) | Abilities | spec-008, spec-009, spec-010, unified-table | WORKLOG.md |
 | 2026-05-20 | Feature 006 logger establishes hook parameter adaptation patterns | Logger | patterns, reusability, hook-adaption | WORKLOG.md |
 
 | DEC-STABLE-UPGRADE-WINDOW | Prioritize first stable releases (v1.0.0, v1.0.1) when upgrading from dev branches | Dependencies | stable-release, upgrade, risk-mitigation | DECISIONS.md |

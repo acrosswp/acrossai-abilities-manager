@@ -143,7 +143,7 @@ includes/
     ├── Sitewide/
     ├── PerUser/
     ├── McpServer/
-    ├── CustomAbility/
+    ├── Abilities/
     └── Webmcp/
 src/
 ├── js/             # JavaScript/React source files

@@ -13,46 +13,48 @@ import apiFetch from '@wordpress/api-fetch';
  * @param {Object} params Query params (page, per_page, search, orderby, order, source, has_override).
  * @return {Promise<{abilities: Array, total: number, pages: number}>}
  */
-export async function fetchAbilities( params = {} ) {
+export async function fetchAbilities(params = {}) {
 	const qs = new URLSearchParams();
-	Object.entries( params ).forEach( ( [ key, value ] ) => {
-		if ( null !== value && undefined !== value && '' !== value ) {
-			qs.set( key, String( value ) );
+	Object.entries(params).forEach(([key, value]) => {
+		if (null !== value && undefined !== value && '' !== value) {
+			qs.set(key, String(value));
 		}
-	} );
+	});
 
 	const queryString = qs.toString();
-	const path = `acrossai-abilities-manager/v1/sitewide/abilities${ queryString ? '?' + queryString : '' }`;
+	const path = `acrossai-abilities-manager/v1/sitewide/abilities${queryString ? '?' + queryString : ''}`;
 
-	const response = await apiFetch( { path, parse: false } );
+	const response = await apiFetch({ path, parse: false });
 
 	// Guard: apiFetch with parse:false bypasses automatic error handling.
 	// Check response.ok before parsing to produce a clear error instead of a
 	// SyntaxError when the server returns HTML (redirect, PHP error, etc.).
-	if ( ! response.ok ) {
-		let message = `Server error: ${ response.status } ${ response.statusText }`;
+	if (!response.ok) {
+		let message = `Server error: ${response.status} ${response.statusText}`;
 		try {
 			const errData = await response.clone().json();
-			if ( errData && errData.message ) {
+			if (errData && errData.message) {
 				message = errData.message;
 			}
-		} catch ( _ ) {
+		} catch (_) {
 			// Non-JSON error body — keep the status message.
 		}
-		throw new Error( message );
+		throw new Error(message);
 	}
 
-	const contentType = response.headers.get( 'Content-Type' ) || '';
-	if ( ! contentType.includes( 'application/json' ) ) {
-		throw new Error( `Expected JSON from REST API but received: ${ contentType }` );
+	const contentType = response.headers.get('Content-Type') || '';
+	if (!contentType.includes('application/json')) {
+		throw new Error(
+			`Expected JSON from REST API but received: ${contentType}`
+		);
 	}
 
 	const data = await response.json();
 
 	return {
-		abilities: Array.isArray( data ) ? data : [],
-		total:     parseInt( response.headers.get( 'X-WP-Total' ) || '0', 10 ),
-		pages:     parseInt( response.headers.get( 'X-WP-TotalPages' ) || '0', 10 ),
+		abilities: Array.isArray(data) ? data : [],
+		total: parseInt(response.headers.get('X-WP-Total') || '0', 10),
+		pages: parseInt(response.headers.get('X-WP-TotalPages') || '0', 10),
 	};
 }
 
@@ -62,10 +64,10 @@ export async function fetchAbilities( params = {} ) {
  * @param {string} slug Ability slug.
  * @return {Promise<Object>}
  */
-export async function fetchAbility( slug ) {
-	return apiFetch( {
-		path: `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
-	} );
+export async function fetchAbility(slug) {
+	return apiFetch({
+		path: `acrossai-abilities-manager/v1/sitewide/abilities/${slug.split('/').map(encodeURIComponent).join('/')}`,
+	});
 }
 
 /**
@@ -75,12 +77,12 @@ export async function fetchAbility( slug ) {
  * @param {Object} data Fields to save.
  * @return {Promise<Object>}
  */
-export async function saveOverride( slug, data ) {
-	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
+export async function saveOverride(slug, data) {
+	return apiFetch({
+		path: `acrossai-abilities-manager/v1/sitewide/abilities/${slug.split('/').map(encodeURIComponent).join('/')}`,
 		method: 'POST',
 		data,
-	} );
+	});
 }
 
 /**
@@ -89,11 +91,11 @@ export async function saveOverride( slug, data ) {
  * @param {string} slug Ability slug.
  * @return {Promise<Object>}
  */
-export async function deleteOverride( slug ) {
-	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }`,
+export async function deleteOverride(slug) {
+	return apiFetch({
+		path: `acrossai-abilities-manager/v1/sitewide/abilities/${slug.split('/').map(encodeURIComponent).join('/')}`,
 		method: 'DELETE',
-	} );
+	});
 }
 
 /**
@@ -103,12 +105,12 @@ export async function deleteOverride( slug ) {
  * @param {boolean} siteAllowed New value.
  * @return {Promise<Object>}
  */
-export async function toggleAbility( slug, siteAllowed ) {
-	return apiFetch( {
-		path:   `acrossai-abilities-manager/v1/sitewide/abilities/${ slug.split( '/' ).map( encodeURIComponent ).join( '/' ) }/toggle`,
+export async function toggleAbility(slug, siteAllowed) {
+	return apiFetch({
+		path: `acrossai-abilities-manager/v1/sitewide/abilities/${slug.split('/').map(encodeURIComponent).join('/')}/toggle`,
 		method: 'POST',
-		data:   { site_allowed: siteAllowed },
-	} );
+		data: { site_allowed: siteAllowed },
+	});
 }
 
 /**
@@ -118,12 +120,12 @@ export async function toggleAbility( slug, siteAllowed ) {
  * @param {string}   action 'allow' | 'disallow' | 'reset'.
  * @return {Promise<Object>}
  */
-export async function bulkAction( slugs, action ) {
-	return apiFetch( {
-		path:   'acrossai-abilities-manager/v1/sitewide/abilities/bulk',
+export async function bulkAction(slugs, action) {
+	return apiFetch({
+		path: 'acrossai-abilities-manager/v1/sitewide/abilities/bulk',
 		method: 'POST',
-		data:   { slugs, action },
-	} );
+		data: { slugs, action },
+	});
 }
 
 /**
@@ -132,8 +134,8 @@ export async function bulkAction( slugs, action ) {
  * @return {Promise<Array>}
  */
 export async function fetchMcpServers() {
-	const data = await apiFetch( {
+	const data = await apiFetch({
 		path: 'acrossai-abilities-manager/v1/sitewide/mcp-servers',
-	} );
-	return Array.isArray( data ) ? data : [];
+	});
+	return Array.isArray(data) ? data : [];
 }

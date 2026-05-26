@@ -104,16 +104,15 @@ There is **no save button** for editing an existing ability. Every field change 
 
 ```
 includes/Modules/Abilities/Rest/
-├── AcrossAI_Abilities_Rest_Controller.php       — Orchestrator: singleton, register_routes(), check_permission()
-├── AcrossAI_Abilities_Read_Controller.php       — GET /abilities (list + search/filter/pagination)
-│                                                   GET /abilities/{id}
-├── AcrossAI_Abilities_Write_Controller.php      — POST /abilities (create — slug prefix injected)
-│                                                   POST /abilities/{id} (update — sparse, source≠db strips identity fields)
-│                                                   DELETE /abilities/{id} (204)
-├── AcrossAI_Abilities_Mcp_Controller.php        — GET /abilities/mcp/tools
-│                                                   GET /abilities/mcp/resources
-│                                                   GET /abilities/mcp/prompts
-└── AcrossAI_Abilities_Categories_Controller.php — GET /ability-categories → wp_get_ability_categories()
+├── AcrossAI_Abilities_Rest_Controller.php      — Orchestrator: singleton, register_routes(), check_permission()
+├── AcrossAI_Abilities_Read_Controller.php      — GET /abilities (list + search/filter/pagination)
+│                                                  GET /abilities/{id}
+├── AcrossAI_Abilities_Write_Controller.php     — POST /abilities (create — slug prefix injected)
+│                                                  POST /abilities/{id} (update — sparse, source≠db strips identity fields)
+│                                                  DELETE /abilities/{id} (204)
+├── AcrossAI_Abilities_Exposure_Controller.php  — GET /abilities/exposures/{type}
+│                                                  type = tools | resources | prompts (admin-only, PD-001)
+└── AcrossAI_Abilities_Category_Controller.php  — GET /abilities/categories → wp_get_ability_categories()
 ```
 
 ### Endpoints
@@ -125,10 +124,8 @@ includes/Modules/Abilities/Rest/
 | POST | `/acrossai-abilities-manager/v1/abilities` | Create (slug prefix injected; starts as draft) |
 | POST | `/acrossai-abilities-manager/v1/abilities/{id}` | Sparse update (only passed fields written) |
 | DELETE | `/acrossai-abilities-manager/v1/abilities/{id}` | Delete (204) |
-| GET | `/acrossai-abilities-manager/v1/abilities/mcp/tools` | MCP tool abilities |
-| GET | `/acrossai-abilities-manager/v1/abilities/mcp/resources` | MCP resource abilities |
-| GET | `/acrossai-abilities-manager/v1/abilities/mcp/prompts` | MCP prompt abilities |
-| GET | `/acrossai-abilities-manager/v1/ability-categories` | `wp_get_ability_categories()` |
+| GET | `/acrossai-abilities-manager/v1/abilities/exposures/{type}` | Exposure collection by type (tools/resources/prompts) |
+| GET | `/acrossai-abilities-manager/v1/abilities/categories` | `wp_get_ability_categories()` |
 
 ### source≠db update rules
 
@@ -167,8 +164,8 @@ includes/Modules/Abilities/Rest/
 ├── AcrossAI_Abilities_Rest_Controller.php
 ├── AcrossAI_Abilities_Read_Controller.php
 ├── AcrossAI_Abilities_Write_Controller.php
-├── AcrossAI_Abilities_Mcp_Controller.php
-└── AcrossAI_Abilities_Categories_Controller.php
+├── AcrossAI_Abilities_Exposure_Controller.php
+└── AcrossAI_Abilities_Category_Controller.php
 ```
 
 ## Files to Modify (1)

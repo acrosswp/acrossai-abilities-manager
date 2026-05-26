@@ -29,11 +29,15 @@ const SOURCES = [
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const HR = '━'.repeat(67);
-function banner(text) { console.log(`\n${HR}\n${text}\n${HR}\n`); }
+function banner(text) {
+	console.log(`\n${HR}\n${text}\n${HR}\n`);
+}
 
 function cloneRepo(repo, dest) {
 	console.log(`==> Cloning ${repo}...`);
-	if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
+	if (fs.existsSync(dest)) {
+		fs.rmSync(dest, { recursive: true, force: true });
+	}
 
 	const result = spawnSync(
 		'git',
@@ -49,18 +53,27 @@ function cloneRepo(repo, dest) {
 
 function listSkills(repoDir) {
 	const skillsDir = path.join(repoDir, 'skills');
-	if (!fs.existsSync(skillsDir)) return [];
+	if (!fs.existsSync(skillsDir)) {
+		return [];
+	}
 
-	return fs.readdirSync(skillsDir, { withFileTypes: true })
-		.filter(d => d.isDirectory() && fs.existsSync(path.join(skillsDir, d.name, 'SKILL.md')))
-		.map(d => d.name);
+	return fs
+		.readdirSync(skillsDir, { withFileTypes: true })
+		.filter(
+			(d) =>
+				d.isDirectory() &&
+				fs.existsSync(path.join(skillsDir, d.name, 'SKILL.md'))
+		)
+		.map((d) => d.name);
 }
 
 function readDesc(repoDir, skill) {
 	const md = path.join(repoDir, 'skills', skill, 'SKILL.md');
 	for (const line of fs.readFileSync(md, 'utf8').split('\n')) {
 		const t = line.trim();
-		if (t && !t.startsWith('#') && !t.startsWith('<!--')) return t.slice(0, 80);
+		if (t && !t.startsWith('#') && !t.startsWith('<!--')) {
+			return t.slice(0, 80);
+		}
 	}
 	return '';
 }
@@ -79,9 +92,15 @@ function copyDir(src, dest) {
 }
 
 function ask(question) {
-	return new Promise(resolve => {
-		const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-		rl.question(question, answer => { rl.close(); resolve(answer.trim()); });
+	return new Promise((resolve) => {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+		rl.question(question, (answer) => {
+			rl.close();
+			resolve(answer.trim());
+		});
 	});
 }
 
@@ -120,7 +139,9 @@ async function main() {
 		allSkills.forEach(({ name, label, desc }, i) => {
 			const num = String(i + 1).padStart(3);
 			console.log(`${num}. [${label}] ${name}`);
-			if (desc) console.log(`       ${desc}`);
+			if (desc) {
+				console.log(`       ${desc}`);
+			}
 		});
 		console.log();
 
@@ -170,12 +191,18 @@ async function main() {
 			copyDir(src, dest);
 		}
 
-		console.log(`\n✅  ${selected.length} skill(s) installed to .agents/skills/`);
-		console.log('   Run  npm run skillpack:push  to distribute to tool directories.\n');
-
+		console.log(
+			`\n✅  ${selected.length} skill(s) installed to .agents/skills/`
+		);
+		console.log(
+			'   Run  npm run skillpack:push  to distribute to tool directories.\n'
+		);
 	} finally {
 		fs.rmSync(WORK_DIR, { recursive: true, force: true });
 	}
 }
 
-main().catch(err => { console.error('Error:', err.message); process.exit(1); });
+main().catch((err) => {
+	console.error('Error:', err.message);
+	process.exit(1);
+});

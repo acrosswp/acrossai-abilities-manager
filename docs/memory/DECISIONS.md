@@ -606,6 +606,88 @@ wpb-access-control releases: https://github.com/WPBoilerplate/wpb-access-control
 
 ---
 
+### 2026-05-24 — User design prototype overrides Constitution §III DataViews/DataForm mandate (DEC-DESIGN-OVERRIDES-DATAVIEWS)
+
+**Status**: Active
+
+**Why this is durable**
+Constitution §III mandates `@wordpress/dataviews` (DataViews) for list tables and `@wordpress/dataforms` (DataForm) for edit forms. When the user supplies a visual design prototype (wireframe HTML, Figma export, etc.) that shows a classic WP-style table or plain HTML form sections, **the design file takes precedence over the Constitution mandate**. Documenting this prevents future developers from wasting effort retrofitting DataViews to match a design that intentionally uses classic patterns.
+
+**Decision**
+When implementing an admin UI feature: read any user-supplied design prototype FIRST. If the prototype shows a classic WP list table (`.wp-list-table`, `.wptable`) instead of DataViews, or flat HTML sections instead of DataForm — implement the design. Do NOT add DataViews/DataForm just to satisfy §III if the user's design does not use them. Record the deviation in the feature's `tasks.md` and `INDEX.md` as an accepted deviation.
+
+**Tradeoffs**
+The Constitution §III recommendation exists for accessibility and consistency. Deviating introduces a maintenance burden if DataViews API changes. Accept this tradeoff when the user's design explicitly shows a different pattern — the design is the source of truth.
+
+**Future mistake prevented**
+Do not implement DataViews for a feature and then have to rewrite it to match a wireframe the user provided. Always check the design file before choosing the list component.
+
+**Evidence**
+Feature 010 (2026-05-24): commits `b39ef5e` (DataViews replaced by `.wptable`) and `248ab5d` (DataForm replaced by `.panel`/`.sect` wireframe layout). Noted in `specs/010-abilities-react-ui/tasks.md` T014 and T016 as "design requirement overrides Constitution §III."
+
+**Where to look next**
+`src/js/abilities/components/AbilitiesList.jsx` (custom `.wptable` example),
+`src/js/abilities/components/AbilityForm.jsx` (plain HTML sections without DataForm),
+`specs/010-abilities-react-ui/tasks.md` (T014/T016 deviation notes).
+
+---
+
+### 2026-05-24 — GET /abilities dual-mode: DB-only vs WP registry merge (DEC-ABILITIES-DUAL-MODE-LIST)
+
+**Status**: Active
+
+**Why this is durable**
+The custom abilities REST endpoint needs to serve two fundamentally different data sets: DB-stored custom abilities (including drafts) and WP-registered abilities from the registry (plugin/theme/core). Using a single query path for both would require either duplicating registry merge logic or missing draft abilities.
+
+**Decision**
+`GET /abilities` branches on `source` param:
+- `source=db` → `AcrossAI_Abilities_Query::get_paginated()` — DB table only, includes drafts, uses `format_for_response()`
+- All other values (including empty) → `AcrossAI_Ability_Registry_Query::query()` + `AcrossAI_Sitewide_Query` — WP registry + override merge, uses `format_merged_ability()`
+
+When a REST endpoint must serve both DB row format and registry merge format, add a dedicated `format_merged_ability()` method to the Formatter that maps the merged shape to the same flat format the frontend already consumes. This keeps the frontend unchanged.
+
+**Tradeoffs**
+Two code paths in one controller method increases branching complexity. Accepted because the two data sources are structurally incompatible and the branching is explicit and well-commented.
+
+**Future mistake prevented**
+Do not try to serve registry abilities through `AcrossAI_Abilities_Query` — it only reads the DB table. Do not forget to include `$override->id` in `AcrossAI_Ability_Merger::merge()` — without it, inherited abilities with override rows get `id=null` and the edit/override navigation breaks.
+
+**Evidence**
+Commit `a206106` — `AcrossAI_Abilities_Read_Controller::get_abilities()` dual-branch + `AcrossAI_Abilities_Formatter::format_merged_ability()` + `id` added to `AcrossAI_Ability_Merger::merge()`.
+
+**Where to look next**
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Read_Controller.php` (get_abilities — dual branch),
+`includes/Utilities/AcrossAI_Abilities_Formatter.php` (format_merged_ability),
+`includes/Utilities/AcrossAI_Ability_Merger.php` (id in merged result).
+
+---
+
+### 2026-05-24 — npm run build requires Node ≥ 20 (DEC-NODE-20-BUILD-REQUIRED)
+
+**Status**: Active
+
+**Why this is durable**
+The build toolchain has a hard Node version floor that is not enforced by `.nvmrc` or `engines` in `package.json` and will not produce a readable error on Node 16 — it throws a cryptic `TypeError` mid-bundle.
+
+**Decision**
+Always build with Node 20: `nvm use 20 && npm run build`. A `@wordpress/scripts` dependency (or transitive dep) uses `Array.prototype.toSorted` which was added in Node 20. On Node 16 the build fails with `TypeError: [...].toSorted is not a function` — no other diagnostic. Document this in every new feature's T028 (build) task.
+
+**Tradeoffs**
+Requires NVM. If the environment uses a system Node < 20, the build silently produces wrong output or errors. Acceptable because Node 20 is LTS and NVM is standard for this project.
+
+**Future mistake prevented**
+Do not attempt `npm run build` on Node 16 and assume a clean exit means success — the failure is a TypeError, not a non-zero exit on some configurations. Add a Node version check to CI if not already present.
+
+**Evidence**
+Feature 010 build (2026-05-23): `npm run build` on Node 16.20 failed with `TypeError: [...].toSorted is not a function`. Succeeded after `nvm use 20`. Documented in `specs/010-abilities-react-ui/tasks.md` T028.
+
+**Where to look next**
+`package.json` (engines field — consider adding `"node": ">=20"`),
+`specs/010-abilities-react-ui/tasks.md` (T028 build note),
+`.nvmrc` (add `20` if missing).
+
+---
+
 ### 2026-05-20 — Re-validate security constraints after library upgrades (DEC-REVALIDATE-SECURITY-POST-UPGRADE)
 
 **Status**: Active
