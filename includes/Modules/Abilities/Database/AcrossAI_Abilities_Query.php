@@ -280,9 +280,9 @@ class AcrossAI_Abilities_Query extends Query {
 	 * @since  0.1.0
 	 * @param  string $slug   Ability slug.
 	 * @param  array  $fields Field values to save.
-	 * @return bool
+	 * @return AcrossAI_Abilities_Row|false Saved row on success, false on failure.
 	 */
-	public function save_override( string $slug, array $fields ): bool {
+	public function save_override( string $slug, array $fields ) {
 		$slug = AcrossAI_Sanitizer::sanitize_ability_slug( $slug );
 		// SEC-002: save_override is exclusively for non-db (registry) abilities.
 		// Strip source='db' to prevent source-injection via call-site ordering errors
@@ -298,13 +298,29 @@ class AcrossAI_Abilities_Query extends Query {
 
 		if ( null === $existing ) {
 			// INSERT path — add_item() returns the new integer ID on success or false.
+			// Re-read by ID rather than slug to bypass BerlinDB's query cache, which
+			// holds a stale null result for the slug until the next request cycle.
 			$fields['ability_slug'] = $slug;
 			$fields['created_at']   = $now;
 			$fields['created_by']   = $user_id;
 			$fields['updated_at']   = $now;
 
-			$result = $this->add_item( $fields );
-			return false !== $result && (int) $result > 0;
+			// Prevent DB schema defaults from being applied to non-db override rows.
+			// Schema defines callback_type DEFAULT 'noop' and status DEFAULT 'draft'.
+			// These columns are not meaningful for override records — explicitly set to
+			// NULL so MySQL does not silently apply those defaults on INSERT.
+			if ( ! array_key_exists( 'callback_type', $fields ) ) {
+				$fields['callback_type'] = null;
+			}
+			if ( ! array_key_exists( 'status', $fields ) ) {
+				$fields['status'] = null;
+			}
+
+			$new_id = $this->add_item( $fields );
+			if ( false === $new_id || (int) $new_id <= 0 ) {
+				return false;
+			}
+			return $this->get_ability_by_id( (int) $new_id );
 		}
 
 		// UPDATE path — update_item() returns the updated item object or false.
@@ -315,7 +331,10 @@ class AcrossAI_Abilities_Query extends Query {
 		unset( $fields['created_at'], $fields['created_by'] );
 
 		$result = $this->update_item( $existing->id, $fields );
-		return false !== $result;
+		if ( false === $result ) {
+			return false;
+		}
+		return $this->get_ability_by_id( $existing->id );
 	}
 
 	/**

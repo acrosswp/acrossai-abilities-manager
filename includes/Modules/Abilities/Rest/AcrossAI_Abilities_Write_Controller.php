@@ -341,17 +341,16 @@ class AcrossAI_Abilities_Write_Controller {
 		$registry_arr     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
 		$fields['source'] = AcrossAI_Ability_Source_Detector::detect( $registry_arr );
 
-		$saved = $this->db_query->save_override( $slug, $fields );
-		if ( ! $saved ) {
+		$override_row = $this->db_query->save_override( $slug, $fields );
+		if ( false === $override_row ) {
 			return new \WP_Error( 'rest_update_failed', __( 'Failed to save override.', 'acrossai-abilities-manager' ), array( 'status' => 500 ) );
 		}
 
 		// SEC-GUARDRAIL-01: bust_cache() only — do not call other methods on Override Processor.
 		AcrossAI_Ability_Override_Processor::bust_cache();
 
-		$override_row = $this->db_query->get_override_by_slug( $slug );
-		$registry     = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
-		$merged       = AcrossAI_Ability_Merger::merge( $registry, $override_row );
+		$registry = AcrossAI_Ability_Merger::normalize_registry( $registry_raw );
+		$merged   = AcrossAI_Ability_Merger::merge( $registry, $override_row );
 		return rest_ensure_response( AcrossAI_Abilities_Formatter::format_merged_ability( $merged ) );
 	}
 

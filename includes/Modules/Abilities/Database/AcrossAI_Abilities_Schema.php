@@ -79,14 +79,14 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'sortable'   => true,
 		),
 
-		// Lifecycle status. 20-char max, defaults to draft.
+		// Lifecycle status. 20-char max. NULL = no status (override rows for non-db abilities).
 		array(
-			'name'     => 'status',
-			'type'     => 'varchar',
-			'length'   => '20',
-			'null'     => false,
-			'default'  => 'draft',
-			'sortable' => true,
+			'name'       => 'status',
+			'type'       => 'varchar',
+			'length'     => '20',
+			'allow_null' => true,
+			'default'    => null,
+			'sortable'   => true,
 		),
 
 		// Provider string.
@@ -118,13 +118,13 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'default'    => null,
 		),
 
-		// Callback type (enum guard in save_override).
+		// Callback type (enum guard in save_override). NULL = not set (override rows for non-db abilities).
 		array(
-			'name'    => 'callback_type',
-			'type'    => 'varchar',
-			'length'  => '50',
-			'null'    => false,
-			'default' => 'noop',
+			'name'       => 'callback_type',
+			'type'       => 'varchar',
+			'length'     => '50',
+			'allow_null' => true,
+			'default'    => null,
 		),
 
 		// Callback configuration JSON.

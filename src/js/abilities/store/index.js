@@ -91,10 +91,29 @@ function reducer(state = DEFAULT_STATE, action) {
 
 		case SET_SAVED: {
 			const saved = action.ability;
+			// For non-db abilities the top-level fields are MERGED (registry + override).
+			// The TriChips and editable fields must bind to the raw override values so that
+			// a null override shows "default", not the registry fallback value.
+			// _override holds exactly those raw values; spread it over the draft when present.
+			const overridableFields = [
+				'label', 'description', 'category',
+				'callback_type', 'callback_config',
+				'site_allowed',
+				'readonly', 'destructive', 'idempotent',
+				'show_in_rest', 'show_in_mcp', 'mcp_type', 'mcp_servers',
+			];
+			let draft = saved ? { ...saved } : {};
+			if ( saved && saved._override ) {
+				const overridePatch = {};
+				overridableFields.forEach( ( f ) => {
+					overridePatch[ f ] = saved._override[ f ] !== undefined ? saved._override[ f ] : null;
+				} );
+				draft = { ...draft, ...overridePatch };
+			}
 			return {
 				...state,
 				savedAbility: saved,
-				draftAbility: saved ? { ...saved } : {},
+				draftAbility: draft,
 				isDirty: false,
 				isSaving: false,
 				saveError: null,
