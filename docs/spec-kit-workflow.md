@@ -282,3 +282,151 @@ specs/NNN-feature-name/
 7. /speckit.memory-md.capture-from-diff
 8. /speckit.git.commit
 ```
+
+---
+
+## Ad-hoc / Hotfix Workflow
+
+Use this when fixes are made outside the normal spec→plan→implement cycle (e.g. bugs surfaced during manual testing, UI reorders, schema corrections).
+
+### Step-by-step
+
+```
+1. Make fix directly in code (no spec/plan/tasks needed for trivial bugs)
+2. /speckit.memory-md.capture-from-diff   ← capture learnings before committing
+3. /speckit.git.commit                    ← commit with structured message
+4. (optional) /speckit.analyze            ← verify no spec drift introduced
+```
+
+---
+
+## Captured Change Log
+
+### Session: 2026-05-26 — Override Layer Bug Fixes + Form Section Reorder
+
+**Branch:** `code-done-via-claude`
+**Commit:** `84324a3` — `feat: push changes done via Claude to new branch`
+**Files changed:** 9 (7 PHP/JSX source + 2 build artefacts)
+
+---
+
+#### Fix 1 — `normalize_registry()` reading wrong paths for MCP / schema fields
+
+**File:** `includes/Utilities/AcrossAI_Ability_Merger.php`
+
+**Root cause:** External plugins register MCP fields under nested `meta['mcp']['type'|'public'|'servers']` (mcp-adapter convention), but `normalize_registry()` was reading flat `meta.mcp_type` / `meta.mcp_servers`. `input_schema` / `output_schema` are first-class `WP_Ability` properties (`get_input_schema()` / `get_output_schema()`), not meta keys — but were being read via `get_meta_item()` which always returned null.
+
+**Fix:**
+- Read `$mcp_meta = get_meta_item('mcp')` → access `$mcp_meta['type']`, `['public']`, `['servers']` with fallback to flat `$ann_or_meta()`
+- Use `get_input_schema()` / `get_output_schema()` getters; normalise `[]` → `null`
+- Guard `$annotations` as array before use
+
+**Pattern learned:** Always check nested vs flat meta convention when consuming third-party `WP_Ability` registrations. `input_schema` and `output_schema` are NOT in meta — use the dedicated getters.
+
+---
+
+#### Fix 2 — "Plugin declares:" TriChip hints reading merged values instead of registry
+
+**File:** `src/js/abilities/components/AbilityForm.jsx`
+
+**Root cause:** Hints were reading `savedAbility.readonly` (merged/effective value) instead of `savedAbility._registry.readonly` (pure WP registration value). Guards like `null !== savedAbility?.field` prevented the hint from showing when the registry value was null/false.
+
+**Fix:**
+- All 6 TriChip hints (show_in_mcp, mcp_type, readonly, destructive, idempotent, show_in_rest) now always read from `savedAbility._registry.*`
+- Removed null guards — hints always render with `'not set'` fallback when registry value is null
+- Same pattern applied to Label, Category, Description, Schema "Plugin declares:" labels
+
+**Pattern learned:** Response has three layers: top-level = effective/merged, `_registry` = pure WP registration, `_override` = raw DB values. UI hints always read from `_registry`; form controls bind to `_override` (or draft which is seeded from `_override`).
+
+---
+
+#### Fix 3 — `SET_SAVED` store reducer seeding draft from merged values
+
+**File:** `src/js/abilities/store/index.js`
+
+**Root cause:** `SET_SAVED` spread `{ ...saved }` which used merged top-level values. For non-db abilities, `saved.readonly = true` (merged from registry) would seed the TriChip as "yes" instead of "default/inherit".
+
+**Fix:** When `saved._override` is present, patch all overridable fields from `_override` (not merged top-level). `null` in `_override` = "inherit/default" → TriChip shows "default".
+
+**Pattern learned:** `draftAbility` overridable fields must always be seeded from `_override`, not merged values. Merged values are display-only; `_override` is the edit source of truth.
+
+---
+
+#### Fix 4 — First-save response returns `has_override: false` (stale BerlinDB query cache)
+
+**Files:** `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`, `includes/Modules/Abilities/Rest/AcrossAI_Abilities_Write_Controller.php`
+
+**Root cause:** BerlinDB `query()` caches results by params array. On first INSERT: `get_override_by_slug()` inside `save_override()` caches a null result for the slug. After `add_item()` inserts the row, the controller's re-query (also by slug) hits the stale cache and returns null → `has_override: false` in response.
+
+**Fix:**
+- `save_override()` return type changed from `bool` to `AcrossAI_Abilities_Row|false`
+- INSERT path re-reads via `get_ability_by_id()` (ID-based lookup bypasses the slug query cache)
+- UPDATE path also returns the row via `get_ability_by_id()`
+- Controller uses the returned row directly — no separate re-query needed
+
+**Pattern learned:** After BerlinDB `add_item()`, always re-read by primary key ID (`get_item()` / `query(['id' => $id])`), never by slug. The slug query cache is populated at query time; a subsequent INSERT does not invalidate it until the next request cycle.
+
+---
+
+#### Fix 5 — DB defaults `callback_type='noop'` and `status='draft'` on non-db override INSERT
+
+**Files:** `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`, `includes/Modules/Abilities/Database/AcrossAI_Abilities_Schema.php`, `includes/Modules/Abilities/Database/AcrossAI_Abilities_Table.php`
+
+**Root cause:** Schema defined `callback_type NOT NULL DEFAULT 'noop'` and `status NOT NULL DEFAULT 'draft'`. Override rows for non-db abilities don't send these fields in the payload, so MySQL silently applied those defaults on INSERT.
+
+**Fix:**
+- `save_override()` INSERT path explicitly sets `callback_type = null` and `status = null` when absent from `$fields`
+- Schema columns updated: both now `allow_null: true, default: null`
+- Table SQL updated: `DEFAULT NULL` (removed `NOT NULL`)
+- Live DB `ALTER TABLE` run directly (plugin is new — no migration needed)
+
+**Pattern learned:** For shared tables used by both `source=db` abilities AND non-db override rows, columns that are only meaningful for one row type must be nullable. Never rely on DB defaults for sparse/optional row patterns.
+
+---
+
+#### Fix 6 — AbilityForm section order and numbering
+
+**File:** `src/js/abilities/components/AbilityForm.jsx`
+
+**Change:** Reordered form sections to:
+
+| # | Section | Variant B (isNonDb) | Variant A (source=db) |
+|---|---------|--------------------|-----------------------|
+| 1 | Identity | ✓ | ✓ |
+| 2 | Site Permission | ✓ (isNonDb only) | — |
+| 3 / 2 | MCP Exposure | 3 | 2 |
+| 4 / 3 | Annotation Overrides | 4 | 3 |
+| 5 / 4 | Callback | 5 | 4 |
+| 6 / 5 | Schema | 6 | 5 |
+
+Status toggle hidden for isNonDb (non-db override rows have no lifecycle status).
+
+---
+
+### Capture prompt (for `/speckit.memory-md.capture-from-diff`)
+
+```
+Capture the following fixes into .specify/memory/ as durable learnings:
+
+1. BerlinDB query cache is NOT invalidated by add_item(). After INSERT, always
+   re-read by primary key ID. Never re-query by a non-PK field (e.g. slug)
+   in the same request cycle after an INSERT.
+
+2. normalize_registry() must use get_input_schema()/get_output_schema() for
+   first-class WP_Ability properties. MCP fields may be nested under meta['mcp']
+   (mcp-adapter convention) — always check nested before flat.
+
+3. draftAbility overridable fields must be seeded from _override (raw DB values),
+   not merged top-level values. _override null = "inherit/default".
+
+4. UI hints ("Plugin declares:") always read from savedAbility._registry.*,
+   never from merged top-level. Remove null guards — show hint with 'not set'
+   fallback when registry value is null.
+
+5. Shared tables with multi-source rows: columns only meaningful for one row type
+   must be nullable. Never rely on DB NOT NULL + DEFAULT for sparse patterns.
+   ALTER TABLE directly on new plugins; add migration for deployed ones.
+
+Branch: code-done-via-claude
+Commit: 84324a3
+```
