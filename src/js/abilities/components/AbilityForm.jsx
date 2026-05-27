@@ -1497,9 +1497,8 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								/>
 							)}
 						</div>
-					</div>
 						{/* ── VARIANT A: Section 5 — Callback ── */}
-						<div className="sect sect-secondary">
+						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
 									<span className="sect-num">5</span>
@@ -1624,7 +1623,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							const regOutput =
 								savedAbility?._registry?.output_schema ?? null;
 							return (
-								<div className="sect sect-secondary">
+								<div className="sect">
 									<div className="sect-hdr">
 										<div className="sect-title">
 											<span className="sect-num">6</span>
@@ -1777,6 +1776,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							);
 						})()}
 
+					</div>
 					{/* end .panel */}
 				</div>
 				{/* end .form-main */}
