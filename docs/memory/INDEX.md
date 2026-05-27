@@ -27,8 +27,6 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-HACTIONS-BUTTON-DEPTH | AbilityForm.jsx: .hactions button=5-tab, sbox button=9-tab | React/UI | abilityform, button, tabs, str_replace | Active | DECISIONS.md |
 | DEC-DB-WRITE-BOUNDARY-GUARD | DB write methods must enforce source-discriminant guards at method level, not via caller ordering | DB/Security | db-write, source, boundary-guard, injection | Active | DECISIONS.md |
 | DEC-SAVE-OVERRIDE-RETURN-ROW | save_override() returns Row\|false (not bool); Write Controller uses row directly; PHP 7.4 union via @return docblock only | DB/BerlinDB | save_override, return-type, berlinddb, php74 | Active | DECISIONS.md |
-| DEC-MCP-SERVER-SANITIZE | sanitize_mcp_servers_array(): null-passthrough, per-element sanitize+255-substr, array_slice(100), REST args schema as defence-in-depth | Abilities/REST/Sanitizer | mcp-servers, sanitize, rest-args, defence-in-depth | Active | DECISIONS.md |
-| DEC-MCP-CAPABILITY-FILTER-WARN | wpb_mcp_servers_list_rest_capability filter wiring point MUST include a manage_options warning comment | Abilities/Main | mcp, capability, filter, warning-comment | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -94,8 +92,6 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 ## Architecture Patterns (continued)
 | ARCH-ZERO-CODE-DEPENDENCY-UPGRADE | Singleton + service locator pattern enables dependency upgrades without plugin code changes | Dependencies | architecture, singleton, service-locator, upgrades | ARCHITECTURE.md |
 | PATTERN-NAMED-EXPORT-JEST | Named export of pure helper from JSX component enables Jest unit tests without rendering | React/JS | jest, named-export, pure-helper, testability | ARCHITECTURE.md |
-| ARCH-SANITIZER-TWO-CLASS | AcrossAI_Sanitizer (base, owns sanitize_mcp_servers_array) ≠ AcrossAI_Abilities_Sanitizer (wrapper). PHPUnit tests must target base class FQCN. | Utilities | sanitizer, two-class, phpunit, fqcn | ARCHITECTURE.md |
-| ARCH-PHPUNIT-BOOTSTRAP | ABSPATH define MUST precede autoloader; phpunit.xml.dist must exclude BerlinDB-loading test files | Testing | phpunit, bootstrap, abspath, berlinddb | ARCHITECTURE.md |
 
 ## Bug Patterns (continued)
 | BUG-AC-NULL-RETURN-SILENT-FAIL | Access control permission checks silently fail when library returns null instead of false | Access Control | type-safety, null-return, silent-fail | BUGS.md |
@@ -108,12 +104,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-BERLINDB-STALE-SLUG-CACHE | After INSERT, get_override_by_slug() hits stale slug cache → null; re-read via ID inside save_override() | DB/BerlinDB | berlinddb, cache, save_override, INSERT | BUGS.md |
 | BUG-MCP-PUBLIC-KEY-MAPPING | meta.mcp.public → show_in_mcp (canonical); mcp_public is a stray key the Merger never reads | Abilities/Merger | mcp, show_in_mcp, normalize_registry, registry | BUGS.md |
 | BUG-DRAFT-SEEDED-FROM-MERGED | SET_SAVED must seed draftAbility from _override[field] (null=inherit), not merged top-level | React/Store | redux, set-saved, trichip, override, draftAbility | BUGS.md |
-| BUG-PHPUNIT-ABSPATH-SILENT-EXIT | ABSPATH define must precede autoloader; wrong order silently produces 0 tests with no errors | Testing | phpunit, abspath, silent-exit, bootstrap | BUGS.md |
-| BUG-PHPUNIT-BERLINDDB-SCOPE | phpunit.xml.dist must be narrowly scoped; BerlinDB Table constructors fatal under stub bootstrap | Testing | phpunit, berlinddb, scope, fatal | BUGS.md |
-| BUG-ABILITIES-STRIP-PROTECTED-PREEXISTING | Pre-existing test/code mismatch: strip_protected_fields test expects broader stripping than implementation provides (line 470) | Testing | phpunit, preexisting, strip-protected, mismatch | BUGS.md |
 
 ## Worklog Milestones (continued)
 | 2026-05-20 | 4-Phase library upgrade workflow validated; zero-code dependency upgrade with 100% test pass rate | Feature 007 | workflow, library-upgrade, zero-code, testing | WORKLOG.md |
 | 2026-05-26 | Feature 014: edit+override routing unified, REST split pattern validated, SEC-001/002/003 hardening | Feature 014 | feature-014, override, rest-split, security | WORKLOG.md |
 | 2026-05-27 | Feature 015: override layer hardened; BerlinDB cache bypass, mcp.public mapping, SET_SAVED seeding — 4 new patterns | Feature 015 | feature-015, override, berlinddb, mcp, redux | WORKLOG.md |
-| 2026-05-27 | Feature 016: allowed-servers checkbox list, PHPUnit bootstrap established, MCP server sanitizer constants + REST args schema (T019, T020) | Feature 016 | feature-016, phpunit, mcp-servers, sanitizer, react | WORKLOG.md |

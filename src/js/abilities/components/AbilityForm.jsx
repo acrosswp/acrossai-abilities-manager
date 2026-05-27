@@ -22,13 +22,13 @@
 import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import apiFetch from '@wordpress/api-fetch';
 import { STORE_NAME } from '../store/index';
 import SourceBadge from './cells/SourceBadge';
 import CallbackConfigField from './CallbackConfigField';
 
 const SLUG_PREFIX = 'acrossai-abilities/';
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
+
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -67,10 +67,7 @@ function formatDate(iso) {
  * @return {Object} Error map for slug_suffix, label, description, category.
  */
 export function validateRequiredFields(ability, slugSuffix) {
-	const required = __(
-		'This field is required.',
-		'acrossai-abilities-manager'
-	);
+	const required = __('This field is required.', 'acrossai-abilities-manager');
 	return {
 		slug_suffix: (slugSuffix || '').trim() ? '' : required,
 		label: (ability.label || '').trim() ? '' : required,
@@ -237,11 +234,6 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 	const [inputSchemaRaw, setInputSchemaRaw] = useState('');
 	const [outputSchemaRaw, setOutputSchemaRaw] = useState('');
 
-	// MCP server list state (Feature 016: Allowed Servers checkbox list).
-	const [mcpServers, setMcpServers] = useState(null); // null = loading; [] = loaded
-	const [mcpAdapterAvailable, setMcpAdapterAvailable] = useState(true);
-	const [mcpServersError, setMcpServersError] = useState(false);
-
 	// Callback config as parsed object (kept in sync with draftAbility.callback_config)
 	const callbackType = draftAbility.callback_type || 'noop';
 	const callbackConfig = draftAbility.callback_config || {};
@@ -267,12 +259,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 	useEffect(() => {
 		// Reset stale validation errors when ability loads or after a successful save
 		// (FR-016, CLARIFY-Q2/B: no errors on page load).
-		setFormErrors({
-			slug_suffix: '',
-			label: '',
-			description: '',
-			category: '',
-		});
+		setFormErrors({ slug_suffix: '', label: '', description: '', category: '' });
 		if (savedAbility?.ability_slug) {
 			const slug = savedAbility.ability_slug;
 			setSlugSuffix(
@@ -296,19 +283,6 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		setInputSchemaRaw(inRaw);
 		setOutputSchemaRaw(outRaw);
 	}, [savedAbility]); // Only reset on ability load, not on every draft change
-
-	// Fetch registered MCP servers from REST endpoint on mount (Feature 016).
-	useEffect(() => {
-		apiFetch({ path: '/wpb-mcp-servers-list/v1/servers' })
-			.then((data) => {
-				setMcpAdapterAvailable(data.adapter_available);
-				setMcpServers(data.servers ?? []);
-			})
-			.catch(() => {
-				setMcpServersError(true);
-				setMcpServers([]);
-			});
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// ---------------------------------------------------------------------------
 	// Patch helpers
@@ -386,7 +360,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		if ('create' !== mode && 'edit' !== mode) {
 			return;
 		}
-		if (isNonDb && isEdit) {
+		if ( isNonDb && isEdit ) {
 			return;
 		}
 		setFormErrors((prev) => ({
@@ -400,7 +374,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		if ('create' !== mode && 'edit' !== mode) {
 			return;
 		}
-		if (isNonDb && isEdit) {
+		if ( isNonDb && isEdit ) {
 			return;
 		}
 		setFormErrors((prev) => ({
@@ -414,7 +388,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		if ('create' !== mode && 'edit' !== mode) {
 			return;
 		}
-		if (isNonDb && isEdit) {
+		if ( isNonDb && isEdit ) {
 			return;
 		}
 		setFormErrors((prev) => ({
@@ -428,7 +402,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		if ('create' !== mode && 'edit' !== mode) {
 			return;
 		}
-		if (isNonDb && isEdit) {
+		if ( isNonDb && isEdit ) {
 			return;
 		}
 		setFormErrors((prev) => ({
@@ -445,7 +419,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 	async function handleSave(forceDraft = false) {
 		// Required-field gate — applies to ALL save paths in create/edit mode,
 		// including forceDraft=true (CLARIFY-Q5/A: no bypass).
-		if (('create' === mode || 'edit' === mode) && !isNonDb) {
+		if ( ( 'create' === mode || 'edit' === mode ) && ! isNonDb ) {
 			const errors = validateRequiredFields(draftAbility, slugSuffix);
 			setFormErrors(errors);
 			if (Object.values(errors).some(Boolean)) {
@@ -477,20 +451,20 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		}
 
 		if ('edit' === mode) {
-			if (isNonDb) {
+			if ( isNonDb ) {
 				// Non-db: send only overridable fields (never identity)
 				const overrideData = {
-					label: data.label,
-					description: data.description,
-					category: data.category,
+					label:        data.label,
+					description:  data.description,
+					category:     data.category,
 					site_allowed: data.site_allowed,
 					show_in_rest: data.show_in_rest,
-					show_in_mcp: data.show_in_mcp,
-					mcp_type: data.mcp_type,
-					mcp_servers: data.mcp_servers,
-					readonly: data.readonly,
-					destructive: data.destructive,
-					idempotent: data.idempotent,
+					show_in_mcp:  data.show_in_mcp,
+					mcp_type:     data.mcp_type,
+					mcp_servers:  data.mcp_servers,
+					readonly:     data.readonly,
+					destructive:  data.destructive,
+					idempotent:   data.idempotent,
 				};
 				await dispatch.updateAbility(slug, overrideData);
 			} else {
@@ -532,51 +506,27 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		dispatch.setView('list');
 	}
 
-	// Feature 016: MCP server checkbox toggle handlers.
-	// Uses patch() (the useCallback-wrapped dispatch.updateDraft) -- NOT raw dispatch().
-	function handleServerToggle(serverId) {
-		const current = Array.isArray(draftAbility.mcp_servers)
-			? draftAbility.mcp_servers
-			: [];
-		const next = current.includes(serverId)
-			? current.filter((id) => id !== serverId)
-			: [...current, serverId];
-		patch({ mcp_servers: next.length === 0 ? null : next });
-	}
-
-	function handleAllServersToggle() {
-		patch({ mcp_servers: null });
-	}
-
 	// ---------------------------------------------------------------------------
 	// Derived state
 	// ---------------------------------------------------------------------------
-	// Feature 016: precompute stale-ID union for Allowed Servers checkbox list.
-	const mcpSavedIds = Array.isArray(draftAbility.mcp_servers)
-		? draftAbility.mcp_servers
-		: [];
-	const mcpFetchedIds = (mcpServers ?? []).map((s) => s.id);
-	const mcpStaleIds = mcpSavedIds.filter((id) => !mcpFetchedIds.includes(id));
-	const mcpAllItems = [
-		...(mcpServers ?? []),
-		...mcpStaleIds.map((id) => ({ id, name: id, stale: true })),
-	];
 	const breadcrumbSlug =
 		savedAbility?.ability_slug ||
 		__('Add New', 'acrossai-abilities-manager');
 	const isCreate = 'create' === mode;
-	const isEdit = 'edit' === mode;
+	const isEdit   = 'edit' === mode;
 	// isNonDb: ability is from plugin/theme/core (non-db source).
-	const isNonDb = !!(savedAbility && 'db' !== savedAbility.source);
+	const isNonDb  = !! ( savedAbility && 'db' !== savedAbility.source );
 
 	// True when any required field is missing — used for CSS-only button dimming.
 	// Always false for non-db abilities (isNonDb=true): identity comes from registry.
 	const hasRequiredErrors =
-		isCreate || (isEdit && !isNonDb)
-			? !slugSuffix.trim() ||
+		( isCreate || ( isEdit && ! isNonDb ) )
+			? (
+				!slugSuffix.trim() ||
 				!(draftAbility.label || '').trim() ||
 				!(draftAbility.description || '').trim() ||
 				!(draftAbility.category || '').trim()
+			  )
 			: false;
 
 	// Save button label (non-db abilities show 'Actions')
@@ -621,16 +571,11 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							__('Edit Ability', 'acrossai-abilities-manager')}
 						{(isEdit || isNonDb) && savedAbility && (
 							<span className="h1-meta">
-								<SourceBadge
-									source={savedAbility.source || 'db'}
-								/>
+								<SourceBadge source={savedAbility.source || 'db'} />
 								{isDirty && (
 									<span className="unsaved">
 										<span className="udot" />
-										{__(
-											'Unsaved changes',
-											'acrossai-abilities-manager'
-										)}
+										{__('Unsaved changes', 'acrossai-abilities-manager')}
 									</span>
 								)}
 							</span>
@@ -648,11 +593,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 					<button
 						type="button"
 						className="button button-primary"
-						style={
-							hasRequiredErrors
-								? { opacity: 0.5, pointerEvents: 'none' }
-								: undefined
-						}
+						style={hasRequiredErrors ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
 						aria-disabled={hasRequiredErrors}
 						disabled={isSaving || (!isCreate && !isDirty)}
 						onClick={() => handleSave(false)}
@@ -678,10 +619,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 					{__('Identity defined by', 'acrossai-abilities-manager')}{' '}
 					<strong>
 						{savedAbility.provider ||
-							__(
-								'an external source',
-								'acrossai-abilities-manager'
-							)}
+							__('an external source', 'acrossai-abilities-manager')}
 					</strong>
 					{' — '}
 					{__(
@@ -704,313 +642,246 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 				<div className="form-main">
 					{/* ——— Unified panel ——— */}
 					<div className="panel">
+
 						{/* ── VARIANT A: Section 1 — Identity ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
 									<span className="sect-num">1</span>
-									{__(
-										'Identity',
-										'acrossai-abilities-manager'
-									)}
-								</div>
-								<div className="sect-desc">
-									{__(
-										"What this ability is called and how it's looked up across REST routes and MCP manifests.",
-										'acrossai-abilities-manager'
-									)}
-								</div>
-							</div>
-
-							{/* Slug */}
-							<div className="fr">
-								<label
-									htmlFor="ability-slug-suffix"
-									className="fl"
-								>
-									{__('Slug', 'acrossai-abilities-manager')}
-									<span className="req"> *</span>
-								</label>
-								<div className="ff">
-									<div className="pxwrap">
-										<div className="pxtxt">
-											{SLUG_PREFIX}
-										</div>
-										<input
-											id="ability-slug-suffix"
-											type="text"
-											className="pxinp"
-											value={slugSuffix}
-											placeholder={__(
-												'my-ability-name',
-												'acrossai-abilities-manager'
-											)}
-											onChange={handleSlugChange}
-											onBlur={handleSlugBlur}
-											readOnly={!isCreate}
-										/>
+									{__('Identity', 'acrossai-abilities-manager')}
 									</div>
-									{slugError && (
-										<div className="field-error">
-											{slugError}
+									<div className="sect-desc">
+										{__(
+											'What this ability is called and how it\'s looked up across REST routes and MCP manifests.',
+											'acrossai-abilities-manager'
+										)}
+									</div>
+								</div>
+
+								{/* Slug */}
+								<div className="fr">
+									<label htmlFor="ability-slug-suffix" className="fl">
+										{__('Slug', 'acrossai-abilities-manager')}
+										<span className="req"> *</span>
+									</label>
+									<div className="ff">
+										<div className="pxwrap">
+											<div className="pxtxt">
+												{SLUG_PREFIX}
+											</div>
+											<input
+												id="ability-slug-suffix"
+												type="text"
+												className="pxinp"
+												value={slugSuffix}
+												placeholder={__(
+													'my-ability-name',
+													'acrossai-abilities-manager'
+												)}
+												onChange={handleSlugChange}
+												onBlur={handleSlugBlur}
+												readOnly={!isCreate}
+											/>
 										</div>
-									)}
-									{('create' === mode || 'edit' === mode) &&
-										formErrors.slug_suffix && (
-											<div
-												className="field-error"
-												role="alert"
-												aria-live="polite"
-											>
+										{slugError && (
+											<div className="field-error">
+												{slugError}
+											</div>
+										)}
+										{('create' === mode || 'edit' === mode) && formErrors.slug_suffix && (
+											<div className="field-error" role="alert" aria-live="polite">
 												{formErrors.slug_suffix}
 											</div>
 										)}
-									<div className="desc">
-										{__(
-											'Lowercase letters, numbers, and dashes only.',
-											'acrossai-abilities-manager'
-										)}
+										<div className="desc">
+											{__(
+												'Lowercase letters, numbers, and dashes only.',
+												'acrossai-abilities-manager'
+											)}
+										</div>
 									</div>
 								</div>
-							</div>
 
-							{/* Label */}
-							<div className="fr">
-								<label htmlFor="ability-label" className="fl">
-									{__('Label', 'acrossai-abilities-manager')}
-									<span className="req"> *</span>
-								</label>
-								<div className="ff">
-									<input
-										id="ability-label"
-										type="text"
-										className="ri"
-										placeholder={__(
-											'e.g. Summarize Post',
-											'acrossai-abilities-manager'
-										)}
-										value={draftAbility.label || ''}
-										onChange={(e) => {
-											patch({ label: e.target.value });
-											if (e.target.value.trim())
-												setFormErrors((prev) => ({
-													...prev,
-													label: '',
-												}));
-										}}
-										onBlur={handleLabelBlur}
-									/>
-									{('create' === mode || 'edit' === mode) &&
-										formErrors.label && (
-											<div
-												className="field-error"
-												role="alert"
-												aria-live="polite"
-											>
+								{/* Label */}
+								<div className="fr">
+									<label htmlFor="ability-label" className="fl">
+										{__('Label', 'acrossai-abilities-manager')}
+										<span className="req"> *</span>
+									</label>
+									<div className="ff">
+										<input
+											id="ability-label"
+											type="text"
+											className="ri"
+											placeholder={__(
+												'e.g. Summarize Post',
+												'acrossai-abilities-manager'
+											)}
+											value={draftAbility.label || ''}
+											onChange={(e) => {
+												patch({ label: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, label: '' }));
+											}}
+											onBlur={handleLabelBlur}
+										/>
+										{('create' === mode || 'edit' === mode) && formErrors.label && (
+											<div className="field-error" role="alert" aria-live="polite">
 												{formErrors.label}
 											</div>
 										)}
+										{isNonDb && (
+											<div className="desc">
+												{`${__('Default declares as:', 'acrossai-abilities-manager')} ${savedAbility?._registry?.label ?? __('not set', 'acrossai-abilities-manager')}`}
+											</div>
+										)}
+									</div>
 								</div>
-							</div>
 
-							{/* Category */}
-							<div className="fr">
-								<label
-									htmlFor="ability-category"
-									className="fl"
-								>
-									{__(
-										'Category',
-										'acrossai-abilities-manager'
-									)}
-									<span className="req"> *</span>
-								</label>
-								<div className="ff">
-									<select
-										id="ability-category"
-										className="rs"
-										style={{ maxWidth: '280px' }}
-										value={draftAbility.category || ''}
-										onChange={(e) => {
-											patch({ category: e.target.value });
-											if (e.target.value.trim())
-												setFormErrors((prev) => ({
-													...prev,
-													category: '',
-												}));
-										}}
-										onBlur={handleCategoryBlur}
-									>
-										<option value="">
-											{__(
-												'— choose —',
-												'acrossai-abilities-manager'
-											)}
-										</option>
-										{categories.map((cat) => (
-											<option
-												key={cat.slug}
-												value={cat.slug}
-											>
-												{cat.label || cat.slug}
+								{/* Category */}
+								<div className="fr">
+									<label htmlFor="ability-category" className="fl">
+										{__('Category', 'acrossai-abilities-manager')}
+										<span className="req"> *</span>
+									</label>
+									<div className="ff">
+										<select
+											id="ability-category"
+											className="rs"
+											style={{ maxWidth: '280px' }}
+											value={draftAbility.category || ''}
+											onChange={(e) => {
+												patch({ category: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, category: '' }));
+											}}
+											onBlur={handleCategoryBlur}
+										>
+											<option value="">
+												{__('— choose —', 'acrossai-abilities-manager')}
 											</option>
-										))}
-									</select>
-									{('create' === mode || 'edit' === mode) &&
-										formErrors.category && (
-											<div
-												className="field-error"
-												role="alert"
-												aria-live="polite"
-											>
+											{categories.map((cat) => (
+												<option key={cat.slug} value={cat.slug}>
+													{cat.label || cat.slug}
+												</option>
+											))}
+										</select>
+										{('create' === mode || 'edit' === mode) && formErrors.category && (
+											<div className="field-error" role="alert" aria-live="polite">
 												{formErrors.category}
 											</div>
 										)}
-								</div>
-							</div>
-
-							{/* Description */}
-							<div className="fr">
-								<label
-									htmlFor="ability-description"
-									className="fl"
-								>
-									{__(
-										'Description',
-										'acrossai-abilities-manager'
-									)}
-									<span className="req"> *</span>
-								</label>
-								<div className="ff">
-									<textarea
-										id="ability-description"
-										className="rt"
-										rows="3"
-										maxLength={1000}
-										placeholder={__(
-											'Describe what this ability does. This will appear to AI agents during discovery.',
-											'acrossai-abilities-manager'
+										{isNonDb && (
+											<div className="desc">
+												{`${__('Default declares as:', 'acrossai-abilities-manager')} ${savedAbility?._registry?.category ?? __('not set', 'acrossai-abilities-manager')}`}
+											</div>
 										)}
-										value={draftAbility.description || ''}
-										onChange={(e) => {
-											patch({
-												description: e.target.value,
-											});
-											if (e.target.value.trim())
-												setFormErrors((prev) => ({
-													...prev,
-													description: '',
-												}));
-										}}
-										onBlur={handleDescriptionBlur}
-									/>
-									{('create' === mode || 'edit' === mode) &&
-										formErrors.description && (
-											<div
-												className="field-error"
-												role="alert"
-												aria-live="polite"
-											>
+									</div>
+								</div>
+
+								{/* Description */}
+								<div className="fr">
+									<label htmlFor="ability-description" className="fl">
+										{__('Description', 'acrossai-abilities-manager')}
+										<span className="req"> *</span>
+									</label>
+									<div className="ff">
+										<textarea
+											id="ability-description"
+											className="rt"
+											rows="3"
+											maxLength={1000}
+											placeholder={__(
+												'Describe what this ability does. This will appear to AI agents during discovery.',
+												'acrossai-abilities-manager'
+											)}
+											value={draftAbility.description || ''}
+											onChange={(e) => {
+												patch({ description: e.target.value });
+												if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, description: '' }));
+											}}
+											onBlur={handleDescriptionBlur}
+										/>
+										{('create' === mode || 'edit' === mode) && formErrors.description && (
+											<div className="field-error" role="alert" aria-live="polite">
 												{formErrors.description}
 											</div>
 										)}
+										{isNonDb && (
+											<div className="desc">
+												{`${__('Default declares as:', 'acrossai-abilities-manager')} ${savedAbility?._registry?.description ?? __('not set', 'acrossai-abilities-manager')}`}
+											</div>
+										)}
+									</div>
 								</div>
-							</div>
 
-							{/* Status (publish/draft) */}
-							<div className="fr">
-								<label htmlFor="ability-status" className="fl">
-									{__('Status', 'acrossai-abilities-manager')}
-								</label>
-								<div className="ff">
-									{isNonDb ? (
-										<div className="togrow">
-											<span className="toglbl">
-												<strong>
+								{/* Status (publish/draft) — db abilities only */}
+								{!isNonDb && (
+								<div className="fr">
+									<label htmlFor="ability-status" className="fl">
+										{__('Status', 'acrossai-abilities-manager')}
+									</label>
+									<div className="ff">
+											<>
+												<div className="togrow">
+													<button
+														type="button"
+														id="ability-status"
+														role="switch"
+														aria-checked={
+															'draft' !== (draftAbility.status ?? 'publish')
+																? 'true'
+																: 'false'
+														}
+														className={`wptog${
+															'draft' !== (draftAbility.status ?? 'publish')
+																? ' on'
+																: ''
+														}`}
+														onClick={() =>
+															patch({
+																status:
+																	'draft' !== (draftAbility.status ?? 'publish')
+																		? 'draft'
+																		: 'publish',
+															})
+														}
+													/>
+													<span className="toglbl">
+														{'draft' !== (draftAbility.status ?? 'publish') ? (
+															<>
+																<strong>
+																	{__('Published', 'acrossai-abilities-manager')}
+																</strong>
+																{' — '}
+																{__(
+																	'registered on every page load',
+																	'acrossai-abilities-manager'
+																)}
+															</>
+														) : (
+															<>
+																<strong>
+																	{__('Draft', 'acrossai-abilities-manager')}
+																</strong>
+																{' — '}
+																{__(
+																	'saved but not registered',
+																	'acrossai-abilities-manager'
+																)}
+															</>
+														)}
+													</span>
+												</div>
+												<div className="desc">
 													{__(
-														'Published',
+														'When draft, the ability is saved but not registered with WordPress on each request.',
 														'acrossai-abilities-manager'
 													)}
-												</strong>
-											</span>
-										</div>
-									) : (
-										<>
-											<div className="togrow">
-												<button
-													type="button"
-													id="ability-status"
-													role="switch"
-													aria-checked={
-														'draft' !==
-														(draftAbility.status ??
-															'publish')
-															? 'true'
-															: 'false'
-													}
-													className={`wptog${
-														'draft' !==
-														(draftAbility.status ??
-															'publish')
-															? ' on'
-															: ''
-													}`}
-													onClick={() =>
-														patch({
-															status:
-																'draft' !==
-																(draftAbility.status ??
-																	'publish')
-																	? 'draft'
-																	: 'publish',
-														})
-													}
-												/>
-												<span className="toglbl">
-													{'draft' !==
-													(draftAbility.status ??
-														'publish') ? (
-														<>
-															<strong>
-																{__(
-																	'Published',
-																	'acrossai-abilities-manager'
-																)}
-															</strong>
-															{' — '}
-															{__(
-																'registered on every page load',
-																'acrossai-abilities-manager'
-															)}
-														</>
-													) : (
-														<>
-															<strong>
-																{__(
-																	'Draft',
-																	'acrossai-abilities-manager'
-																)}
-															</strong>
-															{' — '}
-															{__(
-																'saved but not registered',
-																'acrossai-abilities-manager'
-															)}
-														</>
-													)}
-												</span>
-											</div>
-											<div className="desc">
-												{__(
-													'When draft, the ability is saved but not registered with WordPress on each request.',
-													'acrossai-abilities-manager'
-												)}
-											</div>
-										</>
-									)}
+												</div>
+											</>
+									</div>
 								</div>
+								)}
 							</div>
-						</div>
 
 						{/* ── VARIANT B: Section 2 — Site Permission ── */}
 						{isNonDb && (
@@ -1018,10 +889,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								<div className="sect-hdr">
 									<div className="sect-title">
 										<span className="sect-num">2</span>
-										{__(
-											'Site Permission',
-											'acrossai-abilities-manager'
-										)}
+										{__('Site Permission', 'acrossai-abilities-manager')}
 									</div>
 									<div className="sect-desc">
 										{__(
@@ -1032,27 +900,19 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								</div>
 								<div className="fr">
 									<label className="fl">
-										{__(
-											'Site Access',
-											'acrossai-abilities-manager'
-										)}
+										{__('Site Access', 'acrossai-abilities-manager')}
 									</label>
 									<div className="ff">
 										<SitePermissionTGC
 											value={draftAbility.site_allowed}
-											onChange={(v) =>
-												patch({ site_allowed: v })
-											}
+											onChange={(v) => patch({ site_allowed: v })}
 										/>
 										<div className="desc">
 											<strong>
-												{__(
-													'Inherit',
-													'acrossai-abilities-manager'
-												)}
+												{__('Inherit', 'acrossai-abilities-manager')}
 											</strong>{' '}
 											{__(
-												"respects the plugin's own setting. Force Allow/Block override regardless.",
+												'respects the plugin\'s own setting. Force Allow/Block override regardless.',
 												'acrossai-abilities-manager'
 											)}
 										</div>
@@ -1061,582 +921,298 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							</div>
 						)}
 
-						{/* ── Section 3 — MCP Exposure ── */}
+						{/* ── Section 2 (A) / Section 3 (B) — MCP Exposure ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
-									<span className="sect-num">3</span>
+									<span className="sect-num">
+										{isNonDb ? '3' : '2'}
+									</span>
 									{isNonDb
-										? __(
-												'MCP Exposure',
-												'acrossai-abilities-manager'
-											)
-										: __(
-												'MCP Exposure',
-												'acrossai-abilities-manager'
-											)}
+										? __('MCP Exposure', 'acrossai-abilities-manager')
+										: __('MCP Exposure', 'acrossai-abilities-manager')}
 								</div>
 								<div className="sect-desc">
 									{isNonDb
 										? __(
-												'Override how this ability appears to MCP clients. Leave as "inherit" to use the plugin\'s declared values.',
-												'acrossai-abilities-manager'
-											)
+											'Override how this ability appears to MCP clients. Leave as "inherit" to use the plugin\'s declared values.',
+											'acrossai-abilities-manager'
+										  )
 										: __(
-												'How this ability appears to MCP clients.',
-												'acrossai-abilities-manager'
-											)}
+											'How this ability appears to MCP clients.',
+											'acrossai-abilities-manager'
+										  )}
 								</div>
 							</div>
 
 							{/* Show in MCP */}
 							<TriChips
-								label={__(
-									'Show in MCP',
-									'acrossai-abilities-manager'
-								)}
+								label={__('Show in MCP', 'acrossai-abilities-manager')}
 								value={draftAbility.show_in_mcp ?? null}
 								onChange={(v) => patch({ show_in_mcp: v })}
 								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: true,
-										label: __(
-											'enable',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: false,
-										label: __(
-											'disable',
-											'acrossai-abilities-manager'
-										),
-									},
+									{ value: null,  label: __('default', 'acrossai-abilities-manager') },
+									{ value: true,  label: __('enable',  'acrossai-abilities-manager') },
+									{ value: false, label: __('disable', 'acrossai-abilities-manager') },
 								]}
 								hint={
-									isNonDb &&
-									null !== savedAbility?.show_in_mcp
-										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility.show_in_mcp ? 'yes' : 'no'}`
+									isNonDb
+										? `${__('Default declares as:', 'acrossai-abilities-manager')} ${null == savedAbility?._registry?.show_in_mcp ? __('not set', 'acrossai-abilities-manager') : (true === savedAbility._registry.show_in_mcp ? 'yes' : 'no')}`
 										: null
 								}
 							/>
 
 							{/* MCP Type */}
 							<TriChips
-								label={__(
-									'MCP Type',
-									'acrossai-abilities-manager'
-								)}
+								label={__('MCP Type', 'acrossai-abilities-manager')}
 								value={draftAbility.mcp_type ?? null}
 								onChange={(v) => patch({ mcp_type: v })}
 								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{ value: 'tool', label: 'tool' },
+									{ value: null,       label: __('default',  'acrossai-abilities-manager') },
+									{ value: 'tool',     label: 'tool'     },
 									{ value: 'resource', label: 'resource' },
-									{ value: 'prompt', label: 'prompt' },
+									{ value: 'prompt',   label: 'prompt'   },
 								]}
 								hint={
-									isNonDb && savedAbility?.mcp_type
-										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${savedAbility.mcp_type}`
-										: null
+									isNonDb
+										? `${__('Default declares as:', 'acrossai-abilities-manager')} ${savedAbility?._registry?.mcp_type ?? __('not set', 'acrossai-abilities-manager')} · ${__('If \'Show in MCP\' is enabled and MCP Type is not set, it defaults to \'tool\'.', 'acrossai-abilities-manager')}`
+										: __('If \'Show in MCP\' is enabled and MCP Type is not set, it defaults to \'tool\'.', 'acrossai-abilities-manager')
 								}
 							/>
 
-							{/* Allowed Servers — Feature 016: checkbox list */}
+							{/* Allowed Servers */}
 							<div className="fr">
-								<span className="fl">
-									{__(
-										'Allowed Servers',
-										'acrossai-abilities-manager'
-									)}
-								</span>
+								<label htmlFor="mcp-servers" className="fl">
+									{__('Allowed Servers', 'acrossai-abilities-manager')}
+								</label>
 								<div className="ff">
-									{null === mcpServers && (
-										<span className="desc">
-											{__(
-												'Loading server list…',
-												'acrossai-abilities-manager'
-											)}
-										</span>
-									)}
-									{null !== mcpServers && mcpServersError && (
-										<>
-											<p className="notice notice-error inline-notice">
-												{__(
-													'Could not load server list. Please reload.',
-													'acrossai-abilities-manager'
-												)}
-											</p>
-											{Array.isArray(
-												draftAbility.mcp_servers
-											) &&
-												draftAbility.mcp_servers.map(
-													(id) => (
-														<label
-															key={id}
-															htmlFor={`mcp-server-stale-${id}`}
-															className="checkbox-item"
-														>
-															<input
-																id={`mcp-server-stale-${id}`}
-																type="checkbox"
-																checked={true}
-																onChange={() =>
-																	handleServerToggle(
-																		id
-																	)
-																}
-															/>
-															<span className="checkbox-label">
-																{id}
-															</span>
-															<span className="checkbox-sub desc">
-																{__(
-																	'(not registered)',
-																	'acrossai-abilities-manager'
-																)}
-															</span>
-														</label>
-													)
-												)}
-										</>
-									)}
-									{null !== mcpServers &&
-										!mcpServersError &&
-										!mcpAdapterAvailable && (
-											<p className="desc">
-												{__(
-													'MCP adapter is not active.',
-													'acrossai-abilities-manager'
-												)}
-											</p>
+									<input
+										id="mcp-servers"
+										type="text"
+										className="ri"
+										style={{ maxWidth: '220px' }}
+										value={
+											Array.isArray(draftAbility.mcp_servers)
+												? draftAbility.mcp_servers.join(', ')
+												: draftAbility.mcp_servers || '*'
+										}
+										onChange={(e) => {
+											const raw = e.target.value.trim();
+											if (!raw || '*' === raw) {
+												patch({ mcp_servers: null });
+											} else {
+												patch({
+													mcp_servers: raw
+														.split(',')
+														.map((s) => s.trim())
+														.filter(Boolean),
+												});
+											}
+										}}
+									/>
+									<div className="desc">
+										<code>*</code>
+										{' '}
+										{__(
+											'= all servers. Comma-separate server IDs to restrict.',
+											'acrossai-abilities-manager'
 										)}
-									{null !== mcpServers &&
-										!mcpServersError &&
-										mcpAdapterAvailable &&
-										0 === mcpServers.length && (
-											<p className="desc">
-												{__(
-													'No MCP servers registered yet.',
-													'acrossai-abilities-manager'
-												)}
-											</p>
-										)}
-									{null !== mcpServers &&
-										!mcpServersError &&
-										mcpAdapterAvailable &&
-										mcpServers.length > 0 && (
-											<>
-												<label
-													htmlFor="mcp-server-all"
-													className="checkbox-item"
-												>
-													<input
-														id="mcp-server-all"
-														type="checkbox"
-														checked={
-															null ===
-															draftAbility.mcp_servers
-														}
-														onChange={
-															handleAllServersToggle
-														}
-													/>
-													<span className="checkbox-label">
-														{__(
-															'All servers (default)',
-															'acrossai-abilities-manager'
-														)}
-													</span>
-												</label>
-												{mcpAllItems.map((server) => (
-													<label
-														key={server.id}
-														htmlFor={`mcp-server-${server.id}`}
-														className="checkbox-item"
-													>
-														<input
-															id={`mcp-server-${server.id}`}
-															type="checkbox"
-															checked={
-																Array.isArray(
-																	draftAbility.mcp_servers
-																) &&
-																draftAbility.mcp_servers.includes(
-																	server.id
-																)
-															}
-															onChange={() =>
-																handleServerToggle(
-																	server.id
-																)
-															}
-														/>
-														<span className="checkbox-label">
-															{server.name}
-														</span>
-														<span className="checkbox-sub desc">
-															{server.stale
-																? __(
-																		'(not registered)',
-																		'acrossai-abilities-manager'
-																	)
-																: server.id}
-														</span>
-													</label>
-												))}
-											</>
-										)}
-									{isNonDb && (
-										<p className="field-hint">
-											{savedAbility?._registry
-												?.mcp_servers !== undefined
-												? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${JSON.stringify(savedAbility._registry.mcp_servers)}`
-												: `${__('Plugin declares:', 'acrossai-abilities-manager')} ${__('not set', 'acrossai-abilities-manager')}`}
-										</p>
-									)}
+									</div>
 								</div>
 							</div>
 						</div>
 
-						{/* ── Section 4 — Annotations ── */}
+						{/* ── Section 3 (A) / Section 4 (B) — Annotations ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
-									<span className="sect-num">4</span>
+									<span className="sect-num">
+										{isNonDb ? '4' : '3'}
+									</span>
 									{isNonDb
-										? __(
-												'Annotation Overrides',
-												'acrossai-abilities-manager'
-											)
-										: __(
-												'Annotations',
-												'acrossai-abilities-manager'
-											)}
+										? __('Annotation Overrides', 'acrossai-abilities-manager')
+										: __('Annotations', 'acrossai-abilities-manager')}
 								</div>
 								<div className="sect-desc">
 									{isNonDb
 										? __(
-												"inherit defers to the plugin's declared value; yes/no force the annotation regardless.",
-												'acrossai-abilities-manager'
-											)
+											'inherit defers to the plugin\'s declared value; yes/no force the annotation regardless.',
+											'acrossai-abilities-manager'
+										  )
 										: __(
-												"Tri-state metadata hints for MCP clients. inherit defers to the callback type's default.",
-												'acrossai-abilities-manager'
-											)}
+											'Tri-state metadata hints for MCP clients. inherit defers to the callback type\'s default.',
+											'acrossai-abilities-manager'
+										  )}
 								</div>
 							</div>
 
 							<TriChips
-								label={__(
-									'Readonly',
-									'acrossai-abilities-manager'
-								)}
+								label={__('Readonly', 'acrossai-abilities-manager')}
 								value={draftAbility.readonly ?? null}
 								onChange={(v) => patch({ readonly: v })}
 								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: true,
-										label: __(
-											'yes',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: false,
-										label: __(
-											'no',
-											'acrossai-abilities-manager'
-										),
-									},
+									{ value: null,  label: __('default', 'acrossai-abilities-manager') },
+									{ value: true,  label: __('yes',     'acrossai-abilities-manager') },
+									{ value: false, label: __('no',      'acrossai-abilities-manager') },
 								]}
 								hint={
-									isNonDb && null !== savedAbility?.readonly
-										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility.readonly ? 'yes' : 'no'}`
-										: __(
-												'Does this ability mutate state?',
-												'acrossai-abilities-manager'
-											)
+									isNonDb
+										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${null == savedAbility?._registry?.readonly ? __('not set', 'acrossai-abilities-manager') : (true === savedAbility._registry.readonly ? 'yes' : 'no')}`
+										: __('Does this ability mutate state?', 'acrossai-abilities-manager')
 								}
 							/>
 							<TriChips
-								label={__(
-									'Destructive',
-									'acrossai-abilities-manager'
-								)}
+								label={__('Destructive', 'acrossai-abilities-manager')}
 								value={draftAbility.destructive ?? null}
 								onChange={(v) => patch({ destructive: v })}
 								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: true,
-										label: __(
-											'yes',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: false,
-										label: __(
-											'no',
-											'acrossai-abilities-manager'
-										),
-									},
+									{ value: null,  label: __('default', 'acrossai-abilities-manager') },
+									{ value: true,  label: __('yes',     'acrossai-abilities-manager') },
+									{ value: false, label: __('no',      'acrossai-abilities-manager') },
 								]}
 								hint={
-									isNonDb &&
-									null !== savedAbility?.destructive
-										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility.destructive ? 'yes' : 'no'}`
-										: __(
-												'Can data be permanently lost?',
-												'acrossai-abilities-manager'
-											)
+									isNonDb
+										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${null == savedAbility?._registry?.destructive ? __('not set', 'acrossai-abilities-manager') : (true === savedAbility._registry.destructive ? 'yes' : 'no')}`
+										: __('Can data be permanently lost?', 'acrossai-abilities-manager')
 								}
 							/>
 							<TriChips
-								label={__(
-									'Idempotent',
-									'acrossai-abilities-manager'
-								)}
+								label={__('Idempotent', 'acrossai-abilities-manager')}
 								value={draftAbility.idempotent ?? null}
 								onChange={(v) => patch({ idempotent: v })}
 								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: true,
-										label: __(
-											'yes',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: false,
-										label: __(
-											'no',
-											'acrossai-abilities-manager'
-										),
-									},
+									{ value: null,  label: __('default', 'acrossai-abilities-manager') },
+									{ value: true,  label: __('yes',     'acrossai-abilities-manager') },
+									{ value: false, label: __('no',      'acrossai-abilities-manager') },
 								]}
 								hint={
-									isNonDb && null !== savedAbility?.idempotent
-										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility.idempotent ? 'yes' : 'no'}`
-										: __(
-												'Safe to call multiple times with the same input?',
-												'acrossai-abilities-manager'
-											)
+									isNonDb
+										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${null == savedAbility?._registry?.idempotent ? __('not set', 'acrossai-abilities-manager') : (true === savedAbility._registry.idempotent ? 'yes' : 'no')}`
+										: __('Safe to call multiple times with the same input?', 'acrossai-abilities-manager')
 								}
 							/>
 							{isNonDb && (
 								<TriChips
-									label={__(
-										'Show in REST',
-										'acrossai-abilities-manager'
-									)}
+									label={__('Show in REST', 'acrossai-abilities-manager')}
 									value={draftAbility.show_in_rest ?? null}
 									onChange={(v) => patch({ show_in_rest: v })}
 									options={[
-										{
-											value: null,
-											label: __(
-												'default',
-												'acrossai-abilities-manager'
-											),
-										},
-										{
-											value: true,
-											label: __(
-												'yes',
-												'acrossai-abilities-manager'
-											),
-										},
-										{
-											value: false,
-											label: __(
-												'no',
-												'acrossai-abilities-manager'
-											),
-										},
+										{ value: null,  label: __('default', 'acrossai-abilities-manager') },
+										{ value: true,  label: __('yes',     'acrossai-abilities-manager') },
+										{ value: false, label: __('no',      'acrossai-abilities-manager') },
 									]}
 									hint={
-										null !== savedAbility?.show_in_rest
-											? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility.show_in_rest ? 'yes' : 'no'}`
-											: null
+										`${__('Plugin declares:', 'acrossai-abilities-manager')} ${null == savedAbility?._registry?.show_in_rest ? __('not set', 'acrossai-abilities-manager') : (true === savedAbility._registry.show_in_rest ? 'yes' : 'no')}`
 									}
 								/>
 							)}
 						</div>
-						{/* ── VARIANT A: Section 5 — Callback ── */}
+
+						{/* ── Section 4 (A) / Section 5 (B) — Callback ── */}
 						<div className="sect">
-							<div className="sect-hdr">
-								<div className="sect-title">
-									<span className="sect-num">5</span>
-									{__(
-										'Callback',
-										'acrossai-abilities-manager'
-									)}
+								<div className="sect-hdr">
+									<div className="sect-title">
+										<span className="sect-num">{isNonDb ? '5' : '4'}</span>
+										{__('Callback', 'acrossai-abilities-manager')}
+									</div>
+									<div className="sect-desc">
+										{__(
+											'How this ability resolves at runtime.',
+											'acrossai-abilities-manager'
+										)}
+									</div>
 								</div>
-								<div className="sect-desc">
-									{__(
-										'How this ability resolves at runtime.',
-										'acrossai-abilities-manager'
-									)}
-								</div>
-							</div>
-							<div className="fr">
-								<label className="fl">
-									{__('Type', 'acrossai-abilities-manager')}
-									{!isNonDb && (
-										<span className="req"> *</span>
-									)}
-								</label>
-								<div className="ff">
-									{isNonDb ? (
-										<>
-											<div className="chips">
-												{CALLBACK_CHIPS.map((chip) => (
+								<div className="fr">
+									<label className="fl">
+										{__('Type', 'acrossai-abilities-manager')}
+										{! isNonDb && <span className="req"> *</span>}
+									</label>
+									<div className="ff">
+										{isNonDb ? (
+											<>
+												<div className="chips">
+													{CALLBACK_CHIPS.map((chip) => (
+														<button
+															key={chip.value}
+															type="button"
+															className={`chip${chip.value === draftAbility.callback_type ? ' on' : ''}`}
+															onClick={() =>
+																patch({
+																	callback_type: chip.value,
+																	callback_config: {},
+																})
+															}
+														>
+															{chip.label}
+														</button>
+													))}
 													<button
-														key={chip.value}
 														type="button"
-														className={`chip${chip.value === draftAbility.callback_type ? ' on' : ''}`}
+														className={`chip${! draftAbility.callback_type ? ' on' : ''}`}
 														onClick={() =>
 															patch({
-																callback_type:
-																	chip.value,
-																callback_config:
-																	{},
+																callback_type: null,
+																callback_config: {},
 															})
 														}
 													>
-														{chip.label}
+														{__('Keep as default', 'acrossai-abilities-manager')}
 													</button>
-												))}
-												<button
-													type="button"
-													className={`chip${!draftAbility.callback_type ? ' on' : ''}`}
-													onClick={() =>
+												</div>
+												{draftAbility.callback_type && (
+													<CallbackConfigField
+														callbackType={draftAbility.callback_type}
+														config={callbackConfig}
+														onChange={(cfg) =>
+															patch({ callback_config: cfg })
+														}
+													/>
+												)}
+												{savedAbility?._registry?.callback_type && (
+													<div className="desc">
+														{__('Registered type', 'acrossai-abilities-manager')}
+														{': '}
+														<code>{savedAbility._registry.callback_type}</code>
+													</div>
+												)}
+											</>
+										) : (
+											<>
+												<CallbackTypeChips
+													value={callbackType}
+													onChange={(type) =>
 														patch({
-															callback_type: null,
+															callback_type: type,
 															callback_config: {},
 														})
 													}
-												>
-													{__(
-														'Keep as default',
-														'acrossai-abilities-manager'
-													)}
-												</button>
-											</div>
-											{draftAbility.callback_type && (
+												/>
 												<CallbackConfigField
-													callbackType={
-														draftAbility.callback_type
-													}
+													callbackType={callbackType}
 													config={callbackConfig}
 													onChange={(cfg) =>
-														patch({
-															callback_config:
-																cfg,
-														})
+														patch({ callback_config: cfg })
 													}
 												/>
-											)}
-											{savedAbility?._registry
-												?.callback_type && (
-												<div className="desc">
-													{__(
-														'Registered type',
-														'acrossai-abilities-manager'
-													)}
-													{': '}
-													<code>
-														{
-															savedAbility
-																._registry
-																.callback_type
-														}
-													</code>
-												</div>
-											)}
-										</>
-									) : (
-										<>
-											<CallbackTypeChips
-												value={callbackType}
-												onChange={(type) =>
-													patch({
-														callback_type: type,
-														callback_config: {},
-													})
-												}
-											/>
-											<CallbackConfigField
-												callbackType={callbackType}
-												config={callbackConfig}
-												onChange={(cfg) =>
-													patch({
-														callback_config: cfg,
-													})
-												}
-											/>
-										</>
-									)}
+											</>
+										)}
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{/* ── VARIANT A: Section 6 — Schema (optional) ── */}
+						{/* ── Section 5 (A) / Section 6 (B) — Schema (optional) ── */}
 						{(() => {
-							const regInput =
-								savedAbility?._registry?.input_schema ?? null;
-							const regOutput =
-								savedAbility?._registry?.output_schema ?? null;
+							const regInput = savedAbility?._registry?.input_schema ?? null;
+							const regOutput = savedAbility?._registry?.output_schema ?? null;
 							return (
 								<div className="sect">
 									<div className="sect-hdr">
 										<div className="sect-title">
-											<span className="sect-num">6</span>
-											{__(
-												'Schema',
-												'acrossai-abilities-manager'
-											)}
-											{!isNonDb && (
+											<span className="sect-num">{isNonDb ? '6' : '5'}</span>
+											{__('Schema', 'acrossai-abilities-manager')}
+											{! isNonDb && (
 												<span className="sect-opt">
-													{__(
-														'optional',
-														'acrossai-abilities-manager'
-													)}
+													{__('optional', 'acrossai-abilities-manager')}
 												</span>
 											)}
 										</div>
@@ -1652,52 +1228,32 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 										<>
 											<div className="fr">
 												<label className="fl">
-													{__(
-														'Input Schema',
-														'acrossai-abilities-manager'
-													)}
+													{__('Input Schema', 'acrossai-abilities-manager')}
 												</label>
 												<div className="ff">
 													{regInput !== null ? (
 														<pre className="rt code readonly-schema">
-															{JSON.stringify(
-																regInput,
-																null,
-																2
-															)}
+															{JSON.stringify(regInput, null, 2)}
 														</pre>
 													) : (
 														<span className="desc">
-															{__(
-																'Not defined',
-																'acrossai-abilities-manager'
-															)}
+															{__('Not defined', 'acrossai-abilities-manager')}
 														</span>
 													)}
 												</div>
 											</div>
 											<div className="fr">
 												<label className="fl">
-													{__(
-														'Output Schema',
-														'acrossai-abilities-manager'
-													)}
+													{__('Output Schema', 'acrossai-abilities-manager')}
 												</label>
 												<div className="ff">
 													{regOutput !== null ? (
 														<pre className="rt code readonly-schema">
-															{JSON.stringify(
-																regOutput,
-																null,
-																2
-															)}
+															{JSON.stringify(regOutput, null, 2)}
 														</pre>
 													) : (
 														<span className="desc">
-															{__(
-																'Not defined',
-																'acrossai-abilities-manager'
-															)}
+															{__('Not defined', 'acrossai-abilities-manager')}
 														</span>
 													)}
 												</div>
@@ -1706,14 +1262,8 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 									) : (
 										<>
 											<div className="fr">
-												<label
-													htmlFor="input-schema"
-													className="fl"
-												>
-													{__(
-														'Input Schema',
-														'acrossai-abilities-manager'
-													)}
+												<label htmlFor="input-schema" className="fl">
+													{__('Input Schema', 'acrossai-abilities-manager')}
 												</label>
 												<div className="ff">
 													<textarea
@@ -1722,13 +1272,9 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 														value={inputSchemaRaw}
 														placeholder='{ "param": { "type": "string" } }'
 														onChange={(e) =>
-															setInputSchemaRaw(
-																e.target.value
-															)
+															setInputSchemaRaw(e.target.value)
 														}
-														onBlur={
-															handleInputSchemaBlur
-														}
+														onBlur={handleInputSchemaBlur}
 													/>
 													{inputSchemaError && (
 														<div className="field-error">
@@ -1739,14 +1285,8 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 											</div>
 
 											<div className="fr">
-												<label
-													htmlFor="output-schema"
-													className="fl"
-												>
-													{__(
-														'Output Schema',
-														'acrossai-abilities-manager'
-													)}
+												<label htmlFor="output-schema" className="fl">
+													{__('Output Schema', 'acrossai-abilities-manager')}
 												</label>
 												<div className="ff">
 													<textarea
@@ -1755,13 +1295,9 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 														value={outputSchemaRaw}
 														placeholder='{ "result": { "type": "string" } }'
 														onChange={(e) =>
-															setOutputSchemaRaw(
-																e.target.value
-															)
+															setOutputSchemaRaw(e.target.value)
 														}
-														onBlur={
-															handleOutputSchemaBlur
-														}
+														onBlur={handleOutputSchemaBlur}
 													/>
 													{outputSchemaError && (
 														<div className="field-error">
@@ -1791,60 +1327,27 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{__('Publish', 'acrossai-abilities-manager')}
 							</div>
 							<div className="sbbody">
-								<div
-									style={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: '8px',
-									}}
-								>
+								<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 									<button
 										type="button"
 										className="button button-primary button-large"
-										style={
-											hasRequiredErrors
-												? {
-														width: '100%',
-														justifyContent:
-															'center',
-														opacity: 0.5,
-														pointerEvents: 'none',
-													}
-												: {
-														width: '100%',
-														justifyContent:
-															'center',
-													}
-										}
+										style={hasRequiredErrors ? { width: '100%', justifyContent: 'center', opacity: 0.5, pointerEvents: 'none' } : { width: '100%', justifyContent: 'center' }}
 										disabled={isSaving}
 										aria-disabled={hasRequiredErrors}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving
-											? __(
-													'Saving…',
-													'acrossai-abilities-manager'
-												)
-											: __(
-													'✓ Add Ability',
-													'acrossai-abilities-manager'
-												)}
+											? __('Saving…', 'acrossai-abilities-manager')
+											: __('✓ Add Ability', 'acrossai-abilities-manager')}
 									</button>
 									<button
 										type="button"
 										className="button"
-										style={{
-											width: '100%',
-											justifyContent: 'center',
-											fontSize: '12px',
-										}}
+										style={{ width: '100%', justifyContent: 'center', fontSize: '12px' }}
 										disabled={isSaving}
 										onClick={() => handleSave(true)}
 									>
-										{__(
-											'Save as Draft',
-											'acrossai-abilities-manager'
-										)}
+										{__('Save as Draft', 'acrossai-abilities-manager')}
 									</button>
 								</div>
 							</div>
@@ -1859,80 +1362,37 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{__('Update', 'acrossai-abilities-manager')}
 							</div>
 							<div className="sbbody">
-								<div
-									style={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: '8px',
-									}}
-								>
+								<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 									<button
 										type="button"
 										className="button button-primary button-large"
-										style={
-											hasRequiredErrors
-												? {
-														width: '100%',
-														justifyContent:
-															'center',
-														opacity: 0.5,
-														pointerEvents: 'none',
-													}
-												: {
-														width: '100%',
-														justifyContent:
-															'center',
-													}
-										}
+										style={hasRequiredErrors ? { width: '100%', justifyContent: 'center', opacity: 0.5, pointerEvents: 'none' } : { width: '100%', justifyContent: 'center' }}
 										disabled={isSaving || !isDirty}
 										aria-disabled={hasRequiredErrors}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving
-											? __(
-													'Saving…',
-													'acrossai-abilities-manager'
-												)
-											: __(
-													'✓ Save Changes',
-													'acrossai-abilities-manager'
-												)}
+											? __('Saving…', 'acrossai-abilities-manager')
+											: __('✓ Save Changes', 'acrossai-abilities-manager')}
 									</button>
 									<button
 										type="button"
 										className="button"
-										style={{
-											width: '100%',
-											justifyContent: 'center',
-											fontSize: '12px',
-										}}
+										style={{ width: '100%', justifyContent: 'center', fontSize: '12px' }}
 										disabled={isSaving}
 										onClick={() => handleSave(true)}
 									>
-										{__(
-											'Save as Draft',
-											'acrossai-abilities-manager'
-										)}
+										{__('Save as Draft', 'acrossai-abilities-manager')}
 									</button>
 								</div>
-								<div
-									style={{
-										borderTop: '1px dashed #ddd',
-										marginTop: '14px',
-										paddingTop: '12px',
-										textAlign: 'center',
-									}}
-								>
+								<div style={{ borderTop: '1px dashed #ddd', marginTop: '14px', paddingTop: '12px', textAlign: 'center' }}>
 									<button
 										type="button"
 										className="button-link link-delete"
 										style={{ fontSize: '12px' }}
 										onClick={handleDelete}
 									>
-										{__(
-											'🗑 Delete Ability',
-											'acrossai-abilities-manager'
-										)}
+										{__('🗑 Delete Ability', 'acrossai-abilities-manager')}
 									</button>
 								</div>
 							</div>
@@ -1947,53 +1407,28 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{__('Actions', 'acrossai-abilities-manager')}
 							</div>
 							<div className="sbbody">
-								<div
-									style={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: '8px',
-									}}
-								>
+								<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 									<button
 										type="button"
 										className="button button-primary button-large"
-										style={{
-											width: '100%',
-											justifyContent: 'center',
-										}}
+										style={{ width: '100%', justifyContent: 'center' }}
 										disabled={isSaving || !isDirty}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving
-											? __(
-													'Saving…',
-													'acrossai-abilities-manager'
-												)
-											: __(
-													'✓ Save Changes',
-													'acrossai-abilities-manager'
-												)}
+											? __('Saving…', 'acrossai-abilities-manager')
+											: __('✓ Save Changes', 'acrossai-abilities-manager')}
 									</button>
 								</div>
 								{savedAbility?.has_override && (
-									<div
-										style={{
-											borderTop: '1px dashed #ddd',
-											marginTop: '14px',
-											paddingTop: '12px',
-											textAlign: 'center',
-										}}
-									>
+									<div style={{ borderTop: '1px dashed #ddd', marginTop: '14px', paddingTop: '12px', textAlign: 'center' }}>
 										<button
 											type="button"
 											className="button-link"
 											style={{ fontSize: '12px' }}
 											onClick={handleClearOverrides}
 										>
-											{__(
-												'↩ Clear All Overrides',
-												'acrossai-abilities-manager'
-											)}
+											{__('↩ Clear All Overrides', 'acrossai-abilities-manager')}
 										</button>
 									</div>
 								)}
@@ -2011,10 +1446,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							<div className="prev-grid">
 								<div className="prev-row">
 									<div className="prk">
-										{__(
-											'Slug',
-											'acrossai-abilities-manager'
-										)}
+										{__('Slug', 'acrossai-abilities-manager')}
 									</div>
 									<div className="prv mono">
 										{draftAbility.ability_slug ? (
@@ -2032,22 +1464,14 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{(isEdit || isNonDb) && savedAbility?.label && (
 									<div className="prev-row">
 										<div className="prk">
-											{__(
-												'Label',
-												'acrossai-abilities-manager'
-											)}
+											{__('Label', 'acrossai-abilities-manager')}
 										</div>
-										<div className="prv">
-											{savedAbility.label}
-										</div>
+										<div className="prv">{savedAbility.label}</div>
 									</div>
 								)}
 								<div className="prev-row">
 									<div className="prk">
-										{__(
-											'Source',
-											'acrossai-abilities-manager'
-										)}
+										{__('Source', 'acrossai-abilities-manager')}
 									</div>
 									<div className="prv">
 										<SourceBadge
@@ -2062,10 +1486,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{!isNonDb && (
 									<div className="prev-row">
 										<div className="prk">
-											{__(
-												'Callback',
-												'acrossai-abilities-manager'
-											)}
+											{__('Callback', 'acrossai-abilities-manager')}
 										</div>
 										<div className="prv">
 											{callbackType}
@@ -2089,15 +1510,10 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 										<div className="adot on" />
 										<div>
 											<div className="at">
-												{__(
-													'Updated',
-													'acrossai-abilities-manager'
-												)}
+												{__('Updated', 'acrossai-abilities-manager')}
 											</div>
 											<div className="adt">
-												{formatDate(
-													savedAbility.updated_at
-												)}
+												{formatDate(savedAbility.updated_at)}
 											</div>
 										</div>
 									</div>
@@ -2107,15 +1523,10 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 										<div className="adot off" />
 										<div>
 											<div className="at muted">
-												{__(
-													'Created',
-													'acrossai-abilities-manager'
-												)}
+												{__('Created', 'acrossai-abilities-manager')}
 											</div>
 											<div className="adt">
-												{formatDate(
-													savedAbility.created_at
-												)}
+												{formatDate(savedAbility.created_at)}
 											</div>
 										</div>
 									</div>
@@ -2148,10 +1559,8 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 									];
 									const active = overrideFields.filter(
 										(f) =>
-											null !==
-												savedAbility?._override?.[f] &&
-											undefined !==
-												savedAbility?._override?.[f]
+											null !== savedAbility?._override?.[f] &&
+											undefined !== savedAbility?._override?.[f]
 									);
 									if (0 === active.length) {
 										return (
@@ -2175,10 +1584,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 												<li key={f}>
 													{f}:{' '}
 													<strong>
-														{String(
-															savedAbility
-																._override[f]
-														)}
+														{String(savedAbility._override[f])}
 													</strong>
 												</li>
 											))}
@@ -2200,10 +1606,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{isCreate && (
 									<>
 										<li>
-											{__(
-												'Written to',
-												'acrossai-abilities-manager'
-											)}{' '}
+											{__('Written to', 'acrossai-abilities-manager')}{' '}
 											<code>wp_acrossai_abilities</code>
 										</li>
 										<li>
@@ -2223,10 +1626,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{isEdit && (
 									<>
 										<li>
-											{__(
-												'Updated in',
-												'acrossai-abilities-manager'
-											)}{' '}
+											{__('Updated in', 'acrossai-abilities-manager')}{' '}
 											<code>wp_acrossai_abilities</code>
 										</li>
 										<li>
@@ -2246,10 +1646,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								{isNonDb && (
 									<>
 										<li>
-											{__(
-												'Override saved to',
-												'acrossai-abilities-manager'
-											)}{' '}
+											{__('Override saved to', 'acrossai-abilities-manager')}{' '}
 											<code>wp_acrossai_abilities</code>
 										</li>
 										<li>
@@ -2282,13 +1679,13 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							<span className="udot" />
 							{isNonDb
 								? __(
-										'Changes affect this site only — the plugin definition is not modified.',
-										'acrossai-abilities-manager'
-									)
+									'Changes affect this site only — the plugin definition is not modified.',
+									'acrossai-abilities-manager'
+								  )
 								: __(
-										'Unsaved changes — leaving this page will discard them.',
-										'acrossai-abilities-manager'
-									)}
+									'Unsaved changes — leaving this page will discard them.',
+									'acrossai-abilities-manager'
+								  )}
 						</>
 					)}
 					{isCreate && (

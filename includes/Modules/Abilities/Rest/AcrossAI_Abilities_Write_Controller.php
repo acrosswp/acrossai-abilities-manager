@@ -97,21 +97,6 @@ class AcrossAI_Abilities_Write_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_ability' ),
 					'permission_callback' => $permission,
-					// SEC-MCP-001: WP-layer schema for mcp_servers provides defence-in-depth;
-					// the manual sanitize_mcp_servers() layer runs downstream regardless.
-					'args'                => array(
-						'mcp_servers' => array(
-							'type'              => 'array',
-							'items'             => array(
-								'type'      => 'string',
-								'maxLength' => AcrossAI_Sanitizer::MAX_SERVER_ID_LENGTH,
-							),
-							'maxItems'          => AcrossAI_Sanitizer::MAX_MCP_SERVERS,
-							'required'          => false,
-							'validate_callback' => 'rest_validate_request_arg',
-							'sanitize_callback' => array( AcrossAI_Abilities_Sanitizer::class, 'sanitize_mcp_servers' ),
-						),
-					),
 				),
 			)
 		);
@@ -155,7 +140,7 @@ class AcrossAI_Abilities_Write_Controller {
 					'callback'            => array( $this, 'update_ability' ),
 					'permission_callback' => $permission,
 					'args'                => array(
-						'slug'        => array(
+						'slug' => array(
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => function ( $slug ) {
@@ -167,18 +152,6 @@ class AcrossAI_Abilities_Write_Controller {
 							'validate_callback' => function ( $slug ) {
 								return is_string( $slug ) && '' !== trim( $slug );
 							},
-						),
-						// SEC-MCP-001: WP-layer schema for mcp_servers provides defence-in-depth.
-						'mcp_servers' => array(
-							'type'              => 'array',
-							'items'             => array(
-								'type'      => 'string',
-								'maxLength' => AcrossAI_Sanitizer::MAX_SERVER_ID_LENGTH,
-							),
-							'maxItems'          => AcrossAI_Sanitizer::MAX_MCP_SERVERS,
-							'required'          => false,
-							'validate_callback' => 'rest_validate_request_arg',
-							'sanitize_callback' => array( AcrossAI_Abilities_Sanitizer::class, 'sanitize_mcp_servers' ),
 						),
 					),
 				),
