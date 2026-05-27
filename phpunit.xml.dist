@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PHPUnit configuration for the acrossai-abilities-manager plugin.
+
+  Scope: `abilities` testsuite only — these tests run against a minimal WP stub
+  bootstrap (tests/bootstrap.php) that provides sanitize_text_field, WP_Error,
+  and WP_UnitTestCase without requiring a full WordPress installation.
+
+  The `sitewide` and `Modules` test suites require a full WP integration
+  environment (wp-env, WP_TESTS_DIR). They are excluded here to keep CI fast.
+  To run all suites, set up a WP test environment and add the suites back.
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/13.0/phpunit.xsd"
+	bootstrap="tests/bootstrap.php"
+	colors="true"
+	cacheDirectory=".phpunit.cache"
+>
+	<testsuites>
+		<testsuite name="abilities">
+			<directory suffix="Test.php">tests/phpunit/abilities/</directory>
+		</testsuite>
+	</testsuites>
+	<source>
+		<include>
+			<directory suffix=".php">includes/</directory>
+		</include>
+	</source>
+</phpunit>

@@ -513,6 +513,7 @@ Architecture review checklist: for every REST orchestrator, confirm all literal-
 ---
 
 ### 2026-05-27 — BerlinDB stale slug cache after INSERT causes first-save to return no row
+### 2026-05-27 — PHPUnit bootstrap must define ABSPATH before Composer autoloader (BUG-PHPUNIT-ABSPATH-SILENT-EXIT)
 
 **Status**: Active
 
@@ -535,6 +536,26 @@ After any `add_item()` INSERT in `save_override()`, re-read the row via an ID-ba
 ---
 
 ### 2026-05-27 — `meta.mcp.public` maps to `show_in_mcp`; never to a separate `mcp_public` key
+PHPUnit runs with 0 tests executed, no errors, no failures — as if there are no test files. Plugin PHP files are silently exited before the class is loaded.
+
+**Root Cause**
+Every plugin PHP file starts with `defined('ABSPATH') || exit`. If `tests/bootstrap.php` loads the Composer autoloader before calling `define('ABSPATH', ...)`, the first autoloaded class hits the guard and exits. PHPUnit sees 0 classes loaded, runs 0 tests, and reports success. There is no error message.
+
+**Future mistake prevented**
+In `tests/bootstrap.php`, `define('ABSPATH', dirname(__DIR__) . '/')` MUST appear before `require_once __DIR__ . '/../vendor/autoload.php'`. Swapping the order silently zeroes the test run.
+
+**Evidence**
+Feature 016 (2026-05-27): Bootstrap produced 0 tests until ABSPATH define was moved above the autoloader. Fixed in `tests/bootstrap.php`.
+
+**Prevention / Detection**
+After adding PHPUnit test files for any plugin class: run `./vendor/bin/phpunit --list-tests`. If the list is empty but files exist, check ABSPATH define order in bootstrap.php.
+
+**Where to look next**
+`tests/bootstrap.php` (ABSPATH define must precede autoloader require).
+
+---
+
+### 2026-05-27 — phpunit.xml.dist must be scoped to avoid BerlinDB fatal errors (BUG-PHPUNIT-BERLINDDB-SCOPE)
 
 **Status**: Active
 
@@ -557,6 +578,27 @@ The canonical bidirectional contract is `meta.mcp.public` ↔ `show_in_mcp`. Alw
 ---
 
 ### 2026-05-27 — Redux `SET_SAVED` must seed `draftAbility` from `_override`, not merged top-level
+PHPUnit aborts with a fatal error such as `Call to undefined function add_action()` or `Call to undefined function get_option()` when loading certain plugin classes, even though those classes are not directly under test.
+
+**Root Cause**
+BerlinDB Table subclasses call `add_action()` and `get_option()` in their constructors. If `phpunit.xml.dist` includes a suite directory that triggers autoloading of these classes (e.g., via a controller or query test that imports a BerlinDB Table), and the bootstrap provides only minimal WP stubs without these functions, PHP fatals immediately.
+
+**Future mistake prevented**
+Scope `phpunit.xml.dist` to only the test files/directories that do not transitively load BerlinDB Table classes. Tests for `AcrossAI_Sanitizer`, pure utilities, and standalone logic are safe. Tests for BerlinDB Query, Row, Schema, or any REST controller that calls `AcrossAI_Abilities_Query` require a full WP environment.
+
+**Evidence**
+Feature 016 (2026-05-27): `phpunit.xml.dist` scoped to `tests/phpunit/abilities/AbilitiesValidationTest.php` only. Any broader glob caused BerlinDB fatal errors under stub bootstrap.
+
+**Prevention / Detection**
+When adding a new PHPUnit suite directory: check whether any class in that directory's dependency chain instantiates a BerlinDB Table subclass. If yes, it cannot run under stub bootstrap.
+
+**Where to look next**
+`phpunit.xml.dist` (narrow file-level scope, not directory glob),
+`tests/phpunit/abilities/` (files requiring full WP: AbilitiesQueryTest, AbilitiesWriteControllerTest, AbilitiesReadControllerTest).
+
+---
+
+### 2026-05-27 — Pre-existing test/code mismatch: strip_protected_fields test expects fields not stripped by implementation (BUG-ABILITIES-STRIP-PROTECTED-PREEXISTING)
 
 **Status**: Active
 
@@ -575,3 +617,20 @@ Always seed overridable fields in `draftAbility` from `saved._override[field]` (
 **Where to look next**
 `src/js/abilities/store/index.js` (`SET_SAVED` case, `OVERRIDABLE_FIELDS` constant),
 `includes/Utilities/AcrossAI_Ability_Merger.php` (`$overridable_fields` — PHP mirror).
+`AbilitiesValidationTest::test_strip_protected_fields_removes_identity_fields` fails. The test asserts that `label`, `description`, `category`, and other fields are removed by `strip_protected_fields_for_non_db()`, but the implementation only strips a narrower set.
+
+**Root Cause**
+The test was written with a broader expectation than the current implementation supports. This is a pre-existing mismatch unrelated to Feature 016. The test was present before Feature 016 and the implementation has never matched this assertion.
+
+**Future mistake prevented**
+This failure is not caused by Feature 016 sanitizer changes. Do not attempt to "fix" this by expanding `strip_protected_fields_for_non_db()` scope unless a spec explicitly requires it. The failing test line is `AbilitiesValidationTest.php:470`.
+
+**Evidence**
+Feature 016 security-hardening tasks (T019, T020) confirmed this failure was pre-existing. PHPUnit run of Feature 016's own 6 tests (`sanitize_mcp_servers_array` tests) pass 6/6 clean.
+
+**Prevention / Detection**
+When running the full `AbilitiesValidationTest.php` suite, expect this one pre-existing failure. Track it separately from Feature 016 quality gates.
+
+**Where to look next**
+`tests/phpunit/abilities/AbilitiesValidationTest.php` (line 470 — strip_protected_fields test),
+`includes/Utilities/AcrossAI_Abilities_Validator.php` (strip_protected_fields_for_non_db — current scope).

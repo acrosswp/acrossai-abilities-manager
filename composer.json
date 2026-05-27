@@ -44,5 +44,8 @@
 			"dealerdirect/phpcodesniffer-composer-installer": true,
 			"automattic/jetpack-autoloader": true
 		}
+	},
+	"scripts": {
+		"test": "./vendor/bin/phpunit"
 	}
 }

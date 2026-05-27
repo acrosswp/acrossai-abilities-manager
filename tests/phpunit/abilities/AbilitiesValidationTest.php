@@ -727,4 +727,68 @@ class AbilitiesValidationTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'status', $data );
 		$this->assertSame( 400, $data['status'] );
 	}
+
+	// =========================================================================
+	// sanitize_mcp_servers_array — T017 (Feature 016)
+	// =========================================================================
+
+	/**
+	 * null input returns null.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_null_returns_null() {
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( null ) );
+	}
+
+	/**
+	 * Non-array input returns null.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_non_array_returns_null() {
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( 'string' ) );
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( 42 ) );
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( true ) );
+	}
+
+	/**
+	 * Valid server-id array is returned unchanged.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_valid_array_returned() {
+		$input    = array( 'server-1', 'server-2' );
+		$result   = \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( $input );
+		$this->assertSame( $input, $result );
+	}
+
+	/**
+	 * Empty array collapses to null (P1-B, Constitution §IV).
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_empty_array_returns_null() {
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( array() ) );
+	}
+
+	/**
+	 * Array containing only empty strings collapses to null after filtering.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_only_empty_strings_returns_null() {
+		$this->assertNull( \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( array( '', '  ' ) ) );
+	}
+
+	/**
+	 * Mixed array: empty strings stripped, valid IDs retained.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_mcp_servers_strips_empty_strings() {
+		$result = \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Sanitizer::sanitize_mcp_servers_array( array( '', 'server-1', '' ) );
+		$this->assertSame( array( 'server-1' ), $result );
+	}
+
 }
