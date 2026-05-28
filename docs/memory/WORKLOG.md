@@ -200,3 +200,12 @@ Customize Phase 1 tests based on library criticality and integration depth.
 - **Why durable**: Five reusable patterns captured: (1) `@wpb/access-control` named-import + webpack-alias + SCSS + three-branch rendering, (2) `access_control_available` rendering gate vs auth gate, (3) `acSaveOk` dirty-reset pattern for sub-saves, (4) `acInitialRef` baseline on first `onChange`, (5) four Jest gotchas (`@wordpress/element` v6 `act`, module-level window reads, `await act(async)` for React 18 effects, `api-fetch` virtual mock).
 - **Evidence**: T022 DoD-gate 3/3 green; T028 build pass; T029 validate-packages pass; T030 5-file count confirmed. RT-AR-001/002/003 all applied. Security review: 2 LOW findings (no blockers).
 - **Where to look**: `src/js/abilities/components/AbilityForm.jsx` (Section 5, handleAcChange, AC save block), `admin/Main.php` (access_control_available), `webpack.config.js` (alias), `tests/jest/abilities/ability-form-user-access-section.test.jsx`, `specs/018-user-access-form/`.
+
+---
+
+### 2026-05-29 — Feature 019: safe-by-default uninstall gate and WP Settings API deviation pattern
+
+- **Why durable**: Three reusable patterns introduced: checkbox absent-field sanitizer, data-preservation gate in uninstall, and option→filter default chaining in modules.
+- **Future mistake prevented**: (1) Checkbox sanitize callbacks that silently fail on absent POST fields. (2) `uninstall.php` that drops tables without explicit user consent. (3) Modules that hardcode filter defaults instead of delegating to the settings option.
+- **Evidence**: Feature 019 complete; `admin/Partials/SettingsMenu.php` (new singleton), `uninstall.php` (conditional gate), `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (retention option guard + filter chaining).
+- **Where to look**: `admin/Partials/SettingsMenu.php`, `uninstall.php`, `includes/Modules/Logger/AcrossAI_Ability_Logger.php`, `docs/memory/DECISIONS.md` (DEC-SETTINGS-API-DEVIATION).

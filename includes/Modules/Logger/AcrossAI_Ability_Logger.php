@@ -303,6 +303,12 @@ class AcrossAI_Ability_Logger {
 			return;
 		}
 
+		// Do not schedule if retention is set to 0 (never delete).
+		$option_days = (int) get_option( 'acrossai_abilities_log_retention_days', 0 );
+		if ( 0 === $option_days ) {
+			return;
+		}
+
 		// Check if already scheduled (idempotent).
 		$next_run = as_next_scheduled_action(
 			'acrossai_ability_logger_cleanup',
@@ -332,25 +338,23 @@ class AcrossAI_Ability_Logger {
 	 * Cleanup old logs via Action Scheduler job
 	 *
 	 * Called by Action Scheduler at the scheduled time.
-	 * Deletes logs older than the configured retention period (T016, T017).
+	 * Deletes logs older than the configured retention period.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public function cleanup_old_logs() {
-		// Get retention days from filter (default: 30 days).
-		$retention_days = (int) apply_filters( 'acrossai_ability_log_retention_days', 30 );
+		$option_days    = (int) get_option( 'acrossai_abilities_log_retention_days', 0 );
+		$retention_days = (int) apply_filters( 'acrossai_ability_log_retention_days', $option_days );
 
 		if ( $retention_days < 1 ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: Invalid retention days, skipping cleanup' );
 			return;
 		}
 
-		// Calculate date cutoff (30 days ago).
+		// Calculate date cutoff based on configured retention period.
 		$cutoff_date = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
 
-		// Delete old logs (T017: uses delete_logs_before_date method).
+		// Delete old logs using the date cutoff.
 		$query  = AcrossAI_Ability_Logs_Query::instance();
 		$result = $query->delete_logs_before_date( $cutoff_date );
 

@@ -539,3 +539,27 @@ Always scope to the target section. Global `container.querySelector('p.desc')` w
 find the first match across all sections, producing false positives.
 
 **Evidence**: Feature 018 T022 (2026-05-29) — `p.desc` from Section 3 ("No MCP servers registered yet.") was falsely matching Section 5 assertion.
+
+---
+
+## PATTERN-CHECKBOX-SANITIZE (2026-05-29, Feature 019)
+
+Checkbox `register_setting()` sanitize callbacks MUST handle absent values. Browsers do not transmit unchecked checkbox inputs, so the callback receives `null`/`''` when the box is unchecked. Use `empty($value) ? 0 : 1` in a named public method (`sanitize_*_flag()`), not an inline closure (Settings API cannot serialize closures). Pass it as `array( $this, 'sanitize_*_flag' )`.
+
+**Canonical example**: `SettingsMenu::sanitize_uninstall_flag()` in `admin/Partials/SettingsMenu.php`.
+
+---
+
+## PATTERN-UNINSTALL-DATA-GATE (2026-05-29, Feature 019)
+
+`uninstall.php` MUST guard all destructive SQL inside `if ( (bool) get_option('acrossai_abilities_uninstall_delete_data', 0) )`. Tables and data are **preserved by default** (option default `0`). Plugin-owned settings options (config, not data) are always removed unconditionally.
+
+**Rationale**: Prevents accidental data loss on plugin reinstall cycles or test-env uninstall triggers.
+
+---
+
+## PATTERN-LOGGER-OPTION-FEED-FILTER (2026-05-29, Feature 019)
+
+When a module reads a settings option AND exposes an `apply_filters()` hook, feed the option value as the filter default: `apply_filters( 'hook', get_option( 'key', 0 ) )`. The scheduling guard short-circuits when the effective value is `0` (never schedule). This decouples "should I schedule?" from execution and preserves filter-based override for testing/programmatic control.
+
+**Canonical example**: `AcrossAI_Ability_Logger::schedule_cleanup()` + `cleanup_old_logs()` in `includes/Modules/Logger/AcrossAI_Ability_Logger.php`.

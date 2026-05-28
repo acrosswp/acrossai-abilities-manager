@@ -131,7 +131,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_styles( string $hook_suffix ) {
-		if ( ! $this->is_manager_page( $hook_suffix ) && ! $this->is_logs_page( $hook_suffix ) ) {
+		if ( ! $this->is_manager_page( $hook_suffix )
+			&& ! $this->is_logs_page( $hook_suffix )
+			&& ! $this->is_settings_page( $hook_suffix ) ) {
 			return;
 		}
 
@@ -165,7 +167,9 @@ class Main {
 	 * @param    string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_scripts( string $hook_suffix ) {
-		if ( ! $this->is_manager_page( $hook_suffix ) && ! $this->is_logs_page( $hook_suffix ) ) {
+		if ( ! $this->is_manager_page( $hook_suffix )
+			&& ! $this->is_logs_page( $hook_suffix )
+			&& ! $this->is_settings_page( $hook_suffix ) ) {
 			return;
 		}
 
@@ -243,6 +247,17 @@ class Main {
 	 */
 	private function is_manager_page( string $hook_suffix ): bool {
 		return 'toplevel_page_acrossai-abilities-manager' === $hook_suffix;
+	}
+
+	/**
+	 * Checks whether the current admin screen is the settings page.
+	 *
+	 * @since    0.1.0
+	 * @param string $hook_suffix The hook suffix for the current admin screen.
+	 * @return bool
+	 */
+	private function is_settings_page( string $hook_suffix ): bool {
+		return 'acrossai-abilities-manager_page_acrossai-abilities-settings' === $hook_suffix;
 	}
 
 	/**

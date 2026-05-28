@@ -1001,3 +1001,20 @@ its loaded state via `onChange`, not via a separate "loaded" event.
 **Evidence**: Feature 018 T025 (2026-05-29). `AbilityForm.jsx` `handleAcChange`.
 
 **Where to look next**: `src/js/abilities/components/AbilityForm.jsx` (`handleAcChange`, `acInitialRef`).
+
+---
+
+### 2026-05-29 — WP Settings API accepted deviation from DataForm mandate (DEC-SETTINGS-API-DEVIATION)
+
+**Context**
+Constitution §III (NON-NEGOTIABLE) mandates `@wordpress/dataforms` for all admin form handling. Feature 019 (Admin Settings Page) uses the WordPress Settings API (PHP-rendered form, `options.php` action) instead.
+
+**Decision**
+WP Settings API is the accepted implementation for Feature 019. Justification: the Settings API provides built-in nonce generation (`settings_fields()`), sanitize-callback dispatch (`register_setting()`), and the `options.php` redirect without requiring a custom REST write endpoint. Introducing DataForm would add a REST POST endpoint, client-side JS bundle, and token/nonce bridging solely to replicate what the native API provides for free. For simple scalar-field settings pages (≤ 5 fields), the Settings API is the correct tool.
+
+**Rule**
+This deviation applies only to scalar-field Settings pages using the native Settings API. Any settings page that has custom UI behaviour (dynamic fields, dependent selects, AJAX-powered) MUST use DataForm. This entry does not blanket-approve Settings API for all future features.
+
+**Feature scope**: Feature 019 only (`admin/Partials/SettingsMenu.php`).
+
+**Evidence**: `specs/019-admin-settings-page/spec.md` FR-004, Assumptions §1; security review 2026-05-29.

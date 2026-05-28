@@ -29,6 +29,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-SAVE-OVERRIDE-RETURN-ROW | save_override() returns Row\|false (not bool); Write Controller uses row directly; PHP 7.4 union via @return docblock only | DB/BerlinDB | save_override, return-type, berlinddb, php74 | Active | DECISIONS.md |
 | DEC-MCP-SERVER-SANITIZE | sanitize_mcp_servers_array(): null-passthrough, per-element sanitize+255-substr, array_slice(100), REST args schema as defence-in-depth | Abilities/REST/Sanitizer | mcp-servers, sanitize, rest-args, defence-in-depth | Active | DECISIONS.md |
 | DEC-MCP-CAPABILITY-FILTER-WARN | wpb_mcp_servers_list_rest_capability filter wiring point MUST include a manage_options warning comment | Abilities/Main | mcp, capability, filter, warning-comment | Active | DECISIONS.md |
+| DEC-SETTINGS-API-DEVIATION | WP Settings API accepted for scalar-field (≤5 fields) settings pages; DataForm required for dynamic UI | Admin/Settings | settings-api, dataform, constitution-deviation, 019 | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -52,6 +53,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | PATTERN-ASSET-DECOMMISSION-ORDER | Remove PHP `include` first, then webpack entry + source files, then clean build | Admin/Build | decommission, webpack, include, order | ARCHITECTURE.md |
 | PATTERN-MODULE-DECOMMISSION | 8-step ordered decommission: rename DB → port CRUD → update consumers → delete REST → grep-then-delete | Plugin-wide | decommission, module, berlinddb, cleanup | ARCHITECTURE.md |
 | PATTERN-BERLINDDB-QUERY-PORT | BerlinDB Query port only needs $table_schema/$item_shape + use-statement updates; no new Row/Schema classes | BerlinDB | berlinddb, port, rename, query | ARCHITECTURE.md |
+| PATTERN-CHECKBOX-SANITIZE | Checkbox sanitize_callback: absent→0, present→1; named public method, not closure | Admin/Settings | checkbox, sanitize, settings-api, absent-field | ARCHITECTURE.md |
+| PATTERN-UNINSTALL-DATA-GATE | uninstall.php wraps DROP TABLE in opt-in delete-data gate; config options always removed | Plugin-wide | uninstall, data-gate, destructive, default-safe | ARCHITECTURE.md |
+| PATTERN-LOGGER-OPTION-FEED-FILTER | Module reads option → feeds apply_filters() default; schedule guard short-circuits at 0 | Logger | logger, option, filter, retention, schedule | ARCHITECTURE.md |
 
 ## Bug Patterns
 | ID | Pattern | Affected Area | Tags | Source |
@@ -81,6 +85,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 |---|---|---|---|---|
 | ARCH-ADV-001 | `boot()` wires hooks directly (bypasses Boot Flow Rule) when PATH-A/B conditional loading required — **scope: Override Processor only** (Logger boot() removed Feature 017) | Sitewide/Override | Review if Boot Flow Rule gains conditional-load support | DECISIONS.md |
 | DEV1 | `McpVisibilityControl` uses compound-control pattern instead of DataForm | Sitewide/Admin | Review if DataForm gains compound-control support | memory-synthesis.md |
+| DEC-SETTINGS-API-DEVIATION | WP Settings API instead of DataForm for scalar-field settings pages (≤5 fields); DataForm required for dynamic UI | Admin/Settings | None — permanent exception for scalar settings pages | DECISIONS.md |
 
 ## Worklog Milestones
 | Date | Milestone | Scope | Tags | Source |
@@ -89,6 +94,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | 2026-05-20 | Feature 006 logger establishes hook parameter adaptation patterns | Logger | patterns, reusability, hook-adaption | WORKLOG.md |
 | 2026-05-25 | Feature 012: Sitewide module decommissioned; Abilities module is sole override owner (T001-T030 complete) | Abilities | feature-012, decommission, berlinddb, phpcs | WORKLOG.md |
 | 2026-05-25 | Feature 013: Four-field required validation complete (slug/label/description/category) | Abilities | feature-013, validation, sec-04, react | WORKLOG.md |
+| 2026-05-29 | Feature 019: Settings page (WP Settings API, uninstall gate, Logger option guard); DEC-SETTINGS-API-DEVIATION added | Admin/Settings/Logger | feature-019, settings-api, uninstall-gate, logger, deviation | WORKLOG.md |
 
 | DEC-STABLE-UPGRADE-WINDOW | Prioritize first stable releases (v1.0.0, v1.0.1) when upgrading from dev branches | Dependencies | stable-release, upgrade, risk-mitigation | DECISIONS.md |
 | DEC-AC-RENDERING-GATE | access_control_available is a rendering gate only; server auth enforced by wpb-ac/v1 REST endpoints | Abilities/Admin | access-control, rendering-gate, client-side, auth | DECISIONS.md |

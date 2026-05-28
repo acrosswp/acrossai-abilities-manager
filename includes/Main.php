@@ -274,6 +274,11 @@ final class Main {
 		$logs_menu = \AcrossAI_Abilities_Manager\Admin\Partials\LogsMenu::instance();
 		$this->loader->add_action( 'admin_menu', $logs_menu, 'register_submenu' );
 
+		// Settings submenu page (Feature 019).
+		$settings_menu = \AcrossAI_Abilities_Manager\Admin\Partials\SettingsMenu::instance();
+		$this->loader->add_action( 'admin_menu', $settings_menu, 'register_submenu' );
+		$this->loader->add_action( 'admin_init', $settings_menu, 'register_settings' );
+
 		// Abilities DB table setup — BerlinDB hooks maybe_upgrade() to admin_init.
 		// Named variable before Loader call — Boot Flow Rule variable-first pattern (AC-HOOKS-MAIN).
 		$abilities_table = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Table::instance();

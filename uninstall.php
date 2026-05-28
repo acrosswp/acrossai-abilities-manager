@@ -2,8 +2,8 @@
 /**
  * Fired when the plugin is uninstalled.
  *
- * Drops all custom database tables created by this plugin and removes
- * all associated options. No data is preserved after uninstall.
+ * Drops custom database tables and removes
+ * plugin options when the delete-data setting is enabled. Data is preserved by default.
  *
  * @package    AcrossAI_Abilities_Manager
  * @since      0.0.1
@@ -16,15 +16,19 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 global $wpdb;
 
-// Drop the unified abilities table (renamed in 008-unified-abilities-table).
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
-$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}acrossai_abilities`" );
-\delete_option( 'acrossai_abilities_db_version' );
+// Respect the user's "delete data on uninstall" setting.
+$delete_data = (bool) get_option( 'acrossai_abilities_uninstall_delete_data', 0 );
 
+if ( $delete_data ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}acrossai_abilities`" );
+	\delete_option( 'acrossai_abilities_db_version' );
 
-// Drop the WPBoilerplate Access Control rules table (created on activation via RuleTable).
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
-$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}wpb_access_control`" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}wpb_access_control`" );
+	\delete_option( 'wpb_access_control_db_version' );
+}
 
-// Remove BerlinDB db-version options so the tables are recreated on re-activation.
-\delete_option( 'wpb_access_control_db_version' );
+// Always remove plugin settings options on uninstall (not data — configuration).
+\delete_option( 'acrossai_abilities_log_retention_days' );
+\delete_option( 'acrossai_abilities_uninstall_delete_data' );
