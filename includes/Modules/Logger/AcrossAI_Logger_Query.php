@@ -61,7 +61,6 @@ class AcrossAI_Logger_Query {
 	 * REST controller only extracts params and calls this method.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @param array $args Query arguments:
 	 *   - search (string): Filter by ability_slug partial match.
 	 *   - source (string|array): Filter by source (comma-separated or array).
