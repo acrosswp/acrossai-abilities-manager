@@ -91,12 +91,18 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | 2026-05-25 | Feature 013: Four-field required validation complete (slug/label/description/category) | Abilities | feature-013, validation, sec-04, react | WORKLOG.md |
 
 | DEC-STABLE-UPGRADE-WINDOW | Prioritize first stable releases (v1.0.0, v1.0.1) when upgrading from dev branches | Dependencies | stable-release, upgrade, risk-mitigation | DECISIONS.md |
+| DEC-AC-RENDERING-GATE | access_control_available is a rendering gate only; server auth enforced by wpb-ac/v1 REST endpoints | Abilities/Admin | access-control, rendering-gate, client-side, auth | DECISIONS.md |
+| DEC-AC-SAVE-FLOW-PATTERN | acSaveOk flag: reset dirty state only on confirmed AC save success; failure never blocks ability save | Abilities/React | ac, dirty-state, save-flow, acSaveOk, rt-ar-001 | DECISIONS.md |
+| DEC-ACINITIAL-REF-BASELINE | acInitialRef.current set on first onChange (initial data load), not on mount | Abilities/React | ac, dirty-tracking, useRef, onChange, baseline | DECISIONS.md |
 | DEC-REVALIDATE-SECURITY-POST-UPGRADE | Re-validate security constraints (SEC-04, SEC-03, DEC-PERM-CB, DEC-FAIL-OPEN-NOTICE) after library upgrades | Dependencies, Security | security-constraints, validation, post-upgrade | DECISIONS.md |
 
 ## Architecture Patterns (continued)
 | ARCH-ZERO-CODE-DEPENDENCY-UPGRADE | Singleton + service locator pattern enables dependency upgrades without plugin code changes | Dependencies | architecture, singleton, service-locator, upgrades | ARCHITECTURE.md |
 | PATTERN-NAMED-EXPORT-JEST | Named export of pure helper from JSX component enables Jest unit tests without rendering | React/JS | jest, named-export, pure-helper, testability | ARCHITECTURE.md |
 | ARCH-SANITIZER-TWO-CLASS | AcrossAI_Sanitizer (base, owns sanitize_mcp_servers_array) ≠ AcrossAI_Abilities_Sanitizer (wrapper). PHPUnit tests must target base class FQCN. | Utilities | sanitizer, two-class, phpunit, fqcn | ARCHITECTURE.md |
+| ARCH-ABILITYFORM-SECTION-ORDER | AbilityForm section order is 1–7: Identity → SitePermissions → MCP → Annotations → UserAccess → Callback → Schema (updated Feature 018) | Abilities/React | section-order, abilityform, user-access | ARCHITECTURE.md |
+| PATTERN-AC-COMPONENT-INTEGRATION | Named import + AccessControl.js alias + SCSS + three-branch rendering + module-level abilitiesConfig + no onSave | Abilities/React | access-control, wpb-ac, webpack, named-import, three-branch | ARCHITECTURE.md |
+| PATTERN-JEST-SECTION-SCOPE | Scope test assertions to correct .sect via sect-num to avoid false matches from sibling sections | Testing/Jest | jest, section, selector, dom, abilityform | ARCHITECTURE.md |
 | ARCH-PHPUNIT-BOOTSTRAP | ABSPATH define MUST precede autoloader; phpunit.xml.dist must exclude BerlinDB-loading test files | Testing | phpunit, bootstrap, abspath, berlinddb | ARCHITECTURE.md |
 
 ## Bug Patterns (continued)
@@ -109,6 +115,10 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-REST-ROUTE-ORDER-LITERAL-BEFORE-WILDCARD | WP REST API: literal-segment routes must register before wildcard `[^/]+` routes | REST/Routing | rest, route-order, literal, wildcard, shadowing | BUGS.md |
 | BUG-BERLINDB-STALE-SLUG-CACHE | After INSERT, get_override_by_slug() hits stale slug cache → null; re-read via ID inside save_override() | DB/BerlinDB | berlinddb, cache, save_override, INSERT | BUGS.md |
 | BUG-MCP-PUBLIC-KEY-MAPPING | meta.mcp.public → show_in_mcp (canonical); mcp_public is a stray key the Merger never reads | Abilities/Merger | mcp, show_in_mcp, normalize_registry, registry | BUGS.md |
+| BUG-WP-ELEMENT-ACT-MISSING | @wordpress/element v6+ omits act; inject via jest.requireActual('react').act in mock | Testing/Jest | wordpress, element, act, jest, v6 | BUGS.md |
+| BUG-MODULE-LEVEL-WINDOW-READ | Module-level window.* reads happen at require() time; set globalThis.* before require() in tests | Testing/Jest | jest, window, module-level, require, globalThis | BUGS.md |
+| BUG-JEST-ASYNC-USEEFFECT-FLUSH | React 18 useEffect with resolved promises needs await act(async()=>{}) to flush microtasks | Testing/Jest | jest, react18, useEffect, act, async, promises | BUGS.md |
+| BUG-WP-API-FETCH-VIRTUAL | @wordpress/api-fetch is a WP external; always mock with { virtual: true } in Jest | Testing/Jest | jest, api-fetch, virtual, wordpress, external | BUGS.md |
 | BUG-DRAFT-SEEDED-FROM-MERGED | SET_SAVED must seed draftAbility from _override[field] (null=inherit), not merged top-level | React/Store | redux, set-saved, trichip, override, draftAbility | BUGS.md |
 | BUG-PHPUNIT-ABSPATH-SILENT-EXIT | ABSPATH define must precede autoloader; wrong order silently produces 0 tests with no errors | Testing | phpunit, abspath, silent-exit, bootstrap | BUGS.md |
 | BUG-PHPUNIT-BERLINDDB-SCOPE | phpunit.xml.dist must be narrowly scoped; BerlinDB Table constructors fatal under stub bootstrap | Testing | phpunit, berlinddb, scope, fatal | BUGS.md |
@@ -122,3 +132,5 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-ABILITYFORM-PANEL-PREMATURE-CLOSE | Script-based JSX edits can misplace .panel closing div; verify tab-5 </div> position after every AbilityForm.jsx edit | React/JSX | abilityform, panel, div-nesting, script-edit | BUGS.md |
 | BUG-ABILITYFORM-REBASE-SECTION-SCRAMBLE | Rebase onto main silently scrambles AbilityForm.jsx .sect order; grep section markers after every rebase | React/JSX | abilityform, rebase, section-order, scramble | BUGS.md |
 | ARCH-ABILITYFORM-SECTION-ORDER | Canonical AbilityForm.jsx section order 1-6 (Identity→SitePerm→MCP→Annotations→Callback→Schema); all inside single .panel | Architecture | abilityform, section-order, panel, jsx | ARCHITECTURE.md |
+
+| 2026-05-29 | Feature 018: User Access section + AC integration pattern + 4 Jest gotchas | Abilities | feature-018, access-control, jest, react18 | WORKLOG.md |

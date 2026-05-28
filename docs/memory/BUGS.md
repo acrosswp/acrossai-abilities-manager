@@ -720,3 +720,71 @@ Feature 016 (2026-05-27): Rebase onto `origin/main` (commit `2cfb80a`) moved Cal
 
 **Where to look next**
 `src/js/abilities/components/AbilityForm.jsx` — section comment markers (`{/* ── VARIANT A: Section N ── */}`) show order at a glance.
+
+---
+
+### BUG-WP-ELEMENT-ACT-MISSING — `@wordpress/element` v6+ does not export `act`
+
+`@wordpress/element` v6.46.0+ does not re-export `act` from React.
+Attempting `import { act } from '@wordpress/element'` yields `undefined`, causing
+all `act()` calls to throw `TypeError: act is not a function`.
+
+**Fix**: Inside the `@wordpress/element` Jest manual mock, inject:
+```js
+act: jest.requireActual('react').act
+```
+
+**Future mistake prevented**: Never assume `act` is exported from `@wordpress/element`.
+Always inject it via the mock factory.
+
+**Evidence**: Feature 018 T022 (2026-05-29).
+
+---
+
+### BUG-MODULE-LEVEL-WINDOW-READ — Module-level `window.*` reads happen at `require()` time
+
+When a JSX module reads `window.acrossaiAbilitiesManager` (or any global) at module
+evaluation time (outside the component function), `import` order does not help —
+the value is captured at `require()`. Setting `global.window.*` after the import
+statement silently provides `undefined`.
+
+**Fix**: Set `globalThis.<property>` BEFORE the `require()` call in every test
+that exercises such a module.
+
+**Future mistake prevented**: Any feature that adds a module-level `window.*` read
+will have the same constraint. Document it in the test file's setup block comment.
+
+**Evidence**: Feature 018 T022 — `const abilitiesConfig = window.acrossaiAbilitiesManager || {}`
+is read at module-eval time in `AbilityForm.jsx:37`.
+
+---
+
+### BUG-JEST-ASYNC-USEEFFECT-FLUSH — React 18 `useEffect` with resolved promises needs `await act(async()=>{})`
+
+Plain `act(() => root.render(...))` does not flush microtasks queued by resolved
+`Promise.resolve(...)` mocks inside `useEffect`. The promise settlement triggers
+state updates outside the `act` scope, causing `@wordpress/jest-console` to fail
+with `"An update to X inside a test was not wrapped in act(...)"`.
+
+**Fix**: Always use `await act(async () => { root.render(...) })` when the component
+has `useEffect` hooks that call `jest.fn(() => Promise.resolve(...))`.
+
+**Future mistake prevented**: Affects any test that renders a component with async
+`useEffect` side effects. Prefer `await act(async () => {...})` by default in React 18.
+
+**Evidence**: Feature 018 T022 (2026-05-29) — `useEffect` for MCP server fetch
+in `AbilityForm.jsx:202`.
+
+---
+
+### BUG-WP-API-FETCH-VIRTUAL — `@wordpress/api-fetch` requires `{ virtual: true }` in Jest
+
+`@wordpress/api-fetch` is a WP external (not in `node_modules`). Jest cannot
+resolve it without `{ virtual: true }` in the mock call.
+
+**Fix**: `jest.mock('@wordpress/api-fetch', () => jest.fn(...), { virtual: true })`
+
+**Future mistake prevented**: All WP external packages (`@wordpress/api-fetch`,
+`@wordpress/blocks`, etc.) that are not installed in `node_modules` need `{ virtual: true }`.
+
+**Evidence**: Feature 018 T022 (2026-05-29).

@@ -19,16 +19,18 @@
  *
  * @since 0.2.0
  */
-import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
+import { useState, useEffect, useCallback, useMemo, useRef } from '@wordpress/element';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { STORE_NAME } from '../store/index';
 import SourceBadge from './cells/SourceBadge';
 import CallbackConfigField from './CallbackConfigField';
+import { AccessControl } from '@wpb/access-control';
 
 const SLUG_PREFIX = 'acrossai-abilities/';
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
+const abilitiesConfig = window.acrossaiAbilitiesManager || {};
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -242,6 +244,12 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 	const [mcpAdapterAvailable, setMcpAdapterAvailable] = useState(true);
 	const [mcpServersError, setMcpServersError] = useState(false);
 
+	// Tracks current AC provider key + options as reported by the AccessControl component.
+	// null = component not yet mounted or not yet reported its first state (T025).
+	const [acState, setAcState] = useState(null);
+	const acInitialRef = useRef(null); // baseline set on first onChange call (initial load)
+	const [isAcDirty, setIsAcDirty] = useState(false);
+
 	// Callback config as parsed object (kept in sync with draftAbility.callback_config)
 	const callbackType = draftAbility.callback_type || 'noop';
 	const callbackConfig = draftAbility.callback_config || {};
@@ -319,6 +327,23 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 		},
 		[dispatch]
 	);
+
+	// Receives current AC selection from the AccessControl component (T025).
+	// First call = initial data load; subsequent calls = user interaction.
+	const handleAcChange = useCallback((key, options) => {
+		setAcState({ key, options });
+		if (acInitialRef.current === null) {
+			// Baseline: store what was loaded so we can detect real changes.
+			acInitialRef.current = { key, options: [...options] };
+		} else {
+			const initKey = acInitialRef.current.key;
+			const initOpts = acInitialRef.current.options;
+			setIsAcDirty(
+				key !== initKey ||
+				JSON.stringify(options) !== JSON.stringify(initOpts)
+			);
+		}
+	}, []);
 
 	// ---------------------------------------------------------------------------
 	// Slug input handler
@@ -496,6 +521,36 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 			} else {
 				await dispatch.updateAbility(slug, data);
 			}
+
+			// Save AC state as part of the single save (T026).
+			// Only runs in edit/override mode — no slug exists in create mode (FR-014).
+			if (!isCreate && savedAbility?.ability_slug && acState !== null) {
+				const acUrl = `${abilitiesConfig.rest_url}/wpb-ac/v1/rules/acrossai-abilities/${savedAbility.ability_slug}`;
+				let acSaveOk = false;
+				try {
+					if (acState.key === '') {
+						await apiFetch({ url: acUrl, method: 'DELETE' });
+					} else {
+						await apiFetch({
+							url: acUrl,
+							method: 'PUT',
+							data: { ac_key: acState.key, ac_options: acState.options },
+						});
+					}
+					acSaveOk = true;
+				} catch (acErr) {
+					// AC save failed — ability was saved successfully. Log but do not
+					// block the success flow; the user can retry by saving again (RT-AR-001).
+					// eslint-disable-next-line no-console
+					console.error('Access control save failed:', acErr);
+				}
+				// Reset dirty state only on success — preserves retry ability on failure (RT-AR-001).
+				if (acSaveOk) {
+					acInitialRef.current = acState;
+					setIsAcDirty(false);
+				}
+			}
+
 			return;
 		}
 	}
@@ -624,7 +679,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								<SourceBadge
 									source={savedAbility.source || 'db'}
 								/>
-								{isDirty && (
+								{(isDirty || isAcDirty) && (
 									<span className="unsaved">
 										<span className="udot" />
 										{__(
@@ -654,7 +709,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								: undefined
 						}
 						aria-disabled={hasRequiredErrors}
-						disabled={isSaving || (!isCreate && !isDirty)}
+						disabled={isSaving || (!isCreate && !isDirty && !isAcDirty)}
 						onClick={() => handleSave(false)}
 					>
 						{saveBtnLabel}
@@ -1497,11 +1552,53 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								/>
 							)}
 						</div>
-						{/* ── VARIANT A: Section 5 — Callback ── */}
+						{/* ── Section 5 — User Access ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
 									<span className="sect-num">5</span>
+									{__('User Access', 'acrossai-abilities-manager')}
+								</div>
+								<div className="sect-desc">
+									{__('Who can use this ability.', 'acrossai-abilities-manager')}
+								</div>
+							</div>
+
+							{isCreate && (
+								<p className="desc">
+									{__(
+										'Save this ability first to configure user access.',
+										'acrossai-abilities-manager'
+									)}
+								</p>
+							)}
+
+							{!isCreate && !abilitiesConfig.access_control_available && (
+								<p className="notice notice-warning inline-notice">
+									{__(
+										'User Access is inactive — the wpb-access-control library is not loaded.',
+										'acrossai-abilities-manager'
+									)}
+								</p>
+							)}
+
+							{!isCreate && savedAbility?.ability_slug && abilitiesConfig.access_control_available && (
+								<AccessControl
+									namespace="acrossai-abilities"
+									resourceKey={savedAbility.ability_slug}
+									restApiRoot={abilitiesConfig.rest_url || '/wp-json'}
+									nonce={abilitiesConfig.nonce || ''}
+									hideHeader={true}
+									hideSaveButton={true}
+									onChange={handleAcChange}
+								/>
+							)}
+						</div>
+						{/* ── VARIANT A: Section 6 — Callback ── */}
+						<div className="sect">
+							<div className="sect-hdr">
+								<div className="sect-title">
+									<span className="sect-num">6</span>
 									{__(
 										'Callback',
 										'acrossai-abilities-manager'
@@ -1616,7 +1713,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							</div>
 						</div>
 
-						{/* ── VARIANT A: Section 6 — Schema (optional) ── */}
+						{/* ── VARIANT A: Section 7 — Schema (optional) ── */}
 						{(() => {
 							const regInput =
 								savedAbility?._registry?.input_schema ?? null;
@@ -1626,7 +1723,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								<div className="sect">
 									<div className="sect-hdr">
 										<div className="sect-title">
-											<span className="sect-num">6</span>
+											<span className="sect-num">7</span>
 											{__(
 												'Schema',
 												'acrossai-abilities-manager'
@@ -1884,7 +1981,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 															'center',
 													}
 										}
-										disabled={isSaving || !isDirty}
+										disabled={isSaving || (!isDirty && !isAcDirty)}
 										aria-disabled={hasRequiredErrors}
 										onClick={() => handleSave(false)}
 									>
@@ -1961,7 +2058,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 											width: '100%',
 											justifyContent: 'center',
 										}}
-										disabled={isSaving || !isDirty}
+										disabled={isSaving || (!isDirty && !isAcDirty)}
 										onClick={() => handleSave(false)}
 									>
 										{isSaving
@@ -2277,7 +2374,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 			{/* Sticky save bar */}
 			<div className="sbar">
 				<div className="snote">
-					{isDirty && !isCreate && (
+					{(isDirty || isAcDirty) && !isCreate && (
 						<>
 							<span className="udot" />
 							{isNonDb
@@ -2312,7 +2409,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 					<button
 						type="button"
 						className="button button-primary"
-						disabled={isSaving || (!isCreate && !isDirty)}
+						disabled={isSaving || (!isCreate && !isDirty && !isAcDirty)}
 						onClick={() => handleSave(false)}
 					>
 						{saveBtnLabel}

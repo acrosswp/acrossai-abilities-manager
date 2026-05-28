@@ -60,7 +60,7 @@ module.exports = {
 			...(defaultConfig.resolve?.alias ?? {}),
 			'@wpb/access-control': path.resolve(
 				process.cwd(),
-				'vendor/wpboilerplate/wpb-access-control/js/index.js'
+				'vendor/wpboilerplate/wpb-access-control/js/AccessControl.js'
 			),
 		},
 	},

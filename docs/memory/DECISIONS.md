@@ -918,3 +918,86 @@ Feature 016 (2026-05-27): Warning comment added to `Main.php` at the `rest_api_i
 **Where to look next**
 `includes/Main.php` (rest_api_init wiring for wpb-mcp-servers-list — warning comment),
 `vendor/wpboilerplate/wpb-mcp-servers-list/` (REST endpoint registration, wpb_mcp_servers_list_rest_capability filter definition).
+
+---
+
+### 2026-05-29 — `access_control_available` is a client-side rendering gate, not an auth gate (DEC-AC-RENDERING-GATE)
+
+**Status**: Active
+
+**Why this is durable**
+The flag controls whether `<AccessControl>` renders in the browser. It does NOT
+authorize any action. Server auth is independently enforced by the `wpb-ac/v1`
+REST endpoints. Future implementers must not add any access-control logic that
+trusts this flag as an authorization source.
+
+**Decision**
+`access_control_available` in `window.acrossaiAbilitiesManager` is set by
+`AcrossAI_Abilities_Access_Control::instance()->is_available()` (returns `bool`).
+It is a rendering gate only. The diff comment documents this: "Client rendering
+gate only — server authorization enforced by wpb-ac/v1 REST endpoints (SEC-018-02)."
+
+**Future mistake prevented**
+Do not treat `access_control_available === false` as proof that access control
+is disabled — it only means the PHP library class was not detected. REST endpoints
+enforce access control regardless.
+
+**Evidence**: Feature 018 CHANGE-4 (2026-05-29). `admin/Main.php` inline script.
+
+**Where to look next**: `admin/Main.php` (inline script payload), `includes/Modules/Abilities/AcrossAI_Abilities_Access_Control.php` (`is_available()`).
+
+---
+
+### 2026-05-29 — AC save uses `acSaveOk` flag; dirty state resets only on confirmed success (DEC-AC-SAVE-FLOW-PATTERN)
+
+**Status**: Active
+
+**Why this is durable**
+Any secondary sub-save inside `handleSave()` must follow this pattern. Resetting
+dirty state before confirming success silently discards retry ability on failure.
+
+**Decision**
+```js
+let acSaveOk = false;
+try { await apiFetch(...); acSaveOk = true; }
+catch (acErr) { console.error('...', acErr); /* do not block */ }
+if (acSaveOk) { acInitialRef.current = acState; setIsAcDirty(false); }
+```
+The try/catch logs the failure but does not block the ability-save success path.
+Dirty state is reset only when `acSaveOk === true`. (RT-AR-001)
+
+**Future mistake prevented**
+Do not reset `acInitialRef.current` or `setIsAcDirty(false)` before the try/catch
+resolves. Any pattern that resets inside the try block risks silently losing dirty
+state on error.
+
+**Evidence**: Feature 018 RT-AR-001 (2026-05-29). `AbilityForm.jsx` AC save block.
+
+**Where to look next**: `src/js/abilities/components/AbilityForm.jsx` (handleSave, AC save block).
+
+---
+
+### 2026-05-29 — `acInitialRef.current` baseline set on first `onChange`, not on mount (DEC-ACINITIAL-REF-BASELINE)
+
+**Status**: Active
+
+**Why this is durable**
+The AccessControl component fires `onChange` with the loaded AC state before the
+user interacts. Setting the baseline on mount (before `onChange`) leaves it `null`,
+causing every subsequent render to be considered dirty.
+
+**Decision**
+```js
+if (acInitialRef.current === null) {
+    acInitialRef.current = { key, options: [...options] };
+} else { setIsAcDirty(...); }
+```
+First call = initial data load → set baseline. Subsequent calls = user changes → compute dirty.
+
+**Future mistake prevented**
+Do not initialize `acInitialRef` in `useEffect` on mount. The component reports
+its loaded state via `onChange`, not via a separate "loaded" event.
+
+**Evidence**: Feature 018 T025 (2026-05-29). `AbilityForm.jsx` `handleAcChange`.
+
+**Where to look next**: `src/js/abilities/components/AbilityForm.jsx` (`handleAcChange`, `acInitialRef`).

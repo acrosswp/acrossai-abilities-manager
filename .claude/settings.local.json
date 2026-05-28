@@ -17,7 +17,13 @@
       "Bash(gh issue create --title 'Spec 010: Manual QA verification tasks \\(T007, T021–T027\\)' --body ' *)",
       "Bash(gh issue *)",
       "Bash(bash .specify/scripts/bash/detect-changed-files.sh --json)",
-      "Bash(grep -E '\\\\.\\(php|js|jsx|scss|json\\)$')"
+      "Bash(grep -E '\\\\.\\(php|js|jsx|scss|json\\)$')",
+      "Bash(grep -E '\\\\.\\(php|json|js|md\\)$')",
+      "WebFetch(domain:github.github.io)",
+      "WebFetch(domain:speckit-community.github.io)",
+      "Bash(specify extension *)",
+      "Bash(composer update *)",
+      "Bash(composer require *)"
     ]
   }
 }

@@ -490,9 +490,52 @@ The canonical `AbilityForm.jsx` section DOM order is:
 | 2 | Site Permission | B (non-db) only |
 | 3 | MCP Exposure | A + B |
 | 4 | Annotation Overrides | A + B |
-| 5 | Callback | A (db) only |
-| 6 | Schema | A (db) only |
+| **5** | **User Access** | **A + B** |
+| 6 | Callback | A (db) only |
+| 7 | Schema | A (db) only |
 
-Numbers are global across both variants; sections not applicable to a variant simply do not render. All six `.sect` divs must be children of a single `.panel` div. New features adding sections must insert between Annotation Overrides (4) and Callback (5), or after Schema (6) — never outside the `.panel`.
+Numbers are global across both variants; sections not applicable to a variant simply do not render. All seven `.sect` divs must be children of a single `.panel` div. New features adding sections must insert between Annotation Overrides (4) and User Access (5), or after Schema (7) — never outside the `.panel`.
 
-**Evidence**: Feature 016 (2026-05-27) — commits `5de0307`, `161d1d4`, `e341d1a` restored order, corrected numbers 1–6, and confirmed all sections inside `.panel`. Plan section table documents this layout.
+**Evidence**: Feature 016 (2026-05-27) — commits `5de0307`, `161d1d4`, `e341d1a` restored order, corrected numbers 1–6. Feature 018 (2026-05-29) — inserted User Access as Section 5, renumbered Callback → 6, Schema → 7.
+
+---
+
+## PATTERN-AC-COMPONENT-INTEGRATION
+
+Integrating the `@wpb/access-control` (`wpb-access-control`) vendor library into a React form:
+
+1. **Named import only**: `import { AccessControl } from '@wpb/access-control'` — never default import.
+2. **Webpack alias → `AccessControl.js`, not `index.js`**: `index.js` imports `AccessControl.scss`, which would extract CSS into the JS bundle's CSS sidecar. Point the alias directly at `AccessControl.js` to avoid SCSS double-extraction.
+3. **SCSS import in the feature's SCSS entry**: `@import '../../../vendor/wpboilerplate/wpb-access-control/js/AccessControl';` appended to `src/scss/abilities/admin.scss` — never imported in JS.
+4. **Module-level `abilitiesConfig`**: `const abilitiesConfig = window.acrossaiAbilitiesManager || {}` declared outside the component function (stable for the page lifetime).
+5. **Three-branch rendering gate**:
+   - `isCreate` → placeholder `<p>`
+   - `!isCreate && !abilitiesConfig.access_control_available` → warning notice
+   - `!isCreate && savedAbility?.ability_slug && abilitiesConfig.access_control_available` → `<AccessControl namespace="acrossai-abilities" resourceKey={savedAbility.ability_slug} restApiRoot={abilitiesConfig.rest_url || '/wp-json'} nonce={abilitiesConfig.nonce || ''} hideHeader hideSaveButton onChange={handleAcChange} />`
+6. **No `onSave` prop**: the component manages its own save lifecycle; never integrate it with the main form save flow.
+7. **`acSaveOk` dirty-reset pattern**: see `DEC-AC-SAVE-FLOW-PATTERN` in `DECISIONS.md`.
+8. **`acInitialRef` baseline pattern**: see `DEC-ACINITIAL-REF-BASELINE` in `DECISIONS.md`.
+
+**Evidence**: Feature 018 (2026-05-29). `src/js/abilities/components/AbilityForm.jsx`, `webpack.config.js`, `src/scss/abilities/admin.scss`.
+
+---
+
+## PATTERN-JEST-SECTION-SCOPE
+
+When multiple `.sect` divs in `AbilityForm.jsx` share the same CSS class names
+(e.g., `p.desc`, `p.notice-warning`), scope test assertions to the target section
+by finding the `.sect` whose `sect-num` text matches:
+
+```js
+const getSection5 = () =>
+    Array.from(container.querySelectorAll('.sect')).find(
+        (sect) => sect.querySelector('.sect-num')?.textContent.trim() === '5'
+    );
+const sect5 = getSection5();
+const placeholder = sect5.querySelector('p.desc'); // scoped — not global
+```
+
+Always scope to the target section. Global `container.querySelector('p.desc')` will
+find the first match across all sections, producing false positives.
+
+**Evidence**: Feature 018 T022 (2026-05-29) — `p.desc` from Section 3 ("No MCP servers registered yet.") was falsely matching Section 5 assertion.

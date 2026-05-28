@@ -207,10 +207,12 @@ class Main {
 				'acrossai-abilities-manager-abilities',
 				'window.acrossaiAbilitiesManager = ' . wp_json_encode(
 					array(
-						'nonce'           => wp_create_nonce( 'wp_rest' ),
-						'rest_url'        => untrailingslashit( rest_url() ),
-						'rest_namespace'  => 'acrossai-abilities-manager/v1',
-						'current_user_id' => get_current_user_id(),
+						'nonce'                    => wp_create_nonce( 'wp_rest' ),
+						'rest_url'                 => untrailingslashit( rest_url() ),
+						'rest_namespace'           => 'acrossai-abilities-manager/v1',
+						'current_user_id'          => get_current_user_id(),
+						// Client rendering gate only — server authorization enforced by wpb-ac/v1 REST endpoints (SEC-018-02).
+						'access_control_available' => \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Abilities_Access_Control::instance()->is_available(),
 					)
 				) . ';',
 				'before'
