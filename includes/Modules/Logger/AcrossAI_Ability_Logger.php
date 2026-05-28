@@ -14,6 +14,7 @@ namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
 
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
 use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Source_Detector;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -103,7 +104,7 @@ class AcrossAI_Ability_Logger {
 		}
 
 		$this->mcp_server_id = $server_id;
-		AcrossAI_Logger_Source_Detector::set_mcp_context( $server_id );
+		AcrossAI_Logger_Source_Detector::instance()->set_mcp_context( $server_id );
 
 		return $args;
 	}
@@ -124,7 +125,7 @@ class AcrossAI_Ability_Logger {
 		$start_time = microtime( true );
 
 		// Detect source (uses context checks).
-		$source = AcrossAI_Logger_Source_Detector::detect_source();
+		$source = AcrossAI_Logger_Source_Detector::instance()->detect_source();
 
 		// Get user ID (may be 0 for non-user contexts — EC-003).
 		$user_id = get_current_user_id();
@@ -133,7 +134,7 @@ class AcrossAI_Ability_Logger {
 		$pending = array(
 			'ability_slug'  => $ability_slug,
 			'source'        => $source,
-			'mcp_server_id' => AcrossAI_Logger_Source_Detector::detect_mcp_server_id(),
+			'mcp_server_id' => AcrossAI_Logger_Source_Detector::instance()->detect_mcp_server_id(),
 			'user_id'       => $user_id > 0 ? $user_id : 0,
 			'input'         => $args,
 			'start_time'    => $start_time,
@@ -225,7 +226,7 @@ class AcrossAI_Ability_Logger {
 		}
 
 		// Clear MCP context after execution.
-		AcrossAI_Logger_Source_Detector::clear_mcp_context();
+		AcrossAI_Logger_Source_Detector::instance()->clear_mcp_context();
 	}
 
 	/**
@@ -255,14 +256,14 @@ class AcrossAI_Ability_Logger {
 			// Log permission denials.
 			if ( ! $result || is_wp_error( $result ) ) {
 				// Create permission denial log entry.
-				$source    = AcrossAI_Logger_Source_Detector::detect_source();
+				$source    = AcrossAI_Logger_Source_Detector::instance()->detect_source();
 				$user_id   = get_current_user_id();
 				$error_msg = is_wp_error( $result ) ? $result->get_error_message() : 'Permission denied';
 
 				$entry = array(
 					'ability_slug'  => $ability_slug,
 					'source'        => $source,
-					'mcp_server_id' => AcrossAI_Logger_Source_Detector::detect_mcp_server_id(),
+					'mcp_server_id' => AcrossAI_Logger_Source_Detector::instance()->detect_mcp_server_id(),
 					'user_id'       => $user_id > 0 ? $user_id : 0,
 					'input'         => null,
 					'output'        => $error_msg,
