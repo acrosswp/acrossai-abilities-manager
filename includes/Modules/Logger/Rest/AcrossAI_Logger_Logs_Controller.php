@@ -111,14 +111,16 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 						'enum'        => array( 'ASC', 'DESC' ),
 					),
 					'source'       => array(
-						'type'        => 'string',
-						'description' => __( 'Filter by source (comma-separated list)', 'acrossai-abilities-manager' ),
-						'required'    => false,
+						'type'              => 'string',
+						'description'       => __( 'Filter by source (comma-separated list)', 'acrossai-abilities-manager' ),
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'status'       => array(
-						'type'        => 'string',
-						'description' => __( 'Filter by status (comma-separated list)', 'acrossai-abilities-manager' ),
-						'required'    => false,
+						'type'              => 'string',
+						'description'       => __( 'Filter by status (comma-separated list)', 'acrossai-abilities-manager' ),
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'ability_slug' => array(
 						'type'              => 'string',
