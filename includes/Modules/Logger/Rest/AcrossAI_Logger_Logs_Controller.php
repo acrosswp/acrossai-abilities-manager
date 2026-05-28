@@ -186,7 +186,7 @@ class AcrossAI_Logger_Logs_Controller extends WP_REST_Controller {
 		);
 
 		// Call query builder (all filtering happens here — AC-QUERY-LAYER-FILTERING).
-		$query_result = AcrossAI_Logger_Query::get_logs( $args );
+		$query_result = AcrossAI_Logger_Query::instance()->get_logs( $args );
 
 		// Build response data.
 		$logs_data = array();

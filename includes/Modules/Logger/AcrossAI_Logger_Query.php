@@ -74,7 +74,7 @@ class AcrossAI_Logger_Query {
 	 *   - per_page (int): Records per page (default: 20).
 	 * @return array Result array with keys: 'logs', 'total', 'pages'
 	 */
-	public static function get_logs( $args = array() ) {
+	public function get_logs( $args = array() ) {
 		global $wpdb;
 
 		// Parse arguments.
