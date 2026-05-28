@@ -84,40 +84,6 @@ class AcrossAI_Ability_Logger {
 	}
 
 	/**
-	 * Boot the logger
-	 *
-	 * Registers 4 core hooks at plugins_loaded P20.
-	 * Also schedules daily cleanup job via Action Scheduler.
-	 * This is called by Main.php via Loader system (AC-HOOKS-MAIN).
-	 *
-	 * **ARCH-ADV-001 Exception**: Hooks are registered directly via add_filter/add_action
-	 * (not via Loader) because they depend on other processors' registration state.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-	public function boot() {
-		// Register logging hooks.
-		// P5: Capture MCP context before any execution.
-		add_filter( 'mcp_adapter_pre_tool_call', array( $this, 'capture_mcp_server_id' ), 5, 4 );
-
-		// P10: Start recording pending entry.
-		add_action( 'wp_before_execute_ability', array( $this, 'start_pending_entry' ), 10, 2 );
-
-		// P10: Finish recording and write to database.
-		add_action( 'wp_after_execute_ability', array( $this, 'finish_pending_entry' ), 10, 3 );
-
-		// P100001: Wrap permission callback to log permission denials.
-		add_filter( 'wp_register_ability_args', array( $this, 'wrap_permission_callback' ), 100001, 2 );
-
-		// Register cleanup hook.
-		add_action( 'acrossai_ability_logger_cleanup', array( $this, 'cleanup_old_logs' ), 10 );
-
-		// Schedule cleanup job (T016).
-		$this->schedule_cleanup();
-	}
-
-	/**
 	 * Capture MCP server ID from execution context.
 	 *
 	 * Called on mcp_adapter_pre_tool_call hook P5 (before execution).
@@ -207,8 +173,8 @@ class AcrossAI_Ability_Logger {
 			: 0;
 
 		// Detect result status.
-		$status         = 'success';
-		$output_value   = $result;
+		$status       = 'success';
+		$output_value = $result;
 
 		if ( is_wp_error( $result ) ) {
 			$status       = 'error';

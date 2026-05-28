@@ -328,7 +328,12 @@ final class Main {
 		\AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Table::instance();
 
 		$logger = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Ability_Logger::instance();
-		$this->loader->add_action( 'plugins_loaded', $logger, 'boot', 20 );
+		$this->loader->add_filter( 'mcp_adapter_pre_tool_call', $logger, 'capture_mcp_server_id', 5, 4 );
+		$this->loader->add_action( 'wp_before_execute_ability', $logger, 'start_pending_entry', 10, 2 );
+		$this->loader->add_action( 'wp_after_execute_ability', $logger, 'finish_pending_entry', 10, 3 );
+		$this->loader->add_filter( 'wp_register_ability_args', $logger, 'wrap_permission_callback', 100001, 2 );
+		$this->loader->add_action( 'acrossai_ability_logger_cleanup', $logger, 'cleanup_old_logs', 10, 0 );
+		$this->loader->add_action( 'plugins_loaded', $logger, 'schedule_cleanup', 20, 0 );
 
 		$logger_rest_controller = \AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest\AcrossAI_Logger_Controller::instance();
 		$this->loader->add_action( 'rest_api_init', $logger_rest_controller, 'register_routes' );
