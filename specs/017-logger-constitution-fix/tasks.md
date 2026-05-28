@@ -137,11 +137,13 @@
 - [x] T036 [US5] In same file: update all internal references from `self::$is_mcp_context` → `$this->is_mcp_context` and `self::$mcp_server_id` → `$this->mcp_server_id`
 - [x] T037 [US5] In `includes/Modules/Logger/AcrossAI_Ability_Logger.php`: update `use` import: `AcrossAI_Abilities_Manager\Includes\Modules\Logger\AcrossAI_Logger_Source_Detector` → `AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Source_Detector`
 - [x] T038 [US5] In `includes/Modules/Logger/AcrossAI_Ability_Logger.php`: update all 6 static call sites to instance calls:
-  - `AcrossAI_Logger_Source_Detector::set_mcp_context($server_id)` → `AcrossAI_Logger_Source_Detector::instance()->set_mcp_context($server_id)` (line 140) ← **security-critical**
-  - `AcrossAI_Logger_Source_Detector::detect_source()` → `::instance()->detect_source()` (line ~160)
-  - `AcrossAI_Logger_Source_Detector::detect_mcp_server_id()` → `::instance()->detect_mcp_server_id()` (line 170)
-  - `AcrossAI_Logger_Source_Detector::is_valid_source()` → `::instance()->is_valid_source()` (line ~175)
-  - `AcrossAI_Logger_Source_Detector::clear_mcp_context()` → `::instance()->clear_mcp_context()` (line 262) ← **security-critical**
+  - `AcrossAI_Logger_Source_Detector::set_mcp_context($server_id)` → `AcrossAI_Logger_Source_Detector::instance()->set_mcp_context($server_id)` (L106) ← **security-critical**
+  - `AcrossAI_Logger_Source_Detector::detect_source()` → `::instance()->detect_source()` (L127)
+  - `AcrossAI_Logger_Source_Detector::detect_mcp_server_id()` → `::instance()->detect_mcp_server_id()` (L136, inside `$pending` array)
+  - `AcrossAI_Logger_Source_Detector::clear_mcp_context()` → `::instance()->clear_mcp_context()` (L228) ← **security-critical**
+  - `AcrossAI_Logger_Source_Detector::detect_source()` → `::instance()->detect_source()` (L258, inside `wrap_permission_callback` closure)
+  - `AcrossAI_Logger_Source_Detector::detect_mcp_server_id()` → `::instance()->detect_mcp_server_id()` (L265, inside `wrap_permission_callback` closure)
+  - Note: `is_valid_source()` was listed in the original task but has zero call sites in `AcrossAI_Ability_Logger.php` — task description corrected here for accuracy.
   - Run `grep -n "AcrossAI_Logger_Source_Detector::" includes/Modules/Logger/AcrossAI_Ability_Logger.php` — identify any unlisted call site and update to `::instance()->method()` form
   - Verify zero remaining `AcrossAI_Logger_Source_Detector::` static calls in this file
 - [x] T039 [US5] Run `composer dump-autoload` — must complete without errors
