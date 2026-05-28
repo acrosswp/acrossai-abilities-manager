@@ -2,15 +2,15 @@
 /**
  * Logger source detection utility.
  *
- * Static utility class for detecting execution source context
+ * Singleton utility class for detecting execution source context
  * (mcp, rest, cli, cron, ajax, direct) based on request context.
  *
  * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/Logger
+ * @subpackage AcrossAI_Abilities_Manager/includes/Utilities
  * @since      0.1.0
  */
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
+namespace AcrossAI_Abilities_Manager\Includes\Utilities;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Source detector utility
  *
- * Provides static methods to detect execution source based on request context.
+ * Provides methods to detect execution source based on request context.
  * Detection is deterministic: same context always returns same source.
  *
  * @since 0.1.0
@@ -26,15 +26,22 @@ defined( 'ABSPATH' ) || exit;
 class AcrossAI_Logger_Source_Detector {
 
 	/**
+	 * Singleton instance
+	 *
+	 * @since 0.1.0
+	 * @var self|null
+	 */
+	protected static $_instance = null;
+
+	/**
 	 * MCP context flag
 	 *
 	 * Set during MCP adapter pre-tool-call hook to indicate MCP execution context.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @var bool
 	 */
-	private static $is_mcp_context = false;
+	private $is_mcp_context = false;
 
 	/**
 	 * MCP server ID for current execution
@@ -42,10 +49,29 @@ class AcrossAI_Logger_Source_Detector {
 	 * Stashed during MCP adapter pre-tool-call hook.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @var string|null
 	 */
-	private static $mcp_server_id = null;
+	private $mcp_server_id = null;
+
+	/**
+	 * Get singleton instance
+	 *
+	 * @since 0.1.0
+	 * @return self
+	 */
+	public static function instance(): self {
+		if ( null === self::$_instance ) {
+			self::$_instance = new self();
+		}
+		return self::$_instance;
+	}
+
+	/**
+	 * Private constructor — use instance() to obtain the singleton.
+	 *
+	 * @since 0.1.0
+	 */
+	private function __construct() {}
 
 	/**
 	 * Detect execution source
@@ -54,32 +80,31 @@ class AcrossAI_Logger_Source_Detector {
 	 * Priority order ensures most specific context is returned first.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return string One of the 6 source types
 	 */
-	public static function detect_source() {
+	public function detect_source() {
 		// Priority 1: MCP context (most specific).
-		if ( self::is_mcp_context() ) {
+		if ( $this->is_mcp_context() ) {
 			return 'mcp';
 		}
 
 		// Priority 2: REST API.
-		if ( self::is_rest_context() ) {
+		if ( $this->is_rest_context() ) {
 			return 'rest';
 		}
 
 		// Priority 3: WP-CLI.
-		if ( self::is_cli_context() ) {
+		if ( $this->is_cli_context() ) {
 			return 'cli';
 		}
 
 		// Priority 4: WP-Cron.
-		if ( self::is_cron_context() ) {
+		if ( $this->is_cron_context() ) {
 			return 'cron';
 		}
 
 		// Priority 5: AJAX.
-		if ( self::is_ajax_context() ) {
+		if ( $this->is_ajax_context() ) {
 			return 'ajax';
 		}
 
@@ -91,21 +116,19 @@ class AcrossAI_Logger_Source_Detector {
 	 * Check if currently in MCP context
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return bool True if in MCP execution context
 	 */
-	public static function is_mcp_context() {
-		return self::$is_mcp_context;
+	public function is_mcp_context() {
+		return $this->is_mcp_context;
 	}
 
 	/**
 	 * Check if currently in REST API context
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return bool True if in REST API request
 	 */
-	public static function is_rest_context() {
+	public function is_rest_context() {
 		return defined( 'REST_REQUEST' ) && REST_REQUEST;
 	}
 
@@ -113,10 +136,9 @@ class AcrossAI_Logger_Source_Detector {
 	 * Check if currently in WP-CLI context
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return bool True if running from WP-CLI
 	 */
-	public static function is_cli_context() {
+	public function is_cli_context() {
 		return defined( 'WP_CLI' ) && WP_CLI;
 	}
 
@@ -124,10 +146,9 @@ class AcrossAI_Logger_Source_Detector {
 	 * Check if currently in WP-Cron context
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return bool True if running from WP-Cron
 	 */
-	public static function is_cron_context() {
+	public function is_cron_context() {
 		return wp_doing_cron();
 	}
 
@@ -135,10 +156,9 @@ class AcrossAI_Logger_Source_Detector {
 	 * Check if currently in AJAX context
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return bool True if in AJAX request
 	 */
-	public static function is_ajax_context() {
+	public function is_ajax_context() {
 		return wp_doing_ajax();
 	}
 
@@ -149,11 +169,10 @@ class AcrossAI_Logger_Source_Detector {
 	 * Only valid during MCP execution context.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return string|null MCP server ID or null
 	 */
-	public static function detect_mcp_server_id() {
-		return self::$mcp_server_id;
+	public function detect_mcp_server_id() {
+		return $this->mcp_server_id;
 	}
 
 	/**
@@ -163,13 +182,12 @@ class AcrossAI_Logger_Source_Detector {
 	 * Used to stash MCP execution context for subsequent detection.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @param string|null $server_id MCP server ID.
 	 * @return void
 	 */
-	public static function set_mcp_context( $server_id = null ) {
-		self::$is_mcp_context = true;
-		self::$mcp_server_id  = $server_id;
+	public function set_mcp_context( $server_id = null ) {
+		$this->is_mcp_context = true;
+		$this->mcp_server_id  = $server_id;
 	}
 
 	/**
@@ -178,12 +196,11 @@ class AcrossAI_Logger_Source_Detector {
 	 * Called by logger after ability execution to reset context for next execution.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @return void
 	 */
-	public static function clear_mcp_context() {
-		self::$is_mcp_context = false;
-		self::$mcp_server_id  = null;
+	public function clear_mcp_context() {
+		$this->is_mcp_context = false;
+		$this->mcp_server_id  = null;
 	}
 
 	/**
@@ -193,11 +210,10 @@ class AcrossAI_Logger_Source_Detector {
 	 * Used for input validation.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @param string $source Source value to validate.
 	 * @return bool True if valid source type.
 	 */
-	public static function is_valid_source( $source ) {
+	public function is_valid_source( $source ) {
 		$valid_sources = array( 'mcp', 'rest', 'cli', 'cron', 'ajax', 'direct' );
 		return in_array( $source, $valid_sources, true );
 	}

@@ -209,6 +209,58 @@ Before adding any `include .asset.php` to a constructor, grep `admin/Main.php` f
 `specs/011-merge-abilities-ui/tasks.md` (T008, RISK-001).
 
 
+---
+
+### 2026-05-28 — public static method on singleton class bypasses instance() contract (BUG-STATIC-METHOD-SINGLETON-BYPASS)
+
+**Status**: Active
+
+**Symptoms**
+A method declared `public static` on a class that also implements the singleton pattern allows callers to invoke it without going through `::instance()`. Instance state is inaccessible from a static context, so any properties stored on `$this` are silently bypassed.
+
+**Root Cause**
+`AcrossAI_Logger_Query::get_logs()` was declared `public static function get_logs()`. The method body did not use `$this`, making the `static` declaration appear harmless, but it violated the Module Contract (singleton = all public interface via `::instance()`) and would prevent future refactors that rely on instance state.
+
+**Future mistake prevented**
+Any class that declares `protected static $_instance` and `public static function instance()` MUST NOT have any other `public static function` methods. All other methods must be instance methods (no `static` keyword). Architecture review checklist: `grep 'public static function' <file>` on singleton classes; any match other than `instance()` is a violation.
+
+**Evidence**
+Feature 017 FIX-3 (commit `29894b6`): removed `static` keyword from `get_logs()` in `includes/Modules/Logger/AcrossAI_Logger_Query.php`. Call site in `AcrossAI_Logger_Logs_Controller` updated to `AcrossAI_Logger_Query::instance()->get_logs( $args )`.
+
+**Prevention / Detection**
+Architecture review: `grep -n 'public static function' includes/Modules/Logger/AcrossAI_Logger_Query.php` — should return only `instance()`.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Logger_Query.php` (instance() only; all other methods non-static),
+`includes/Modules/Logger/Rest/AcrossAI_Logger_Logs_Controller.php` (call site: ::instance()->get_logs()),
+`specs/017-logger-constitution-fix/spec.md` (FIX-3).
+
+---
+
+### 2026-05-28 — Stale @static PHPDoc annotation not removed when static keyword removed (BUG-PHPDOC-STATIC-STALE)
+
+**Status**: Active
+
+**Symptoms**
+After removing `static` from a method declaration, the `@static` annotation in the PHPDoc block above the method remains. PHPStan does not flag stale `@static` annotations, so it silently persists until a manual code or architecture review catches it.
+
+**Root Cause**
+FIX-3 correctly removed the `static` keyword from `AcrossAI_Logger_Query::get_logs()` (commit `29894b6`) but left the `@static` PHPDoc annotation. The stale annotation was caught as architecture violation V1 during the post-FIX-3 architecture review and fixed in a separate commit (`cc6b6b5`).
+
+**Future mistake prevented**
+Removing `static` from a method is a two-step operation: (1) remove the `static` keyword from the method signature, (2) immediately grep the same file for `@static` in PHPDoc blocks and remove the matching annotation. Do not treat the method signature change as complete until the PHPDoc is also clean.
+
+**Evidence**
+Feature 017 V1 (commit `cc6b6b5`): removed stale `@static` annotation from `get_logs()` docblock in `includes/Modules/Logger/AcrossAI_Logger_Query.php`. Found during architecture review, not during FIX-3 development.
+
+**Prevention / Detection**
+After de-staticifying any method: `grep -n '@static' <file>` — confirm no stale annotations remain.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Logger_Query.php` (get_logs — PHPDoc clean after V1 fix),
+`specs/017-logger-constitution-fix/spec.md` (V1 architecture violation).
+
+
 ## Template
 ### YYYY-MM-DD - Bug / Failure Pattern
 **Status**

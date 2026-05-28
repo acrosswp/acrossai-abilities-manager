@@ -11,7 +11,7 @@ parameters:
 
     excludePaths:
         - vendor/
-        - node_modules/
+        - node_modules/ (?)
 
     bootstrapFiles:
         - acrossai-abilities-manager.php

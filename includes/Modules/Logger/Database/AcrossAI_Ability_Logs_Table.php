@@ -63,6 +63,11 @@ class AcrossAI_Ability_Logs_Table extends Table {
 	/**
 	 * Get the singleton instance of this table.
 	 *
+	 * Note: constructor is intentionally NOT private. BerlinDB\Database\Table
+	 * performs table-registration side-effects in parent::__construct().
+	 * A private constructor would prevent those from running and break table
+	 * registration. Justified exception to the Module Contract.
+	 *
 	 * @since  0.1.0
 	 * @return AcrossAI_Ability_Logs_Table
 	 */

@@ -14,6 +14,7 @@ namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger;
 
 use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Formatter;
 use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Query;
+use AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Logger_Source_Detector;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -84,40 +85,6 @@ class AcrossAI_Ability_Logger {
 	}
 
 	/**
-	 * Boot the logger
-	 *
-	 * Registers 4 core hooks at plugins_loaded P20.
-	 * Also schedules daily cleanup job via Action Scheduler.
-	 * This is called by Main.php via Loader system (AC-HOOKS-MAIN).
-	 *
-	 * **ARCH-ADV-001 Exception**: Hooks are registered directly via add_filter/add_action
-	 * (not via Loader) because they depend on other processors' registration state.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-	public function boot() {
-		// Register logging hooks.
-		// P5: Capture MCP context before any execution.
-		add_filter( 'mcp_adapter_pre_tool_call', array( $this, 'capture_mcp_server_id' ), 5, 4 );
-
-		// P10: Start recording pending entry.
-		add_action( 'wp_before_execute_ability', array( $this, 'start_pending_entry' ), 10, 2 );
-
-		// P10: Finish recording and write to database.
-		add_action( 'wp_after_execute_ability', array( $this, 'finish_pending_entry' ), 10, 3 );
-
-		// P100001: Wrap permission callback to log permission denials.
-		add_filter( 'wp_register_ability_args', array( $this, 'wrap_permission_callback' ), 100001, 2 );
-
-		// Register cleanup hook.
-		add_action( 'acrossai_ability_logger_cleanup', array( $this, 'cleanup_old_logs' ), 10 );
-
-		// Schedule cleanup job (T016).
-		$this->schedule_cleanup();
-	}
-
-	/**
 	 * Capture MCP server ID from execution context.
 	 *
 	 * Called on mcp_adapter_pre_tool_call hook P5 (before execution).
@@ -137,7 +104,7 @@ class AcrossAI_Ability_Logger {
 		}
 
 		$this->mcp_server_id = $server_id;
-		AcrossAI_Logger_Source_Detector::set_mcp_context( $server_id );
+		AcrossAI_Logger_Source_Detector::instance()->set_mcp_context( $server_id );
 
 		return $args;
 	}
@@ -158,7 +125,7 @@ class AcrossAI_Ability_Logger {
 		$start_time = microtime( true );
 
 		// Detect source (uses context checks).
-		$source = AcrossAI_Logger_Source_Detector::detect_source();
+		$source = AcrossAI_Logger_Source_Detector::instance()->detect_source();
 
 		// Get user ID (may be 0 for non-user contexts — EC-003).
 		$user_id = get_current_user_id();
@@ -167,7 +134,7 @@ class AcrossAI_Ability_Logger {
 		$pending = array(
 			'ability_slug'  => $ability_slug,
 			'source'        => $source,
-			'mcp_server_id' => AcrossAI_Logger_Source_Detector::detect_mcp_server_id(),
+			'mcp_server_id' => AcrossAI_Logger_Source_Detector::instance()->detect_mcp_server_id(),
 			'user_id'       => $user_id > 0 ? $user_id : 0,
 			'input'         => $args,
 			'start_time'    => $start_time,
@@ -207,8 +174,8 @@ class AcrossAI_Ability_Logger {
 			: 0;
 
 		// Detect result status.
-		$status         = 'success';
-		$output_value   = $result;
+		$status       = 'success';
+		$output_value = $result;
 
 		if ( is_wp_error( $result ) ) {
 			$status       = 'error';
@@ -259,7 +226,7 @@ class AcrossAI_Ability_Logger {
 		}
 
 		// Clear MCP context after execution.
-		AcrossAI_Logger_Source_Detector::clear_mcp_context();
+		AcrossAI_Logger_Source_Detector::instance()->clear_mcp_context();
 	}
 
 	/**
@@ -289,14 +256,14 @@ class AcrossAI_Ability_Logger {
 			// Log permission denials.
 			if ( ! $result || is_wp_error( $result ) ) {
 				// Create permission denial log entry.
-				$source    = AcrossAI_Logger_Source_Detector::detect_source();
+				$source    = AcrossAI_Logger_Source_Detector::instance()->detect_source();
 				$user_id   = get_current_user_id();
 				$error_msg = is_wp_error( $result ) ? $result->get_error_message() : 'Permission denied';
 
 				$entry = array(
 					'ability_slug'  => $ability_slug,
 					'source'        => $source,
-					'mcp_server_id' => AcrossAI_Logger_Source_Detector::detect_mcp_server_id(),
+					'mcp_server_id' => AcrossAI_Logger_Source_Detector::instance()->detect_mcp_server_id(),
 					'user_id'       => $user_id > 0 ? $user_id : 0,
 					'input'         => null,
 					'output'        => $error_msg,

@@ -6,7 +6,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | ID | Title | Scope | Tags | Status | Source |
 |---|---|---|---|---|---|
 | DEC-PERM-CB | AC rule-gated permission_callback injection | Sitewide/Override | access-control, ability-args, fail-open | Active | DECISIONS.md |
-| ARCH-ADV-001 | boot() conditional hook deviation from Boot Flow Rule | Sitewide/Override | hooks, loader, PATH-A/B | Active | DECISIONS.md |
+| ARCH-ADV-001 | boot() conditional hook deviation from Boot Flow Rule (Override Processor only; Logger boot() removed in Feature 017) | Sitewide/Override | hooks, loader, PATH-A/B | Active | DECISIONS.md |
 | DEC-FAIL-OPEN-NOTICE | Fail-open library absence must pair with manage_options admin notice | Plugin-wide | fail-open, admin-notice, library | Active | DECISIONS.md |
 | DEC-PROTECTED-SLUGS-PATTERN | Centralized exclusion utility with filter extensibility | REST/Utilities | filtering, REST-API, extensibility | Active | DECISIONS.md |
 | DEC-EARLY-404-REST-CHECK | Early 404 checks before database lookups in REST controllers | REST | access-control, fail-fast, security | Active | DECISIONS.md |
@@ -65,6 +65,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-UNCONDITIONAL-ASSET-INCLUDE | `include .asset.php` without `file_exists` guard causes PHP fatal on missing bundle | Admin/Enqueue | asset-include, fatal, build, constructor | BUGS.md |
 | BUG-PHPCS-DOCBLOCK-CAPITAL | PHPDoc long descriptions starting with function name must be manually prefixed with "The " — phpcbf won't capitalize | PHP/PHPCS | phpcs, docblock, capital, phpcbf | BUGS.md |
 | BUG-PHPCBF-TABS | phpcbf converts spaces→tabs; Python str_replace on PHP files must use \t not spaces | PHP/PHPCS | phpcbf, tabs, spaces, str_replace | BUGS.md |
+| BUG-STATIC-METHOD-SINGLETON-BYPASS | public static on singleton class (other than instance()) bypasses ::instance() contract | Logger/Query | singleton, static, arch-review | BUGS.md |
+| BUG-PHPDOC-STATIC-STALE | @static docblock not removed when static keyword is removed from method | Logger/Query | phpdoc, static, arch-review | BUGS.md |
 
 ## Security Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -77,7 +79,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 ## Accepted Deviations
 | ID | Deviation | Scope | Expiry/Review | Source |
 |---|---|---|---|---|
-| ARCH-ADV-001 | `boot()` wires hooks directly (bypasses Boot Flow Rule) when PATH-A/B conditional loading required | Sitewide/Override | Review if Boot Flow Rule gains conditional-load support | DECISIONS.md |
+| ARCH-ADV-001 | `boot()` wires hooks directly (bypasses Boot Flow Rule) when PATH-A/B conditional loading required — **scope: Override Processor only** (Logger boot() removed Feature 017) | Sitewide/Override | Review if Boot Flow Rule gains conditional-load support | DECISIONS.md |
 | DEV1 | `McpVisibilityControl` uses compound-control pattern instead of DataForm | Sitewide/Admin | Review if DataForm gains compound-control support | memory-synthesis.md |
 
 ## Worklog Milestones

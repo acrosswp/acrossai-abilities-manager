@@ -94,7 +94,7 @@ class AcrossAI_Logger_Controller extends WP_REST_Controller {
 			return new WP_REST_Response(
 				array(
 					'code'    => 'rest_forbidden',
-					'message' => __( 'You do not have permission to access logger endpoints.', 'acrossai-abilities' ),
+					'message' => __( 'You do not have permission to access logger endpoints.', 'acrossai-abilities-manager' ),
 				),
 				403
 			);

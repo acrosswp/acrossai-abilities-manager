@@ -61,7 +61,6 @@ class AcrossAI_Logger_Query {
 	 * REST controller only extracts params and calls this method.
 	 *
 	 * @since 0.1.0
-	 * @static
 	 * @param array $args Query arguments:
 	 *   - search (string): Filter by ability_slug partial match.
 	 *   - source (string|array): Filter by source (comma-separated or array).
@@ -74,7 +73,7 @@ class AcrossAI_Logger_Query {
 	 *   - per_page (int): Records per page (default: 20).
 	 * @return array Result array with keys: 'logs', 'total', 'pages'
 	 */
-	public static function get_logs( $args = array() ) {
+	public function get_logs( $args = array() ) {
 		global $wpdb;
 
 		// Parse arguments.

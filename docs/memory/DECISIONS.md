@@ -211,14 +211,16 @@ Hooks in `boot()` are invisible to the Loader's hook inventory. Acceptable here 
 
 **Future mistake prevented**
 Do not move `wp_register_ability_args` or `wp_abilities_api_init` registration into Main.php via the Loader — they would fire on PATH A (Manager REST) and corrupt the `_registry` layer shown in the Manager UI.
+`ARCH-ADV-001` applies **only** to `AcrossAI_Ability_Override_Processor` — it is not a recognized exemption for any other class. `AcrossAI_Ability_Logger::boot()` had an `"ARCH-ADV-001 Exception"` comment; Feature 017 FIX-1 removed `boot()` entirely as a Boot Flow Rule violation. Do not add a `boot()` method with direct `add_filter`/`add_action` calls to any other feature class and cite ARCH-ADV-001 as justification.
 
 **Evidence**
-`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php::boot()`. Reviewed in governed-plan session 2026-05-17. `mcp_adapter_expose_ability` added in T016 (commit `2c9442e`, 2026-05-17).
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php::boot()`. Reviewed in governed-plan session 2026-05-17. `mcp_adapter_expose_ability` added in T016 (commit `2c9442e`, 2026-05-17). Logger `boot()` removed in Feature 017 FIX-1 (commit `cc3cd8f`, 2026-05-28).
 
 **Where to look next**
 `includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (boot, is_manager_rest_request),
 `includes/Main.php` (define_public_hooks — Loader wires only),
-`specs/004-ability-override-processor/plan.md` (ARCH-ADV-001 note).
+`specs/004-ability-override-processor/plan.md` (ARCH-ADV-001 note),
+`specs/017-logger-constitution-fix/spec.md` (FIX-1 — Boot Flow Rule violation in Logger).
 
 
 ### 2026-05-17 — Fail-open library absence must be paired with an admin notice (DEC-FAIL-OPEN-NOTICE)
@@ -442,8 +444,11 @@ The plugin uses two patterns: stateless utilities (pure static methods) and stat
 Utility classes that have no mutable state and perform functional transformations MUST be 100% static. Never add `$_instance`, `instance()`, or `private __construct()` to utility classes. Only stateful components (Logger, Query, Table, REST controllers) use the singleton pattern.
 
 Examples:
-- **Pure utilities (static only)**: `AcrossAI_Logger_Formatter` (formatting logic), `AcrossAI_Logger_Source_Detector` (context checks), `AcrossAI_Protected_Abilities` (exclusion list)
-- **Stateful singletons**: `AcrossAI_Ability_Logger` (manages pending_entries stack), `AcrossAI_Ability_Logs_Query` (BerlinDB wrapper), `AcrossAI_Sitewide_Table` (database registration)
+- **Pure utilities (static only)**: `AcrossAI_Logger_Formatter` (formatting logic), `AcrossAI_Protected_Abilities` (exclusion list)
+- **Stateful singletons**: `AcrossAI_Ability_Logger` (manages pending_entries stack), `AcrossAI_Ability_Logs_Query` (BerlinDB wrapper), `AcrossAI_Sitewide_Table` (database registration), `AcrossAI_Logger_Source_Detector` (mutable MCP context state — moved to singleton in Feature 017/FIX-5)
+
+**Amendment (Feature 017 / FIX-5, 2026-05-28)**
+`AcrossAI_Logger_Source_Detector` was reclassified from pure-static utility to stateful singleton because it holds mutable MCP context state (`$is_mcp_context`, `$mcp_server_id`) that must be isolated to an instance to support constitution compliance. It was moved from `includes/Modules/Logger/` to `includes/Utilities/` and the singleton pattern was adopted. The rule remains: pure, stateless utilities MUST stay static-only.
 
 **Tradeoffs**
 Utilities are slightly less flexible than singletons (cannot hold request-scoped state), but simplicity is gained. Acceptable because utilities should be deterministic and state-free.
@@ -456,7 +461,7 @@ Feature 006 cleanup (2026-05-19): `AcrossAI_Logger_Formatter.php` removed 50+ li
 
 **Where to look next**
 `includes/Utilities/AcrossAI_Logger_Formatter.php` (pure utility example),
-`includes/Modules/Logger/AcrossAI_Logger_Source_Detector.php` (pure utility with private state),
+`includes/Utilities/AcrossAI_Logger_Source_Detector.php` (stateful singleton — moved Feature 017),
 `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (stateful singleton example),
 `specs/006-ability-execution-logger/plan.md` (B-phase logger tasks).
 
