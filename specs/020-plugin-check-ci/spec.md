@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-plugin-check-ci`  
 **Created**: 2026-05-30  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "Add GitHub Actions workflow for WordPress Plugin Check Action on PRs. Fix all compliance issues the check flags in the current codebase."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -103,7 +103,7 @@ The `AGENTS.md` commit checklist and the project constitution are updated so tha
 - `vendor/` is git-ignored and must be installed via `composer install --no-dev` in CI (confirmed by `.gitignore`).
 - The `eval()` at `AcrossAI_Abilities_Processor.php` line 251 is intentional and must be preserved — it executes admin-defined `php_code` ability callbacks.
 - `README.txt` already has `Tested up to: 7.0` and does not need to change.
-- The `ignore-codes` input is a valid `WordPress/plugin-check-action@v1` input — **confirmed** by inspecting the action's `action.yml` (maps to `--ignore-codes=<value>` in the plugin-check CLI).
+- The `ignore-codes` input is a **confirmed valid** `WordPress/plugin-check-action@v1` input (verified against the action's `action.yml` `main` branch — maps to `--ignore-codes=<value>` in the CLI). The `exclude-checks` fallback is not needed.
 - All existing `phpcs:ignore` comments in place across the codebase remain unchanged; only the `error_log()` guards add new structure around existing ignores.
 - No JS build step is required for this feature.
 - The `WP_DEBUG_LOG` guard pattern is identical across all 12 call sites — no per-site variation.

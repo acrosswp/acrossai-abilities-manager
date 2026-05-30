@@ -67,3 +67,8 @@ eval PHPCS suppression), and updates `AGENTS.md` and `CONSTITUTION.md`. Affected
 - Source sections read: BUGS.md (3 entries), ARCHITECTURE.md (AC-FILE-HEADER-PATTERN snippet),
   WORKLOG.md (2026-05-29 entry).
 - Budget status: Within all limits. Synthesis < 500 words.
+
+## Post-Implementation Notes
+
+- **SC-006 (negative-path CI gate)**: Acceptance scenario "a PR introducing a bare `error_log()` causes CI failure" cannot be auto-verified locally. Must be confirmed manually after this branch is pushed to GitHub and a test PR is created with an intentionally unguarded `error_log()` call. Expected result: the "WordPress Plugin Check" job fails.
+- **SC-001 (CI runtime ≤ 5 min)**: Observable only after the first live PR. No local verification possible.

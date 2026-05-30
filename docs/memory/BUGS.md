@@ -788,3 +788,17 @@ resolve it without `{ virtual: true }` in the mock call.
 `@wordpress/blocks`, etc.) that are not installed in `node_modules` need `{ virtual: true }`.
 
 **Evidence**: Feature 018 T022 (2026-05-29).
+
+---
+
+## BUG-PHPCS-ELSE-IF (2026-05-30, Feature 020)
+
+**Symptom**: PHPCS error: "Expected 1 space after `if` keyword" or "Inline control structures are not allowed" — actually a `Squiz.ControlStructures.ControlSignature` violation on an `else { if () }` nesting.
+
+**Cause**: `else { if ( $condition ) { $body; } }` is flagged by PHPCS because having a single `if` as the only statement inside an `else` block is a style violation. `phpcbf` will NOT auto-fix this — it requires manual restructuring.
+
+**Fix**: Rewrite as `elseif ( $condition ) { $body; }`. The two forms are semantically equivalent when the outer conditional is a simple `if`.
+
+**Evidence**: Feature 020 — `admin/Main.php` at line 120-125: `else { // phpcs:ignore\n  if ( defined('WP_DEBUG_LOG') ... ) { error_log(...); } }` restructured to `elseif ( defined('WP_DEBUG_LOG') ... ) { // phpcs:ignore\n  error_log(...); }`.
+
+**Where to look**: `admin/Main.php` lines 118-126.

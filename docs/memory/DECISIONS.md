@@ -1018,3 +1018,30 @@ This deviation applies only to scalar-field Settings pages using the native Sett
 **Feature scope**: Feature 019 only (`admin/Partials/SettingsMenu.php`).
 
 **Evidence**: `specs/019-admin-settings-page/spec.md` FR-004, Assumptions §1; security review 2026-05-29.
+
+### 2026-05-30 — Intentional eval() in php_code ability type: risk accepted, CI suppressed (DEC-EVAL-PHP-CODE)
+
+**Status**: Active
+
+**Context**
+Feature 020 ran WordPress Plugin Check CI against the codebase. The Plugin Check tool flagged the `eval()` call in `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` (line ~253) under OWASP A03:2021 (Injection). This call is intentional and pre-existing: the `php_code` ability type executes admin-defined PHP callbacks stored in the database.
+
+**Decision**
+The `eval()` is retained. Risk is accepted under the following conditions:
+1. **Access gate**: Only users with the `manage_options` capability can create or modify `php_code` abilities (enforced in the REST `permission_callback`).
+2. **CI suppression**: The GitHub Actions plugin-check workflow suppresses this specific PHPCS code via `ignore-codes: WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval`. This is the only entry in `ignore-codes`.
+3. **Code-level annotation**: The line carries `// phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval`.
+4. **No removal**: `eval()` must never be removed without replacing the `php_code` ability execution mechanism.
+
+**Rule**
+Any future PHPCS/Plugin Check finding that references `runtime_configuration_eval` in `AcrossAI_Abilities_Processor.php` is a known accepted risk and must NOT be escalated or "fixed" by removing the `eval()`. If the `php_code` ability type is ever removed, remove the `ignore-codes` entry from the workflow simultaneously.
+
+**OWASP A03 context**
+Input is admin-supplied and stored in the DB. Execution is gated behind `manage_options`. The `$code` template is admin-defined (requires `manage_options` on the write path — enforced in the REST `permission_callback`). The `$input` execution argument is **caller-controlled**: any logged-in user can invoke an ability and supply `$input` at execution time. The risk acceptance applies to the `$code` template; `$input` data within `eval()`'d code is NOT admin-gated at execution time. Admin authors of `php_code` abilities are responsible for treating `$input` as untrusted.
+
+**Where to look next**
+`includes/Modules/Abilities/AcrossAI_Abilities_Processor.php::execute_php_code_ability()` (the eval call),
+`.github/workflows/plugin-check.yml` (ignore-codes entry),
+`specs/020-plugin-check-ci/security-constraints.md` (Advisory ADV-001)
+
+---

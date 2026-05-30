@@ -5,22 +5,25 @@ on:
     branches: [main]
   pull_request:
 
+permissions: {}
+
 jobs:
   plugin-check:
     name: WordPress Plugin Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
         with:
           php-version: '8.1'
 
       - run: composer install --no-dev --prefer-dist --no-progress
 
-      - uses: WordPress/plugin-check-action@v1
+      - uses: WordPress/plugin-check-action@18573eb38f13543484a1f095672dae3849a4fbb0 # v1
         with:
           build-dir: '.'
           ignore-codes: 'WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval'
