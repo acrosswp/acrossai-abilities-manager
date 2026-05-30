@@ -146,3 +146,6 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | PATTERN-CONSTITUTION-SYNC-REPORT | Every CONSTITUTION.md version bump must update the SYNC IMPACT REPORT HTML comment at the top | Plugin-wide | constitution, sync-impact, version-bump | ARCHITECTURE.md |
 | BUG-PHPCS-ELSE-IF | else { if() } nesting fails PHPCS; rewrite as elseif — phpcbf will not auto-fix | PHP/PHPCS | phpcs, else-if, elseif, admin-main | BUGS.md |
 | 2026-05-30 | Feature 020: Plugin Check CI gate, 12 error_log() guards, CONSTITUTION v1.4.3, 4 new patterns | Feature 020 | feature-020, plugin-check, error_log, ci, constitution | WORKLOG.md |
+| BUG-PLUGIN-CHECK-ACTION-NODE24 | plugin-check-action@v1 silently exits 0 on Node 24.16 ubuntu-latest (≥2026-05-25); use wp-env+WP-CLI directly | CI | plugin-check, wp-env, node24, silent-exit, github-actions | BUGS.md |
+| PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT | Canonical Plugin Check CI: @wordpress/env + WP-CLI post-boot; never use plugin-check-action@v1 directly | CI | plugin-check, wp-env, wpcli, node24, workaround | ARCHITECTURE.md |
+| 2026-05-30 | Feature 020 CI fix: 3 commits to work around plugin-check-action#579 Node 24.16 silent-exit bug | Feature 020 | ci-fix, plugin-check, node24, wp-env | WORKLOG.md |

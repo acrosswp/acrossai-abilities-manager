@@ -222,3 +222,13 @@ Customize Phase 1 tests based on library criticality and integration depth.
 - Updated `AGENTS.md` checklist (9 items) and bumped `CONSTITUTION.md` to v1.4.3
 - Added `DEC-EVAL-PHP-CODE` to DECISIONS.md: eval() in php_code ability type; $code admin-gated, $input caller-controlled
 - New patterns: PATTERN-WP-DEBUG-LOG-GUARD, PATTERN-CI-WORKFLOW-HARDENING, PATTERN-CONSTITUTION-SYNC-REPORT, BUG-PHPCS-ELSE-IF
+
+---
+
+## 2026-05-30 — Feature 020 CI fix: plugin-check-action#579 workaround
+
+- `WordPress/plugin-check-action@v1` silently exited 0 on first PR run (ubuntu-latest + Node 24.16)
+- Root cause: action injects URL-plugin into wp-env.json; Node 24.16 @wordpress/env exits silently on URL plugins
+- 3 fix iterations (`8f92c02`, `9ba14d2`, `d58f487`) before finding working solution
+- Final fix: bypass action entirely; inline wp-env start + WP-CLI `wp plugin check` directly
+- New patterns: BUG-PLUGIN-CHECK-ACTION-NODE24, PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT
