@@ -196,26 +196,26 @@ class AcrossAI_Logger_Query {
 		}
 
 		// Build query parts.
-		$table = $wpdb->base_prefix . 'acrossai_ability_logs';
+		$table = $wpdb->prefix . 'acrossai_ability_logs';
 
 		// Count total after filtering (for pagination header).
+		$count_sql    = "SELECT COUNT(*) FROM %i {$where_clause}";
+		$count_values = array_merge( array( $table ), $where_values );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total = (int) $wpdb->get_var(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-			$wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_clause}", $where_values )
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- WHERE fragments are built from fixed clauses and placeholders only.
+			$wpdb->prepare( $count_sql, $count_values )
 		);
 
 		// Build paginated SELECT query.
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$select_sql = "SELECT * FROM `{$table}` {$where_clause} ORDER BY `{$orderby}` {$order} LIMIT %d OFFSET %d";
-
-		// Add pagination params to values.
-		$final_values = array_merge( $where_values, array( $per_page, $offset ) );
+		$select_sql   = "SELECT * FROM %i {$where_clause} ORDER BY `{$orderby}` {$order} LIMIT %d OFFSET %d";
+		$final_values = array_merge( array( $table ), $where_values, array( $per_page, $offset ) );
 
 		// Execute paginated query.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- SQL fragments are allowlisted and all values are prepared.
 			$wpdb->prepare( $select_sql, $final_values )
 		);
 

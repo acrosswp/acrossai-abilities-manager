@@ -149,8 +149,33 @@ class AcrossAI_Abilities_Processor {
 			case 'wp_remote_post':
 				return $this->make_wp_remote_post_callback( $row );
 
+			case 'registered_callback':
+				/*
+				 * Security boundary: only version-controlled plugin/theme code may register
+				 * callables via this filter. The DB row stores only a sanitized key; it never
+				 * stores or executes arbitrary PHP. $input is caller-controlled (untrusted) —
+				 * registered callbacks must treat it as untrusted input.
+				 *
+				 * @see DEC-PLUGIN-CHECK-PRODUCTION-SURFACE in docs/memory/DECISIONS.md
+				 */
+				$callbacks = apply_filters( 'acrossai_abilities_registered_callbacks', array() );
+				$callback  = isset( $row->callback_config['callback'] )
+					? sanitize_key( (string) $row->callback_config['callback'] )
+					: '';
+				if ( ! isset( $callbacks[ $callback ] ) || ! is_callable( $callbacks[ $callback ] ) ) {
+					return static function () {
+						return new \WP_Error( 'unsupported_callback_type', 'Unsupported ability callback type.' );
+					};
+				}
+				$safe_callback = $callbacks[ $callback ];
+				return static function ( $input ) use ( $safe_callback ) {
+					return call_user_func( $safe_callback, $input );
+				};
+
 			case 'php_code':
-				return $this->make_php_code_callback( $row );
+				return static function () {
+					return new \WP_Error( 'unsupported_callback_type', 'Unsupported ability callback type.' );
+				};
 
 			case 'noop':
 			default:
@@ -220,53 +245,6 @@ class AcrossAI_Abilities_Processor {
 			$decoded = json_decode( $body, true );
 
 			return is_array( $decoded ) ? $decoded : array( 'raw' => $body );
-		};
-	}
-
-	/**
-	 * Build a php_code execute callback (PD-002 hardening).
-	 *
-	 * Static closure prevents $this capture. Per-invocation Throwable isolation.
-	 * Audit logging on each execution (slug + outcome, no input/output data).
-	 *
-	 * @since  0.1.0
-	 * @param  AcrossAI_Abilities_Row $row Ability row.
-	 * @return callable
-	 */
-	private function make_php_code_callback( AcrossAI_Abilities_Row $row ): callable {
-		$code = isset( $row->callback_config['code'] ) ? (string) $row->callback_config['code'] : '';
-		$slug = $row->ability_slug;
-
-		return static function ( $input ) use ( $code, $slug ) {
-			if ( '' === $code ) {
-				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log( sprintf( 'acrossai: php_code ability "%s" has empty code — returning [].', $slug ) );
-				}
-				return array();
-			}
-
-			try {
-				// Isolated static closure — no $this capture (PD-002).
-				// $input is intentionally named so eval'd code can reference it as $input.
-				$fn     = static function ( $input ) use ( $code ) { // phpcs:ignore Squiz.PHP.Eval.Discouraged, Generic.CodeAnalysis.UnusedFunctionParameter.Found
-					return eval( $code ); // phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval
-				};
-				$result = $fn( $input );
-				// Audit log: slug + success, no payload data.
-				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log( sprintf( 'acrossai: php_code ability "%s" executed successfully.', $slug ) );
-				}
-				return $result;
-			} catch ( \Throwable $e ) {
-				// Isolate per-invocation failures — do not abort registry bootstrap.
-				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log( sprintf( 'acrossai: php_code ability "%s" threw %s: %s', $slug, get_class( $e ), $e->getMessage() ) );
-				}
-				return new \WP_Error( 'ability_exec_error', 'PHP code execution failed.' );
-			}
 		};
 	}
 }

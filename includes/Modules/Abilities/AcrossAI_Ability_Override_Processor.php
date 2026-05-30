@@ -218,8 +218,9 @@ final class AcrossAI_Ability_Override_Processor {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- URI used for boolean strpos detection only, never echoed or used in SQL.
-		$uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		$uri = isset( $_SERVER['REQUEST_URI'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) )
+			: '';
 
 		$namespace         = (string) apply_filters( 'acrossai_manager_rest_namespace', ACROSSAI_MANAGER_REST_NAMESPACE );
 		self::$_is_manager = ( '' !== $uri ) &&

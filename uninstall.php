@@ -17,15 +17,23 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 // Respect the user's "delete data on uninstall" setting.
-$delete_data = (bool) get_option( 'acrossai_abilities_uninstall_delete_data', 0 );
+$acrossai_delete_data = (bool) get_option( 'acrossai_abilities_uninstall_delete_data', 0 );
 
-if ( $delete_data ) {
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
-	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}acrossai_abilities`" );
+if ( $acrossai_delete_data ) {
+	$acrossai_abilities_table = $wpdb->prefix . 'acrossai_abilities';
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+	$wpdb->query(
+		$wpdb->prepare( 'DROP TABLE IF EXISTS %i', $acrossai_abilities_table )
+	);
 	\delete_option( 'acrossai_abilities_db_version' );
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
-	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}wpb_access_control`" );
+	$acrossai_access_control_table = $wpdb->prefix . 'wpb_access_control';
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+	$wpdb->query(
+		$wpdb->prepare( 'DROP TABLE IF EXISTS %i', $acrossai_access_control_table )
+	);
 	\delete_option( 'wpb_access_control_db_version' );
 }
 

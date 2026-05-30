@@ -1021,7 +1021,7 @@ This deviation applies only to scalar-field Settings pages using the native Sett
 
 ### 2026-05-30 — Intentional eval() in php_code ability type: risk accepted, CI suppressed (DEC-EVAL-PHP-CODE)
 
-**Status**: Active
+**Status**: Superseded by DEC-PLUGIN-CHECK-PRODUCTION-SURFACE (2026-05-31)
 
 **Context**
 Feature 020 ran WordPress Plugin Check CI against the codebase. The Plugin Check tool flagged the `eval()` call in `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` (line ~253) under OWASP A03:2021 (Injection). This call is intentional and pre-existing: the `php_code` ability type executes admin-defined PHP callbacks stored in the database.
@@ -1043,5 +1043,26 @@ Input is admin-supplied and stored in the DB. Execution is gated behind `manage_
 `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php::execute_php_code_ability()` (the eval call),
 `.github/workflows/plugin-check.yml` (ignore-codes entry),
 `specs/020-plugin-check-ci/security-constraints.md` (Advisory ADV-001)
+
+---
+### 2026-05-31 — Plugin Check CI scans production surface only (DEC-PLUGIN-CHECK-PRODUCTION-SURFACE)
+
+Plugin Check must evaluate installable plugin runtime files, not the full development repository.
+CI must exclude hidden files, Spec Kit artifacts, tests, docs, source-only assets, and local tooling
+with `--exclude-directories` / `--exclude-files`, or run Plugin Check against a production staging
+directory. Production PHP files remain fully in scope.
+
+SQL table identifiers in production code use `$wpdb->prepare()` with `%i`; values use `%s`, `%d`,
+or other value placeholders. If a query contains internally-built SQL fragments such as allowlisted
+ORDER BY or fixed WHERE clauses, any suppression must be local, exact, and documented inline.
+
+Forbidden functions reported by Plugin Check are removed or replaced by safe WordPress/plugin
+patterns. `eval()` is replaced with a registered callback model, `extract()` is replaced with
+explicit variable assignment, and shell/process functions are not used in production code. This
+supersedes `DEC-EVAL-PHP-CODE`; arbitrary database-stored PHP is no longer accepted.
+
+PHPCS is installed through Composer and uses WPCS, WordPress-Docs, and PHPCompatibility. The current
+repo-wide `composer run phpcs` baseline is not clean, so required PR checks should run PHPCS against
+the production plugin surface or wait until the baseline is fixed.
 
 ---

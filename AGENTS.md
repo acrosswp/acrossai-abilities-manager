@@ -70,6 +70,14 @@ package_hierarchy:
 - [ ] Package validation pass (npm run validate-packages)
 - [ ] Plugin Check pass (WordPress/plugin-check-action)
 
+## Plugin Check & Code Quality Rules
+
+- Plugin Check must scan the production plugin surface, not the full development repository. Exclude hidden files, Spec Kit files, docs, tests, source-only assets, and local tooling from Plugin Check CI via `--exclude-directories` / `--exclude-files` or a production staging directory.
+- For dynamic SQL table identifiers, use `$wpdb->prepare()` with `%i`; do not interpolate table names into SQL strings.
+- WordPress forbidden-function findings must be fixed by replacement/removal, not suppressed. `eval()`, `extract()`, and shell/process functions are not allowed in production plugin code.
+- Plugin Check suppressions must be local and exact, and only for cases with no safe WordPress API replacement. Never use workflow-level ignore codes for one-line production-code findings.
+- PHPCS is already configured through Composer (`composer run phpcs`) with WPCS, WordPress-Docs, and PHPCompatibility. Do not make repo-wide PHPCS a required PR gate until the existing baseline is fixed or the PHPCS config is scoped to the production plugin surface.
+
 ---
 
 # AI Engineering Rules

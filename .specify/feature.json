@@ -1,1 +1,3 @@
-{"feature_directory":"specs/020-plugin-check-ci"}
+{
+  "feature_directory": "specs/021-plugin-check-remaining-cleanup"
+}

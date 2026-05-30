@@ -819,3 +819,17 @@ resolve it without `{ virtual: true }` in the mock call.
 **Fix**: Do not use `WordPress/plugin-check-action@v1`. Use the direct approach documented in `PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT`.
 
 **Where to look**: `.github/workflows/plugin-check.yml`, commits `8f92c02`–`d58f487` on branch `020-plugin-check-ci`.
+
+---
+
+## BUG-EVAL-NOT-SUPPRESSIBLE (2026-05-31, Feature 021)
+
+**Symptom**: Attempting to suppress `eval()` via `--ignore-codes: Generic.PHP.ForbiddenFunctions.Found` in the Plugin Check workflow removes the gate for ALL future code — not just the one call site. Any future production file using `eval()` would silently pass CI.
+
+**Cause**: `--ignore-codes` is a workflow-level suppression. It applies to every file scanned, not just the intended line. There is no per-line `--ignore-codes` equivalent in the `wp plugin check` CLI.
+
+**Fix**: Remove and replace `eval()` with a safe WordPress pattern. For DB-stored callable dispatch, use the registered-callback model: DB row stores a `sanitize_key()` callback key; `apply_filters('acrossai_abilities_registered_callbacks', array())` returns an allow-list of callables from version-controlled code; `isset($callbacks[$key]) && is_callable($callbacks[$key])` guard; `WP_Error` fail-closed for unknown keys.
+
+**Future mistake prevented**: Never use workflow-level `ignore-codes` for forbidden-function findings. Remove or replace the function instead. See `PATTERN-REGISTERED-CALLBACK-TRUST` for the canonical eval() replacement.
+
+**Where to look**: `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` (`registered_callback` case), `docs/memory/DECISIONS.md` (DEC-PLUGIN-CHECK-PRODUCTION-SURFACE), `specs/021-plugin-check-remaining-cleanup/plan.md` (CHANGE-4).

@@ -1,5 +1,20 @@
 <!--
 SYNC IMPACT REPORT
+Version change: 1.4.3 → 1.4.4
+Modified sections: §II WordPress Standards Compliance — clarified Plugin Check production-surface scope,
+SQL identifier escaping with %i, forbidden-function removal, and local suppression policy
+Rationale: Feature 021 converts remaining Plugin Check findings into durable Spec Kit guidance so future
+plans generate compliant SQL, workflow scan surfaces, forbidden-function replacements, and suppressions.
+Templates reviewed:
+  - .specify/templates/plan-template.md ✅ reviewed — no outdated references
+  - .specify/templates/spec-template.md ✅ reviewed — no outdated references
+  - .specify/templates/tasks-template.md ✅ reviewed — no outdated references
+  - .specify/templates/checklist-template.md ✅ reviewed — no outdated references
+Deferred TODOs: None
+
+Previous sync impact (v1.4.2 → v1.4.3): §II WordPress Standards Compliance — added Plugin Check mandatory gate bullet
+
+SYNC IMPACT REPORT
 Version change: 1.4.2 → 1.4.3
 Modified sections: §II WordPress Standards Compliance — added Plugin Check mandatory gate bullet
 Rationale: Feature 020 adds CI enforcement via WordPress/plugin-check-action@v1; CONSTITUTION updated
@@ -62,9 +77,32 @@ JavaScript MUST pass ESLint with zero errors or warnings.
 All output MUST be escaped using the most specific available WordPress escaping function.
 All input MUST be sanitized at system entry points.
 No deprecated WordPress functions are permitted.
-The plugin MUST pass the WordPress Plugin Check tool with zero errors and zero warnings,
-with only intentional code suppressions (currently: `ignore-codes: WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval`
-for the intentional `eval()` in the `php_code` ability type). All new code MUST remain plugin-check clean.
+The plugin MUST pass the WordPress Plugin Check tool with zero errors and zero warnings.
+All new code MUST remain plugin-check clean.
+
+Plugin Check compliance is evaluated against the installable production plugin surface.
+Development-only repository artifacts such as `.github/`, `.specify/`, `.agents/`, `docs/`,
+`specs/`, `src/`, `tests/`, hidden dotfiles, and local tooling configs MUST be excluded from
+Plugin Check CI by workflow configuration or by checking a production staging directory.
+Production PHP code MUST still be Plugin Check clean.
+
+Dynamic SQL identifiers MUST be escaped with `$wpdb->prepare()` and `%i`; values MUST use the
+appropriate value placeholders such as `%s` and `%d`. Direct interpolation of table names into SQL
+is prohibited unless there is a documented narrow suppression for an internally-built, allowlisted
+fragment.
+
+WordPress forbidden-function findings MUST be fixed by replacing or removing the forbidden function.
+Production plugin code MUST NOT use `eval()`, `extract()`, shell/process execution functions, or
+other functions reported by Plugin Check as forbidden. Suppressions for forbidden functions are not
+allowed unless the function is not executing arbitrary code/commands, there is no safe WordPress API
+replacement, and the exception is documented in `docs/memory/DECISIONS.md`.
+
+Plugin Check suppressions MUST be local and exact. Do not add broad workflow-level ignore codes for
+single-line production-code findings.
+
+PHPCS is part of the quality gate via Composer and WPCS. Required CI checks MUST either run PHPCS
+against a clean production plugin surface or first eliminate the repo-wide PHPCS baseline. A failing
+baseline MUST NOT be added as a required PR check without a documented remediation plan.
 The plugin MUST be compatible with WordPress 6.9+ and PHP 7.4+.
 The plugin MUST be multisite-compatible unless a feature is explicitly scoped to single-site with
 documented justification.
@@ -271,4 +309,4 @@ constitution. Any implementation that appears to violate a principle MUST either
 include documented justification in the feature plan explaining why a compliant approach was not
 feasible.
 
-**Version**: 1.4.3 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-30
+**Version**: 1.4.4 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-31

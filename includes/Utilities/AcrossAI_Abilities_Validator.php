@@ -80,7 +80,7 @@ class AcrossAI_Abilities_Validator {
 	 *
 	 * @var string[]
 	 */
-	const CALLBACK_TYPES = array( 'noop', 'filter_hook', 'wp_remote_post', 'php_code' );
+	const CALLBACK_TYPES = array( 'noop', 'filter_hook', 'wp_remote_post', 'registered_callback' );
 
 	/**
 	 * Allowed status values.
@@ -104,31 +104,6 @@ class AcrossAI_Abilities_Validator {
 	const MCP_TYPES = array( 'tool', 'resource', 'prompt' );
 
 	/**
-	 * PHP functions blocked from php_code payloads (PD-002).
-	 *
-	 * All entries here are matched against T_STRING tokens (function calls).
-	 * Note: `eval` is a PHP language construct tokenized as T_EVAL — it is handled
-	 * separately in validate_php_code() and is NOT matched via this list.
-	 *
-	 * Variable indirection (e.g. `$f='system'; $f()`) cannot be detected at static
-	 * analysis level and is an accepted limitation at manage_options trust level.
-	 *
-	 * @var string[]
-	 */
-	const PHP_CODE_BLOCKED_FUNCTIONS = array(
-		'exec',
-		'system',
-		'passthru',
-		'shell_exec',
-		'popen',
-		'proc_open',
-		'file_put_contents',
-		'unlink',
-		'call_user_func',       // prevents blocked-function indirection (TASK-SEC-002).
-		'call_user_func_array', // prevents blocked-function indirection (TASK-SEC-002).
-	);
-
-	/**
 	 * Allowed keys in filter_hook callback_config.
 	 *
 	 * @var string[]
@@ -141,13 +116,6 @@ class AcrossAI_Abilities_Validator {
 	 * @var string[]
 	 */
 	const WP_REMOTE_POST_CONFIG_KEYS = array( 'url', 'timeout' );
-
-	/**
-	 * Allowed keys in php_code callback_config.
-	 *
-	 * @var string[]
-	 */
-	const PHP_CODE_CONFIG_KEYS = array( 'code' );
 
 	// -------------------------------------------------------------------------
 	// Field validators
@@ -396,8 +364,8 @@ class AcrossAI_Abilities_Validator {
 				return self::validate_filter_hook_config( $config );
 			case 'wp_remote_post':
 				return self::validate_wp_remote_post_config( $config );
-			case 'php_code':
-				return self::validate_php_code_config( $config );
+			case 'registered_callback':
+				return self::validate_registered_callback_config( $config );
 		}
 
 		return true;
@@ -539,79 +507,21 @@ class AcrossAI_Abilities_Validator {
 	}
 
 	/**
-	 * Validate php_code callback_config.
+	 * Validate registered_callback callback_config.
 	 *
 	 * @since  0.1.0
 	 * @param  array $config Config array.
 	 * @return true|\WP_Error
 	 */
-	private static function validate_php_code_config( array $config ) {
-		// Reject unknown keys.
-		$unknown = array_diff( array_keys( $config ), self::PHP_CODE_CONFIG_KEYS );
+	private static function validate_registered_callback_config( array $config ) {
+		$allowed_keys = array( 'callback' );
+		$unknown      = array_diff( array_keys( $config ), $allowed_keys );
 		if ( ! empty( $unknown ) ) {
-			return new \WP_Error( 'invalid_callback_config', __( 'php_code config contains unknown keys.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'invalid_callback_config', __( 'registered_callback config contains unknown keys.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
-		if ( ! isset( $config['code'] ) || ! is_string( $config['code'] ) ) {
-			return new \WP_Error( 'invalid_callback_config', __( 'php_code config requires a code string.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
+		if ( empty( $config['callback'] ) || ! is_string( $config['callback'] ) ) {
+			return new \WP_Error( 'invalid_callback_config', __( 'registered_callback config requires a non-empty callback key string.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
 		}
-		return self::validate_php_code( $config['code'] );
-	}
-
-	/**
-	 * Validate raw PHP code string (PD-002 hardening).
-	 *
-	 * Checks: size limit, syntax via token_get_all(), blocked function names.
-	 *
-	 * @since  0.1.0
-	 * @param  string $code Raw PHP code (no opening tag).
-	 * @return true|\WP_Error
-	 */
-	public static function validate_php_code( string $code ) {
-		// Size limit (64 KB).
-		if ( strlen( $code ) > self::JSON_MAX_BYTES ) {
-			return new \WP_Error( 'invalid_php_code', __( 'PHP code exceeds the 64 KB size limit.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
-		}
-
-		// Syntax check via token_get_all() with PHP opening tag prepended.
-		// In PHP 8+, TOKEN_PARSE throws ParseError on syntax errors instead of returning false.
-		$wrapped = '<?php ' . $code;
-		try {
-			$tokens = @token_get_all( $wrapped, TOKEN_PARSE ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		} catch ( \ParseError $e ) {
-			return new \WP_Error( 'invalid_php_code', __( 'PHP code contains a syntax error.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
-		}
-		if ( false === $tokens ) {
-			return new \WP_Error( 'invalid_php_code', __( 'PHP code contains a syntax error.', 'acrossai-abilities-manager' ), array( 'status' => 400 ) );
-		}
-
-		// Blocked construct/function scan.
-		foreach ( $tokens as $token ) {
-			if ( ! is_array( $token ) ) {
-				continue;
-			}
-			// eval is a language construct with its own token type T_EVAL (not T_STRING).
-			// Check it explicitly before the T_STRING gate (TASK-SEC-001).
-			if ( T_EVAL === $token[0] ) {
-				return new \WP_Error(
-					'invalid_php_code',
-					__( 'PHP code uses a blocked construct: eval.', 'acrossai-abilities-manager' ),
-					array( 'status' => 400 )
-				);
-			}
-			if ( T_STRING !== $token[0] ) {
-				continue;
-			}
-			$function_name = strtolower( $token[1] );
-			if ( in_array( $function_name, self::PHP_CODE_BLOCKED_FUNCTIONS, true ) ) {
-				return new \WP_Error(
-					'invalid_php_code',
-					/* translators: %s: blocked function name */
-					sprintf( __( 'PHP code uses a blocked function: %s.', 'acrossai-abilities-manager' ), $token[1] ),
-					array( 'status' => 400 )
-				);
-			}
-		}
-
 		return true;
 	}
 

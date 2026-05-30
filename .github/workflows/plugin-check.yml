@@ -53,5 +53,6 @@ jobs:
         run: |
           wp-env run cli wp plugin activate acrossai-abilities-manager
           wp-env run cli wp plugin check acrossai-abilities-manager \
-            --ignore-codes=WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval \
-            --include-experimental
+            --include-experimental \
+            --exclude-directories=.agents,.claude,.github,.specify,docs,node_modules,scripts,specs,src,tests \
+            --exclude-files=.distignore,.editorconfig,.eslintignore,.eslintrc,.gitattributes,.gitignore,.gitmodules,.nvmrc,.prettierignore,.wp-env.json,AGENTS.md,LICENSE.md,README.md,composer.json,composer.lock,eslint.config.js,package.json,package-lock.json,phpcs.xml.dist,phpstan.neon.dist,phpunit.xml.dist,webpack.config.js

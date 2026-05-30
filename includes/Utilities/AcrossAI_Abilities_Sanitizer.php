@@ -150,7 +150,7 @@ class AcrossAI_Abilities_Sanitizer {
 			return null;
 		}
 		$clean = sanitize_key( (string) $callback_type );
-		return in_array( $clean, array( 'noop', 'filter_hook', 'wp_remote_post', 'php_code' ), true ) ? $clean : null;
+		return in_array( $clean, array( 'noop', 'filter_hook', 'wp_remote_post', 'registered_callback' ), true ) ? $clean : null;
 	}
 
 	/**
@@ -188,32 +188,18 @@ class AcrossAI_Abilities_Sanitizer {
 				}
 				return empty( $clean['url'] ) ? null : $clean;
 
-			case 'php_code':
+			case 'registered_callback':
 				$clean = array();
-				if ( isset( $config['code'] ) ) {
-					$clean['code'] = self::sanitize_php_code( (string) $config['code'] );
+				if ( isset( $config['callback'] ) ) {
+					$clean['callback'] = sanitize_key( (string) $config['callback'] );
 				}
-				return isset( $clean['code'] ) ? $clean : null;
+				return ! empty( $clean['callback'] ) ? $clean : null;
 		}
 
 		return null;
 	}
 
-	/**
-	 * Sanitize raw PHP code (strip PHP opening tags, trim whitespace).
-	 *
-	 * Does NOT validate syntax or blocked functions — that is the Validator's job.
-	 *
-	 * @since  0.1.0
-	 * @param  string $code Raw PHP code.
-	 * @return string
-	 */
-	public static function sanitize_php_code( string $code ): string {
-		// Strip any opening PHP tags the user may have accidentally included.
-		$code = preg_replace( '/^<\?php\s*/i', '', $code );
-		$code = preg_replace( '/^<\?\s*/', '', $code );
-		return trim( $code );
-	}
+
 
 	/**
 	 * Sanitize a JSON Schema payload.

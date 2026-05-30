@@ -232,3 +232,12 @@ Customize Phase 1 tests based on library criticality and integration depth.
 - 3 fix iterations (`8f92c02`, `9ba14d2`, `d58f487`) before finding working solution
 - Final fix: bypass action entirely; inline wp-env start + WP-CLI `wp plugin check` directly
 - New patterns: BUG-PLUGIN-CHECK-ACTION-NODE24, PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT
+
+---
+
+### 2026-05-31 — Feature 021: Plugin Check cleanup; eval() removed, registered-callback model, CI scan surface fixed
+
+- **Why durable**: Eight production findings eliminated without suppression. Three new durable patterns (registered-callback trust model, `%i` SQL identifier escaping, Plugin Check production scan surface) now live in CONSTITUTION.md §II, AGENTS.md, and DECISIONS.md. Any future feature that touches ability execution, SQL queries, or Plugin Check CI will encounter these rules immediately.
+- **Future mistake prevented**: (1) Future features won't attempt to suppress `eval()` via `ignore-codes` — they'll see `BUG-EVAL-NOT-SUPPRESSIBLE` and `PATTERN-REGISTERED-CALLBACK-TRUST`. (2) Future query builders won't interpolate table names — they'll use `%i`. (3) Plugin Check CI won't scan Spec Kit/test/dev artifacts — the `--exclude-directories`/`--exclude-files` pattern is documented.
+- **Evidence**: Branch `021-plugin-check-cleanup`, commits `ec358de`–`8d2cdef`. 30/31 tasks complete (T030 optional local run). PHPStan level 8: exit 0. Architecture review: 0 CRITICAL/HIGH violations. Security review: no findings.
+- **Where to look**: `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` (registered_callback case), `.github/workflows/plugin-check.yml` (--exclude-directories/--exclude-files flags), `docs/memory/DECISIONS.md` (DEC-PLUGIN-CHECK-PRODUCTION-SURFACE), `docs/memory/ARCHITECTURE.md` (PATTERN-REGISTERED-CALLBACK-TRUST).

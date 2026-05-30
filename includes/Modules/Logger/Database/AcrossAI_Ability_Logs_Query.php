@@ -134,8 +134,11 @@ class AcrossAI_Ability_Logs_Query extends Query {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->query(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$wpdb->prepare( "DELETE FROM `{$table}` WHERE created_at < %s", $date )
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE created_at < %s',
+				$table,
+				$date
+			)
 		);
 
 		return ( false !== $result ) ? (int) $result : 0;
@@ -152,8 +155,10 @@ class AcrossAI_Ability_Logs_Query extends Query {
 
 		$table = $this->get_table_name();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}`" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table )
+		);
 	}
 
 	/**

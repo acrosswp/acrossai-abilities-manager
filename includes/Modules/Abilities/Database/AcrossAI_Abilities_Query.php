@@ -600,7 +600,7 @@ class AcrossAI_Abilities_Query extends Query {
 			}
 		}
 		if ( array_key_exists( 'callback_type', $fields ) && null !== $fields['callback_type'] ) {
-			if ( ! in_array( $fields['callback_type'], array( 'noop', 'filter_hook', 'wp_remote_post', 'php_code' ), true ) ) {
+			if ( ! in_array( $fields['callback_type'], array( 'noop', 'filter_hook', 'wp_remote_post', 'registered_callback' ), true ) ) {
 				unset( $fields['callback_type'] );
 			}
 		}

@@ -654,3 +654,20 @@ The canonical CI pattern for running Plugin Check is to inline the steps manuall
 - `timeout-minutes: 15` minimum — Docker container startup adds significant time vs plain CI steps
 
 **Evidence**: `.github/workflows/plugin-check.yml` at commit `d58f487` on branch `020-plugin-check-ci`.
+
+---
+
+### PATTERN-REGISTERED-CALLBACK-TRUST (Feature 021, 2026-05-31)
+
+**When to use**: Any time an ability or plugin feature needs to execute a callable that was previously stored as PHP code in the database.
+
+**Pattern**:
+1. DB row stores a `sanitize_key()` callback key string only — never executable PHP.
+2. Version-controlled plugin/theme code registers callables via `apply_filters('acrossai_abilities_registered_callbacks', array())`.
+3. At execution time: retrieve the allow-list, apply `sanitize_key()` to the stored key, check `isset($callbacks[$key]) && is_callable($callbacks[$key])`, then dispatch via `call_user_func($callbacks[$key], $input)`.
+4. Any missing or unregistered key returns `WP_Error('unsupported_callback_type')` — never a silent no-op.
+5. Existing `php_code` DB rows must fail closed (step 4); they must never be silently mapped or executed.
+
+**Why**: Eliminates `eval()` (OWASP A03) while preserving extensibility. Trust boundary is version control, not the database.
+
+**Evidence**: `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` `registered_callback` case; `includes/Utilities/AcrossAI_Abilities_Sanitizer.php`; `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`; Feature 021 commits `ec358de`–`8d2cdef`.

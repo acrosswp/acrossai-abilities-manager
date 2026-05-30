@@ -105,7 +105,7 @@ final class Main {
 	 * Define the core functionality of the plugin.
 	 *
 	 * Set the plugin name and the plugin version that can be used throughout the plugin.
-	 * Load the dependencies, define the locale, and set the hooks for the admin area and
+	 * Load the dependencies and set the hooks for the admin area and
 	 * the public-facing side of the site.
 	 *
 	 * @since    0.0.1
@@ -123,8 +123,6 @@ final class Main {
 		$this->load_composer_dependencies();
 
 		$this->load_dependencies();
-
-		$this->set_locale();
 
 		$this->load_hooks();
 	}
@@ -160,14 +158,14 @@ final class Main {
 	}
 
 	/**
-	 * Define constant if not already set
+	 * Define constant if not already set.
 	 *
-	 * @param  string      $name
-	 * @param  string|bool $value
+	 * @param  string      $constant_name  The constant name.
+	 * @param  string|bool $constant_value The constant value.
 	 */
-	private function define( $name, $value ) {
-		if ( ! defined( $name ) ) {
-			define( $name, $value );
+	private function define( $constant_name, $constant_value ) {
+		if ( ! defined( $constant_name ) ) {
+			define( $constant_name, $constant_value );
 		}
 	}
 
@@ -216,7 +214,6 @@ final class Main {
 	 * Include the following files that make up the plugin:
 	 *
 	 * - AcrossAI_Abilities_Manager\Admin\Loader. Orchestrates the hooks of the plugin.
-	 * - AcrossAI_Abilities_Manager\Admin\I18n. Defines internationalization functionality.
 	 * - AcrossAI_Abilities_Manager\Admin\Main. Defines all hooks for the admin area.
 	 * - AcrossAI_Abilities_Manager_Public. Defines all hooks for the public side of the site.
 	 *
@@ -230,23 +227,6 @@ final class Main {
 
 		$this->loader = AcrossAI_Loader::instance();
 	}
-
-	/**
-	 * Define the locale for this plugin for internationalization.
-	 *
-	 * Uses the AcrossAI_Abilities_Manager_i18n class in order to set the domain and to register the hook
-	 * with WordPress.
-	 *
-	 * @since    0.0.1
-	 * @access   private
-	 */
-	private function set_locale() {
-		$i18n = new AcrossAI_I18n();
-
-		// Now attach it to `init`, not `plugins_loaded`.
-		$this->loader->add_action( 'init', $i18n, 'do_load_textdomain' );
-	}
-
 
 	/**
 	 * Register all of the hooks related to the admin area functionality
