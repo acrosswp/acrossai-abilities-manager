@@ -163,8 +163,10 @@ class AcrossAI_Ability_Logger {
 
 		// Handle case where stack is empty (defensive).
 		if ( null === $pending ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: attempted to finish pending entry but stack is empty' );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Logger: attempted to finish pending entry but stack is empty' );
+			}
 			return;
 		}
 
@@ -211,8 +213,10 @@ class AcrossAI_Ability_Logger {
 
 		// Validate entry.
 		if ( ! AcrossAI_Logger_Formatter::validate_entry( $entry ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: entry validation failed' );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Logger: entry validation failed' );
+			}
 			return;
 		}
 
@@ -221,8 +225,10 @@ class AcrossAI_Ability_Logger {
 		$result = $query->insert_log( $entry );
 
 		if ( ! $result ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: failed to insert log entry to database' );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Logger: failed to insert log entry to database' );
+			}
 		}
 
 		// Clear MCP context after execution.
@@ -359,8 +365,10 @@ class AcrossAI_Ability_Logger {
 		$result = $query->delete_logs_before_date( $cutoff_date );
 
 		// Log result.
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( "Logger: Deleted {$result} log entries older than {$cutoff_date}" );
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( "Logger: Deleted {$result} log entries older than {$cutoff_date}" );
+		}
 	}
 
 	/**

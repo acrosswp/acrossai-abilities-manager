@@ -209,3 +209,26 @@ Customize Phase 1 tests based on library criticality and integration depth.
 - **Future mistake prevented**: (1) Checkbox sanitize callbacks that silently fail on absent POST fields. (2) `uninstall.php` that drops tables without explicit user consent. (3) Modules that hardcode filter defaults instead of delegating to the settings option.
 - **Evidence**: Feature 019 complete; `admin/Partials/SettingsMenu.php` (new singleton), `uninstall.php` (conditional gate), `includes/Modules/Logger/AcrossAI_Ability_Logger.php` (retention option guard + filter chaining).
 - **Where to look**: `admin/Partials/SettingsMenu.php`, `uninstall.php`, `includes/Modules/Logger/AcrossAI_Ability_Logger.php`, `docs/memory/DECISIONS.md` (DEC-SETTINGS-API-DEVIATION).
+
+---
+
+## 2026-05-30 — Feature 020: Plugin Check CI + Compliance Fixes
+
+- Created `.github/workflows/plugin-check.yml` — WordPress Plugin Check Action CI gate, SHA-pinned, `permissions: {}`, `timeout-minutes: 10`
+- Added `Tested up to: 7.0` to plugin header
+- Wrapped 12 `error_log()` calls in `WP_DEBUG_LOG` guards across 5 PHP files
+- Fixed `admin/Main.php` PHPCS violation: `else { if() }` → `elseif` (BUG-PHPCS-ELSE-IF)
+- Fixed pre-existing PHPCS error: missing docblock on `sanitize_mcp_servers_array()` in `AcrossAI_Sanitizer.php`
+- Updated `AGENTS.md` checklist (9 items) and bumped `CONSTITUTION.md` to v1.4.3
+- Added `DEC-EVAL-PHP-CODE` to DECISIONS.md: eval() in php_code ability type; $code admin-gated, $input caller-controlled
+- New patterns: PATTERN-WP-DEBUG-LOG-GUARD, PATTERN-CI-WORKFLOW-HARDENING, PATTERN-CONSTITUTION-SYNC-REPORT, BUG-PHPCS-ELSE-IF
+
+---
+
+## 2026-05-30 — Feature 020 CI fix: plugin-check-action#579 workaround
+
+- `WordPress/plugin-check-action@v1` silently exited 0 on first PR run (ubuntu-latest + Node 24.16)
+- Root cause: action injects URL-plugin into wp-env.json; Node 24.16 @wordpress/env exits silently on URL plugins
+- 3 fix iterations (`8f92c02`, `9ba14d2`, `d58f487`) before finding working solution
+- Final fix: bypass action entirely; inline wp-env start + WP-CLI `wp plugin check` directly
+- New patterns: BUG-PLUGIN-CHECK-ACTION-NODE24, PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT

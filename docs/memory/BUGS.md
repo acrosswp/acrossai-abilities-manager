@@ -788,3 +788,34 @@ resolve it without `{ virtual: true }` in the mock call.
 `@wordpress/blocks`, etc.) that are not installed in `node_modules` need `{ virtual: true }`.
 
 **Evidence**: Feature 018 T022 (2026-05-29).
+
+---
+
+## BUG-PHPCS-ELSE-IF (2026-05-30, Feature 020)
+
+**Symptom**: PHPCS error: "Expected 1 space after `if` keyword" or "Inline control structures are not allowed" — actually a `Squiz.ControlStructures.ControlSignature` violation on an `else { if () }` nesting.
+
+**Cause**: `else { if ( $condition ) { $body; } }` is flagged by PHPCS because having a single `if` as the only statement inside an `else` block is a style violation. `phpcbf` will NOT auto-fix this — it requires manual restructuring.
+
+**Fix**: Rewrite as `elseif ( $condition ) { $body; }`. The two forms are semantically equivalent when the outer conditional is a simple `if`.
+
+**Evidence**: Feature 020 — `admin/Main.php` at line 120-125: `else { // phpcs:ignore\n  if ( defined('WP_DEBUG_LOG') ... ) { error_log(...); } }` restructured to `elseif ( defined('WP_DEBUG_LOG') ... ) { // phpcs:ignore\n  error_log(...); }`.
+
+**Where to look**: `admin/Main.php` lines 118-126.
+
+---
+
+## BUG-PLUGIN-CHECK-ACTION-NODE24 (2026-05-30, Feature 020)
+
+**Symptom**: The `WordPress/plugin-check-action@v1` CI job completes with exit code 0 and produces no output — Plugin Check never actually runs. No error is shown.
+
+**Cause**: The action always injects `plugin-check.zip` as a URL-based plugin entry into `wp-env.json`. On `ubuntu-latest` runners running Node 24.16 (shipped from ≥ 2026-05-25), `@wordpress/env` silently exits 0 without starting any Docker containers when it encounters any URL-based plugin entry. Tracked upstream at https://github.com/WordPress/plugin-check-action/issues/579.
+
+**Three intermediate fixes tried before root cause found**:
+1. `8f92c02` — Delete repo's `.wp-env.json` before the action runs → still fails (action creates its own URL-plugin config)
+2. `9ba14d2` — Provide custom `wp-env.json` with `testsEnvironment:false` → still fails (action overwrites it)
+3. `d58f487` — Bypass the action entirely; run Plugin Check via `@wordpress/env` + WP-CLI directly → **works**
+
+**Fix**: Do not use `WordPress/plugin-check-action@v1`. Use the direct approach documented in `PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT`.
+
+**Where to look**: `.github/workflows/plugin-check.yml`, commits `8f92c02`–`d58f487` on branch `020-plugin-check-ci`.

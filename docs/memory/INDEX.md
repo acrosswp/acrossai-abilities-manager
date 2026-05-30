@@ -140,3 +140,12 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | ARCH-ABILITYFORM-SECTION-ORDER | Canonical AbilityForm.jsx section order 1-6 (Identity→SitePerm→MCP→Annotations→Callback→Schema); all inside single .panel | Architecture | abilityform, section-order, panel, jsx | ARCHITECTURE.md |
 
 | 2026-05-29 | Feature 018: User Access section + AC integration pattern + 4 Jest gotchas | Abilities | feature-018, access-control, jest, react18 | WORKLOG.md |
+| DEC-EVAL-PHP-CODE | eval() in php_code ability type: $code admin-gated (manage_options), $input caller-controlled; risk accepted; CI suppressed via ignore-codes | Plugin-wide | eval, php-code, owasp-a03, injection, risk-acceptance | DECISIONS.md |
+| PATTERN-WP-DEBUG-LOG-GUARD | Wrap error_log() in WP_DEBUG_LOG guard; phpcs:ignore inside guard; identical pattern across all call sites | PHP | error_log, WP_DEBUG_LOG, plugin-check, compliance | ARCHITECTURE.md |
+| PATTERN-CI-WORKFLOW-HARDENING | GitHub Actions: SHA-pin all uses:, permissions: {} at workflow level, timeout-minutes per job | CI/GitHub | github-actions, sha-pin, permissions, timeout, security | ARCHITECTURE.md |
+| PATTERN-CONSTITUTION-SYNC-REPORT | Every CONSTITUTION.md version bump must update the SYNC IMPACT REPORT HTML comment at the top | Plugin-wide | constitution, sync-impact, version-bump | ARCHITECTURE.md |
+| BUG-PHPCS-ELSE-IF | else { if() } nesting fails PHPCS; rewrite as elseif — phpcbf will not auto-fix | PHP/PHPCS | phpcs, else-if, elseif, admin-main | BUGS.md |
+| 2026-05-30 | Feature 020: Plugin Check CI gate, 12 error_log() guards, CONSTITUTION v1.4.3, 4 new patterns | Feature 020 | feature-020, plugin-check, error_log, ci, constitution | WORKLOG.md |
+| BUG-PLUGIN-CHECK-ACTION-NODE24 | plugin-check-action@v1 silently exits 0 on Node 24.16 ubuntu-latest (≥2026-05-25); use wp-env+WP-CLI directly | CI | plugin-check, wp-env, node24, silent-exit, github-actions | BUGS.md |
+| PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT | Canonical Plugin Check CI: @wordpress/env + WP-CLI post-boot; never use plugin-check-action@v1 directly | CI | plugin-check, wp-env, wpcli, node24, workaround | ARCHITECTURE.md |
+| 2026-05-30 | Feature 020 CI fix: 3 commits to work around plugin-check-action#579 Node 24.16 silent-exit bug | Feature 020 | ci-fix, plugin-check, node24, wp-env | WORKLOG.md |

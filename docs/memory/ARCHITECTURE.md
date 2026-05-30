@@ -563,3 +563,94 @@ Checkbox `register_setting()` sanitize callbacks MUST handle absent values. Brow
 When a module reads a settings option AND exposes an `apply_filters()` hook, feed the option value as the filter default: `apply_filters( 'hook', get_option( 'key', 0 ) )`. The scheduling guard short-circuits when the effective value is `0` (never schedule). This decouples "should I schedule?" from execution and preserves filter-based override for testing/programmatic control.
 
 **Canonical example**: `AcrossAI_Ability_Logger::schedule_cleanup()` + `cleanup_old_logs()` in `includes/Modules/Logger/AcrossAI_Ability_Logger.php`.
+
+---
+
+## PATTERN-WP-DEBUG-LOG-GUARD (2026-05-30, Feature 020)
+
+Wrap every `error_log()` call in a `WP_DEBUG_LOG` conditional guard for Plugin Check compliance. Never suppress or remove `error_log()` calls — guard them so they only fire when debug logging is explicitly enabled by the site owner.
+
+**Canonical pattern** (identical for all call sites; must be exact):
+```php
+if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+    error_log( '...' );
+}
+```
+
+Key rules:
+- `defined()` check BEFORE boolean evaluation — avoids PHP notice on undefined constant
+- `phpcs:ignore` moves INSIDE the guard, on the line immediately before `error_log()`
+- Never use `WP_DEBUG` alone; never use `ini_get`; never vary the pattern across call sites
+
+**Evidence**: Feature 020 — 12 `error_log()` calls guarded across 5 PHP files; Plugin Check CI passes with zero non-suppressed errors.
+
+---
+
+## PATTERN-CI-WORKFLOW-HARDENING (2026-05-30, Feature 020)
+
+GitHub Actions CI workflows must apply three hardening measures:
+1. **SHA-pin every `uses:` reference** to an immutable commit hash with the mutable tag as a comment: `uses: actions/checkout@<sha> # v4`. Prevents supply-chain substitution if an upstream tag is moved.
+2. **Declare `permissions: {}` at the workflow level** (before `jobs:`), with specific permissions granted only at the job level. Prevents future jobs from inheriting broader token grants.
+3. **Set `timeout-minutes` on every job** to fail fast and prevent unbounded runner consumption. Use `15` minimum for jobs that start Docker containers (e.g. `wp-env start`); `10` is sufficient for jobs with no container startup.
+
+**Canonical example**: `.github/workflows/plugin-check.yml` — permissions: {}, timeout-minutes: 10, three SHA-pinned actions.
+
+**Evidence**: Feature 020 — architecture review V1–V3 findings; all three applied.
+
+---
+
+## PATTERN-CONSTITUTION-SYNC-REPORT (2026-05-30, Feature 020)
+
+Every `CONSTITUTION.md` version bump (MAJOR, MINOR, or PATCH) must also update the `<!-- SYNC IMPACT REPORT -->` HTML comment at the very top of the file. The comment must list: version change (e.g. `1.4.2 → 1.4.3`), modified sections, rationale, templates reviewed, and any deferred TODOs.
+
+**Why**: The sync report is the primary audit trail for architecture governance changes. An unupdated sync report will mislead architecture reviewers about what changed and when.
+
+**Evidence**: Feature 019 (1.4.1 → 1.4.2), Feature 020 (1.4.2 → 1.4.3).
+
+---
+
+## PATTERN-PLUGIN-CHECK-WP-ENV-DIRECT (2026-05-30, Feature 020)
+
+**Do NOT use `WordPress/plugin-check-action@v1` directly** — it has a silent exit-0 bug on Node 24.16 (`ubuntu-latest` ≥ 2026-05-25). See `BUG-PLUGIN-CHECK-ACTION-NODE24`.
+
+The canonical CI pattern for running Plugin Check is to inline the steps manually:
+
+```yaml
+- name: Install @wordpress/env
+  run: npm install -g --no-fund @wordpress/env
+
+- name: Create wp-env config
+  run: |
+    cat > .wp-env.json << 'EOF'
+    {
+      "core": null,
+      "plugins": [],
+      "testsEnvironment": false,
+      "mappings": {
+        "wp-content/plugins/<your-slug>": "."
+      }
+    }
+    EOF
+
+- name: Start WordPress environment
+  run: wp-env start
+
+- name: Install Plugin Check
+  run: wp-env run cli wp plugin install plugin-check --activate
+
+- name: Run Plugin Check
+  run: |
+    wp-env run cli wp plugin activate <your-slug>
+    wp-env run cli wp plugin check <your-slug> \
+      --ignore-codes=<phpcs_error_codes> \
+      --include-experimental
+```
+
+**Key rules**:
+- `"plugins": []` in `.wp-env.json` — never add URL-based plugins here; install them via WP-CLI post-boot
+- `"testsEnvironment": false` — starts one environment instead of two (faster, avoids Docker resource issues)
+- `--ignore-warnings` does NOT exist on `wp plugin check` CLI — use `--ignore-codes` only
+- `timeout-minutes: 15` minimum — Docker container startup adds significant time vs plain CI steps
+
+**Evidence**: `.github/workflows/plugin-check.yml` at commit `d58f487` on branch `020-plugin-check-ci`.

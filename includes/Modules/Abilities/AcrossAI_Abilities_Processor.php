@@ -239,8 +239,10 @@ class AcrossAI_Abilities_Processor {
 
 		return static function ( $input ) use ( $code, $slug ) {
 			if ( '' === $code ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( sprintf( 'acrossai: php_code ability "%s" has empty code — returning [].', $slug ) );
+				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( sprintf( 'acrossai: php_code ability "%s" has empty code — returning [].', $slug ) );
+				}
 				return array();
 			}
 
@@ -252,13 +254,17 @@ class AcrossAI_Abilities_Processor {
 				};
 				$result = $fn( $input );
 				// Audit log: slug + success, no payload data.
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( sprintf( 'acrossai: php_code ability "%s" executed successfully.', $slug ) );
+				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( sprintf( 'acrossai: php_code ability "%s" executed successfully.', $slug ) );
+				}
 				return $result;
 			} catch ( \Throwable $e ) {
 				// Isolate per-invocation failures — do not abort registry bootstrap.
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( sprintf( 'acrossai: php_code ability "%s" threw %s: %s', $slug, get_class( $e ), $e->getMessage() ) );
+				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( sprintf( 'acrossai: php_code ability "%s" threw %s: %s', $slug, get_class( $e ), $e->getMessage() ) );
+				}
 				return new \WP_Error( 'ability_exec_error', 'PHP code execution failed.' );
 			}
 		};
