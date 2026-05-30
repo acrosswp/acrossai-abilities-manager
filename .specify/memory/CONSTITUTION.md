@@ -1,5 +1,19 @@
 <!--
 SYNC IMPACT REPORT
+Version change: 1.4.2 → 1.4.3
+Modified sections: §II WordPress Standards Compliance — added Plugin Check mandatory gate bullet
+Rationale: Feature 020 adds CI enforcement via WordPress/plugin-check-action@v1; CONSTITUTION updated
+to require plugin-check compliance in perpetuity. Only intentional suppression is the eval() in
+AcrossAI_Abilities_Processor.php (php_code ability type), recorded via ignore-codes in the workflow.
+Templates reviewed:
+  - .specify/templates/plan-template.md ✅ reviewed — no outdated references
+  - .specify/templates/spec-template.md ✅ reviewed — no outdated references
+  - .specify/templates/tasks-template.md ✅ reviewed — no outdated references
+  - .specify/templates/checklist-template.md ✅ reviewed — no outdated references
+Deferred TODOs: None
+
+Previous sync impact (v1.4.1 → v1.4.2): Directory Layout (Logger/ added), §I (module count corrected)
+
 Version change: 1.4.0 → 1.4.1
 Modified principles: Integration Resilience — added canonical pattern for MCP server listing via wpboilerplate/wpb-mcp-servers-list Composer package
 Added sections: None
@@ -48,6 +62,9 @@ JavaScript MUST pass ESLint with zero errors or warnings.
 All output MUST be escaped using the most specific available WordPress escaping function.
 All input MUST be sanitized at system entry points.
 No deprecated WordPress functions are permitted.
+The plugin MUST pass the WordPress Plugin Check tool with zero errors and zero warnings,
+with only intentional code suppressions (currently: `ignore-codes: WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval`
+for the intentional `eval()` in the `php_code` ability type). All new code MUST remain plugin-check clean.
 The plugin MUST be compatible with WordPress 6.9+ and PHP 7.4+.
 The plugin MUST be multisite-compatible unless a feature is explicitly scoped to single-site with
 documented justification.
@@ -254,4 +271,4 @@ constitution. Any implementation that appears to violate a principle MUST either
 include documented justification in the feature plan explaining why a compliant approach was not
 feasible.
 
-**Version**: 1.4.2 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-28
+**Version**: 1.4.3 | **Ratified**: 2026-05-11 | **Last Amended**: 2026-05-30

@@ -1,0 +1,28 @@
+name: Plugin Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - run: composer install --no-dev --prefer-dist --no-progress
+
+      - uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: '.'
+          ignore-codes: 'WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_eval'
+          include-experimental: true
+          ignore-warnings: false

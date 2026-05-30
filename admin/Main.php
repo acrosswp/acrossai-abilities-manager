@@ -117,7 +117,7 @@ class Main {
 		$abilities_asset_path = \ACROSSAI_ABILITIES_MANAGER_PLUGIN_PATH . 'build/js/abilities.asset.php';
 		if ( file_exists( $abilities_asset_path ) ) {
 			$this->abilities_asset_file = include $abilities_asset_path;
-		} else {
+		} elseif ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
 			// Log a notice when the build artifact is absent so developers can diagnose missing builds.
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'acrossai-abilities-manager: build/js/abilities.asset.php not found — run npm run build.' );

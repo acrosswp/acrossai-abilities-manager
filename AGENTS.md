@@ -68,6 +68,7 @@ package_hierarchy:
 - [ ] Input sanitized, output escaped
 - [ ] No deprecated functions
 - [ ] Package validation pass (npm run validate-packages)
+- [ ] Plugin Check pass (WordPress/plugin-check-action)
 
 ---
 

@@ -98,8 +98,10 @@ class AcrossAI_Sanitizer {
 		}
 
 		// Unrecognised value — return null (safe default) and log.
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[AcrossAI] sanitize_tri_state: unexpected value type ' . gettype( $value ) . ', coercing to null.' );
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( '[AcrossAI] sanitize_tri_state: unexpected value type ' . gettype( $value ) . ', coercing to null.' );
+		}
 		return null;
 	}
 
@@ -138,6 +140,13 @@ class AcrossAI_Sanitizer {
 	 */
 	const MAX_SERVER_ID_LENGTH = 255;
 
+	/**
+	 * Sanitize an array of MCP server IDs.
+	 *
+	 * @since  0.1.0
+	 * @param  mixed $value Raw value.
+	 * @return array<string>|null Sanitized array of server ID strings, or null if empty/invalid.
+	 */
 	public static function sanitize_mcp_servers_array( $value ): ?array {
 		if ( null === $value ) {
 			return null;

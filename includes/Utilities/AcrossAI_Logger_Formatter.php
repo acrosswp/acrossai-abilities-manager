@@ -46,8 +46,10 @@ class AcrossAI_Logger_Formatter {
 
 		foreach ( $required_fields as $field ) {
 			if ( ! isset( $entry[ $field ] ) ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( "Logger: missing required field '{$field}'" );
+				if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( "Logger: missing required field '{$field}'" );
+				}
 				return array();
 			}
 		}
@@ -55,16 +57,20 @@ class AcrossAI_Logger_Formatter {
 		// Validate source is valid (SEC-04: strict comparison).
 		$valid_sources = array( 'mcp', 'rest', 'cli', 'cron', 'ajax', 'direct' );
 		if ( ! in_array( $entry['source'], $valid_sources, true ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: invalid source value' );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Logger: invalid source value' );
+			}
 			$entry['source'] = 'direct'; // Fallback.
 		}
 
 		// Validate status is valid (SEC-04: strict comparison).
 		$valid_statuses = array( 'success', 'error', 'permission_denied' );
 		if ( ! in_array( $entry['status'], $valid_statuses, true ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'Logger: invalid status value' );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Logger: invalid status value' );
+			}
 			$entry['status'] = 'error'; // Fallback.
 		}
 
