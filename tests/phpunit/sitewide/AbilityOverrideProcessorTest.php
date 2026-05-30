@@ -51,19 +51,19 @@ class AbilityOverrideProcessorTest extends WP_UnitTestCase {
 	private function reset_processor_state(): void {
 		$ref = new \ReflectionClass( AcrossAI_Ability_Override_Processor::class );
 
-		$instance = $ref->getProperty( '_instance' );
+		$instance = $ref->getProperty( 'instance' );
 		$instance->setAccessible( true );
 		$instance->setValue( null, null );
 
-		$cache = $ref->getProperty( '_overrides_cache' );
+		$cache = $ref->getProperty( 'overrides_cache' );
 		$cache->setAccessible( true );
 		$cache->setValue( null, null );
 
-		$checked = $ref->getProperty( '_checked' );
+		$checked = $ref->getProperty( 'checked' );
 		$checked->setAccessible( true );
 		$checked->setValue( null, false );
 
-		$is_manager = $ref->getProperty( '_is_manager' );
+		$is_manager = $ref->getProperty( 'is_manager' );
 		$is_manager->setAccessible( true );
 		$is_manager->setValue( null, false );
 	}
@@ -158,7 +158,7 @@ class AbilityOverrideProcessorTest extends WP_UnitTestCase {
 		$ref_method->setAccessible( true );
 		$ref_method->invoke( null );
 
-		$ref_cache = new \ReflectionProperty( AcrossAI_Ability_Override_Processor::class, '_overrides_cache' );
+		$ref_cache = new \ReflectionProperty( AcrossAI_Ability_Override_Processor::class, 'overrides_cache' );
 		$ref_cache->setAccessible( true );
 		$cache_value = $ref_cache->getValue( null );
 
@@ -185,7 +185,7 @@ class AbilityOverrideProcessorTest extends WP_UnitTestCase {
 		set_transient( 'acrossai_ability_overrides_cache', array(), HOUR_IN_SECONDS );
 
 		// Also populate the in-memory cache to verify it is cleared.
-		$ref_cache = new \ReflectionProperty( AcrossAI_Ability_Override_Processor::class, '_overrides_cache' );
+		$ref_cache = new \ReflectionProperty( AcrossAI_Ability_Override_Processor::class, 'overrides_cache' );
 		$ref_cache->setAccessible( true );
 		$ref_cache->setValue( null, array( 'test-ability' => new \stdClass() ) );
 

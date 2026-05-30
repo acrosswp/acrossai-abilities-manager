@@ -49,14 +49,14 @@ final class AcrossAI_Ability_Override_Processor {
 	 *
 	 * @var AcrossAI_Ability_Override_Processor|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * In-memory cache: slug → AcrossAI_Abilities_Row. Null means not yet loaded.
 	 *
 	 * @var AcrossAI_Abilities_Row[]|null
 	 */
-	protected static $_overrides_cache = null;
+	protected static $overrides_cache = null;
 
 
 	/**
@@ -64,14 +64,14 @@ final class AcrossAI_Ability_Override_Processor {
 	 *
 	 * @var bool
 	 */
-	protected static $_checked = false;
+	protected static $checked = false;
 
 	/**
 	 * Memoized result of is_manager_rest_request().
 	 *
 	 * @var bool
 	 */
-	protected static $_is_manager = false;
+	protected static $is_manager = false;
 
 	// -------------------------------------------------------------------------
 	// Singleton
@@ -84,10 +84,10 @@ final class AcrossAI_Ability_Override_Processor {
 	 * @return self
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**
@@ -196,25 +196,25 @@ final class AcrossAI_Ability_Override_Processor {
 	 * @return bool True when the current request is a Manager REST API request (PATH A).
 	 */
 	public static function is_manager_rest_request(): bool {
-		if ( self::$_checked ) {
-			return self::$_is_manager;
+		if ( self::$checked ) {
+			return self::$is_manager;
 		}
 
-		self::$_checked = true;
+		self::$checked = true;
 
 		// Non-HTTP contexts are never Manager REST requests.
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			self::$_is_manager = false;
+			self::$is_manager = false;
 			return false;
 		}
 
 		if ( wp_doing_cron() ) {
-			self::$_is_manager = false;
+			self::$is_manager = false;
 			return false;
 		}
 
 		if ( wp_doing_ajax() ) {
-			self::$_is_manager = false;
+			self::$is_manager = false;
 			return false;
 		}
 
@@ -222,11 +222,11 @@ final class AcrossAI_Ability_Override_Processor {
 			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) )
 			: '';
 
-		$namespace         = (string) apply_filters( 'acrossai_manager_rest_namespace', ACROSSAI_MANAGER_REST_NAMESPACE );
-		self::$_is_manager = ( '' !== $uri ) &&
+		$namespace        = (string) apply_filters( 'acrossai_manager_rest_namespace', ACROSSAI_MANAGER_REST_NAMESPACE );
+		self::$is_manager = ( '' !== $uri ) &&
 			false !== strpos( $uri, '/' . rest_get_url_prefix() . '/' . $namespace . '/' );
 
-		return self::$_is_manager;
+		return self::$is_manager;
 	}
 
 	/**
@@ -239,7 +239,7 @@ final class AcrossAI_Ability_Override_Processor {
 	 * @return void
 	 */
 	private static function load_overrides_cache(): void {
-		if ( null !== self::$_overrides_cache ) {
+		if ( null !== self::$overrides_cache ) {
 			return;
 		}
 
@@ -256,7 +256,7 @@ final class AcrossAI_Ability_Override_Processor {
 			set_transient( 'acrossai_ability_overrides_cache', $cached, 12 * HOUR_IN_SECONDS );
 		}
 
-		self::$_overrides_cache = $cached;
+		self::$overrides_cache = $cached;
 	}
 
 	/**
@@ -291,8 +291,8 @@ final class AcrossAI_Ability_Override_Processor {
 		self::load_overrides_cache();
 
 		// Inject DB override fields when a record exists for this slug.
-		if ( isset( self::$_overrides_cache[ $slug ] ) ) {
-			$row = self::$_overrides_cache[ $slug ];
+		if ( isset( self::$overrides_cache[ $slug ] ) ) {
+			$row = self::$overrides_cache[ $slug ];
 
 			// Top-level field — skip null to preserve Inherit semantics (FR-006).
 			if ( null !== $row->site_allowed ) {
@@ -417,7 +417,7 @@ final class AcrossAI_Ability_Override_Processor {
 	public static function unregister_blocked_abilities(): void {
 		self::load_overrides_cache();
 
-		foreach ( self::$_overrides_cache as $slug => $row ) {
+		foreach ( self::$overrides_cache as $slug => $row ) {
 			if ( \wp_has_ability( $slug ) && false === $row->site_allowed ) {
 				\wp_unregister_ability( $slug );
 			}
@@ -603,6 +603,6 @@ final class AcrossAI_Ability_Override_Processor {
 	 */
 	public static function bust_cache(): void {
 		delete_transient( 'acrossai_ability_overrides_cache' );
-		self::$_overrides_cache = null;
+		self::$overrides_cache = null;
 	}
 }

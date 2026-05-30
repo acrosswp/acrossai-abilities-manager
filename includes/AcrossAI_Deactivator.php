@@ -1,11 +1,6 @@
 <?php
-namespace AcrossAI_Abilities_Manager\Includes;
-
-// Exit if accessed directly
-defined( 'ABSPATH' ) || exit;
-
 /**
- * Fired during plugin deactivation
+ * Fired during plugin deactivation.
  *
  * @link       https://github.com/WPBoilerplate/acrossai-abilities-manager
  * @since      0.0.1
@@ -13,6 +8,11 @@ defined( 'ABSPATH' ) || exit;
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes
  */
+
+namespace AcrossAI_Abilities_Manager\Includes;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Fired during plugin deactivation.

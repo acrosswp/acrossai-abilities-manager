@@ -50,7 +50,7 @@ class AcrossAI_Ability_Logs_Query extends Query {
 	 *
 	 * @var AcrossAI_Ability_Logs_Query|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Get the singleton instance of this query.
@@ -59,10 +59,10 @@ class AcrossAI_Ability_Logs_Query extends Query {
 	 * @return AcrossAI_Ability_Logs_Query
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

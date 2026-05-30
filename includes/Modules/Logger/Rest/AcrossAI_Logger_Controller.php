@@ -41,7 +41,7 @@ class AcrossAI_Logger_Controller extends WP_REST_Controller {
 	 * @static
 	 * @var AcrossAI_Logger_Controller|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Get singleton instance
@@ -51,10 +51,10 @@ class AcrossAI_Logger_Controller extends WP_REST_Controller {
 	 * @return AcrossAI_Logger_Controller
 	 */
 	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

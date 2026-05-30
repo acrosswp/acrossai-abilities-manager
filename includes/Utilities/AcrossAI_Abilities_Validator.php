@@ -533,12 +533,12 @@ class AcrossAI_Abilities_Validator {
 	 * Calculate the nesting depth of an array.
 	 *
 	 * @since  0.1.0
-	 * @param  array $array Input array.
+	 * @param  array $items Input array.
 	 * @return int
 	 */
-	private static function array_depth( array $array ): int {
+	private static function array_depth( array $items ): int {
 		$max_depth = 1;
-		foreach ( $array as $value ) {
+		foreach ( $items as $value ) {
 			if ( is_array( $value ) ) {
 				$depth     = self::array_depth( $value ) + 1;
 				$max_depth = max( $max_depth, $depth );

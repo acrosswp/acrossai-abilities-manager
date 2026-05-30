@@ -26,7 +26,7 @@ class AcrossAI_Abilities_Access_Control {
 	 *
 	 * @var self|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Plugin-scoped provider filter tag.
@@ -48,11 +48,11 @@ class AcrossAI_Abilities_Access_Control {
 	 * @return self
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
 
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

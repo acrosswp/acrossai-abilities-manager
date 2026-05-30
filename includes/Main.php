@@ -46,7 +46,7 @@ final class Main {
 	 * @var AcrossAI_Abilities_Manager
 	 * @since 0.0.1
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * The autoloader instance.
@@ -138,10 +138,10 @@ final class Main {
 	 * @return AcrossAI_Abilities_Manager - Main instance.
 	 */
 	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

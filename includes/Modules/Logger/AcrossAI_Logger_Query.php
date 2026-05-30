@@ -31,7 +31,7 @@ class AcrossAI_Logger_Query {
 	 * @static
 	 * @var AcrossAI_Logger_Query|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Get singleton instance
@@ -41,10 +41,10 @@ class AcrossAI_Logger_Query {
 	 * @return AcrossAI_Logger_Query
 	 */
 	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

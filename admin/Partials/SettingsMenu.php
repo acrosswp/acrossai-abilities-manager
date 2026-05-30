@@ -33,7 +33,7 @@ class SettingsMenu {
 	 * @since 0.1.0
 	 * @var SettingsMenu|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Returns the singleton instance of this class.
@@ -42,10 +42,10 @@ class SettingsMenu {
 	 * @return self
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

@@ -36,7 +36,7 @@ class AcrossAI_Ability_Logger {
 	 * @static
 	 * @var AcrossAI_Ability_Logger|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Pending entries stack
@@ -68,10 +68,10 @@ class AcrossAI_Ability_Logger {
 	 * @return AcrossAI_Ability_Logger
 	 */
 	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

@@ -66,7 +66,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 *
 	 * @var AcrossAI_Abilities_Query|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Maximum JSON field size in bytes (64 KB — consistent with original Query guard (Feature 009)).
@@ -108,10 +108,10 @@ class AcrossAI_Abilities_Query extends Query {
 	 * @return AcrossAI_Abilities_Query
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	// -------------------------------------------------------------------------

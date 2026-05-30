@@ -31,7 +31,7 @@ class AcrossAI_Logger_Source_Detector {
 	 * @since 0.1.0
 	 * @var self|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * MCP context flag
@@ -60,10 +60,10 @@ class AcrossAI_Logger_Source_Detector {
 	 * @return self
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

@@ -1,9 +1,4 @@
 <?php
-namespace AcrossAI_Abilities_Manager\Public;
-
-// Exit if accessed directly
-defined( 'ABSPATH' ) || exit;
-
 /**
  * The public-facing functionality of the plugin.
  *
@@ -13,6 +8,11 @@ defined( 'ABSPATH' ) || exit;
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/public
  */
+
+namespace AcrossAI_Abilities_Manager\Public;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * The public-facing functionality of the plugin.
@@ -66,8 +66,8 @@ class Main {
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    0.0.1
-	 * @param      string    $plugin_name       The name of the plugin.
-	 * @param      string    $version    The version of this plugin.
+	 * @param      string $plugin_name       The name of the plugin.
+	 * @param      string $version    The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
 

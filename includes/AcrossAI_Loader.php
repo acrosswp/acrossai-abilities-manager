@@ -1,11 +1,6 @@
 <?php
-namespace AcrossAI_Abilities_Manager\Includes;
-
-// Exit if accessed directly
-defined( 'ABSPATH' ) || exit;
-
 /**
- * Register all actions and filters for the plugin
+ * Register all actions and filters for the plugin.
  *
  * @link       https://github.com/WPBoilerplate/acrossai-abilities-manager
  * @since      0.0.1
@@ -13,6 +8,11 @@ defined( 'ABSPATH' ) || exit;
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes
  */
+
+namespace AcrossAI_Abilities_Manager\Includes;
+
+// Exit if accessed directly.
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Register all actions and filters for the plugin.
@@ -51,7 +51,7 @@ class AcrossAI_Loader {
 	 * @var AcrossAI_Abilities_Manager_Loader
 	 * @since 0.0.1
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Initialize the collections used to maintain the actions and filters.
@@ -75,10 +75,10 @@ class AcrossAI_Loader {
 	 * @return AcrossAI_Abilities_Manager_Loader - Main instance.
 	 */
 	public static function instance() {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**
@@ -103,7 +103,7 @@ class AcrossAI_Loader {
 	 * @param    object $component        A reference to the instance of the object on which the filter is defined.
 	 * @param    string $callback         The name of the function definition on the $component.
 	 * @param    int    $priority         Optional. The priority at which the function should be fired. Default is 10.
-	 * @param    int    $accepted_args    Optional. The number of arguments that should be passed to the $callback. Default is 1
+	 * @param    int    $accepted_args    Optional. The number of arguments that should be passed to the $callback. Default is 1.
 	 */
 	public function add_filter( $hook, $component, $callback, $priority = 10, $accepted_args = 1 ) {
 		$this->filters = $this->add( $this->filters, $hook, $component, $callback, $priority, $accepted_args );

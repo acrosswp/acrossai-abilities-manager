@@ -57,7 +57,7 @@ class AcrossAI_Abilities_Table extends Table {
 	 *
 	 * @var AcrossAI_Abilities_Table|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Get the singleton instance of this table.
@@ -66,10 +66,10 @@ class AcrossAI_Abilities_Table extends Table {
 	 * @return AcrossAI_Abilities_Table
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

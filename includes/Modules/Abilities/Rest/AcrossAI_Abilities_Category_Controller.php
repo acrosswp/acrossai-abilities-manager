@@ -27,7 +27,7 @@ class AcrossAI_Abilities_Category_Controller {
 	 *
 	 * @var AcrossAI_Abilities_Category_Controller|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * Retrieve the singleton instance.
@@ -36,10 +36,10 @@ class AcrossAI_Abilities_Category_Controller {
 	 * @return AcrossAI_Abilities_Category_Controller
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**

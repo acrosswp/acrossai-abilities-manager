@@ -39,7 +39,7 @@ class AcrossAI_Abilities_Read_Controller {
 	 *
 	 * @var AcrossAI_Abilities_Read_Controller|null
 	 */
-	protected static $_instance = null;
+	protected static $instance = null;
 
 	/**
 	 * DB query instance (custom abilities, source=db).
@@ -55,10 +55,10 @@ class AcrossAI_Abilities_Read_Controller {
 	 * @return AcrossAI_Abilities_Read_Controller
 	 */
 	public static function instance(): self {
-		if ( null === self::$_instance ) {
-			self::$_instance = new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
 		}
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**
@@ -67,7 +67,7 @@ class AcrossAI_Abilities_Read_Controller {
 	 * @since 0.1.0
 	 */
 	private function __construct() {
-		$this->db_query        = AcrossAI_Abilities_Query::instance();
+		$this->db_query = AcrossAI_Abilities_Query::instance();
 	}
 
 	/**
