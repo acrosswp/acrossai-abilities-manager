@@ -112,7 +112,7 @@ Execute in sub-order (a → b → c → d) since they form a logical chain, thou
   - Remove `'php_code'` from the `callback_type` DB enum allowlist array.
   - Do NOT add `'registered_callback'` as a new DB enum entry (deferred per clarification Q2).
 
-- [x] T015 [US2] Verify: `grep -rn "eval(" includes/ admin/ uninstall.php acrossai-abilities-manager.php` → 0; `grep -rn "'php_code'" includes/ admin/` → 0 (non-comment occurrences)
+- [x] T015 [US2] Verify: `grep -rn "eval(" includes/ admin/ uninstall.php acrossai-abilities-manager.php` → 0; `grep -rn "'php_code'" includes/ admin/` → only the fail-closed `case 'php_code': return WP_Error('unsupported_callback_type')` in Processor remains; no execution path
 
 ---
 

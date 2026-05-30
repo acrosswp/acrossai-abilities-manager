@@ -55,4 +55,4 @@ jobs:
           wp-env run cli wp plugin check acrossai-abilities-manager \
             --include-experimental \
             --exclude-directories=.agents,.claude,.github,.specify,docs,node_modules,scripts,specs,src,tests \
-            --exclude-files=phpcs.xml.dist,phpstan.neon.dist,phpunit.xml.dist,composer.json,composer.lock,package.json,package-lock.json
+            --exclude-files=.distignore,.editorconfig,.eslintignore,.eslintrc,.gitattributes,.gitignore,.gitmodules,.nvmrc,.prettierignore,.wp-env.json,AGENTS.md,LICENSE.md,README.md,composer.json,composer.lock,eslint.config.js,package.json,package-lock.json,phpcs.xml.dist,phpstan.neon.dist,phpunit.xml.dist,webpack.config.js
