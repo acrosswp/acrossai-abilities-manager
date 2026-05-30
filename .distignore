@@ -10,6 +10,7 @@
 /.specify
 /.claude
 /.vscode
+/.phpunit.cache
 
 /node_modules
 
@@ -40,5 +41,7 @@ package.json
 package-lock.json
 
 webpack.config.js
+eslint.config.js
 phpcs.xml.dist
 phpstan.neon.dist
+phpunit.xml.dist

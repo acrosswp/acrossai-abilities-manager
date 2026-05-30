@@ -23,7 +23,10 @@
       "WebFetch(domain:speckit-community.github.io)",
       "Bash(specify extension *)",
       "Bash(composer update *)",
-      "Bash(composer require *)"
+      "Bash(composer require *)",
+      "mcp__procureco-mcp-adapter-default-server__mcp-adapter-discover-abilities",
+      "mcp__procureco-mcp-adapter-default-server__mcp-adapter-execute-ability",
+      "mcp__procureco-mcp-adapter-default-server__mcp-adapter-get-ability-info"
     ]
   }
 }
