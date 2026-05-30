@@ -23,8 +23,18 @@ jobs:
 
       - run: composer install --no-dev --prefer-dist --no-progress
 
-      - name: Remove local wp-env config
-        run: rm -f .wp-env.json
+      - name: Create CI wp-env config
+        run: |
+          cat > .wp-env.json << 'EOF'
+          {
+            "core": null,
+            "plugins": [ "https://downloads.wordpress.org/plugin/plugin-check.zip" ],
+            "testsEnvironment": false,
+            "mappings": {
+              "wp-content/plugins/acrossai-abilities-manager": "."
+            }
+          }
+          EOF
 
       - uses: WordPress/plugin-check-action@18573eb38f13543484a1f095672dae3849a4fbb0 # v1
         with:
