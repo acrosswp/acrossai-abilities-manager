@@ -15,20 +15,20 @@ namespace AcrossAI_Abilities_Manager;
  * registers the activation and deactivation functions, and defines a function
  * that starts the plugin.
  *
- * @link              https://github.com/WPBoilerplate/acrossai-abilities-manager
+ * @link              https://github.com/acrosswp/acrossai-abilities-manager
  * @since             0.0.1
  * @package           AcrossAI_Abilities_Manager
  *
  * @wordpress-plugin
  * Plugin Name:       AcrossAI Abilities Manager
- * Plugin URI:        https://github.com/WPBoilerplate/acrossai-abilities-manager
- * Description:       AcrossAI Abilities Manager by WPBoilerplate
+ * Plugin URI:        https://acrossai.co/
+ * Description:       Manage and customize the abilities of AcrossAI on your WordPress site. Tailor the AI's capabilities to suit your needs, enhancing user experience and engagement.
  * Version:           0.0.1
  * Requires PHP:      7.4
  * Requires at least: 6.9
  * Tested up to:      7.0
- * Author:            WPBoilerplate
- * Author URI:        https://github.com/WPBoilerplate/acrossai-abilities-manager
+ * Author:            raftaar1191
+ * Author URI:        https://profiles.wordpress.org/raftaar1191/
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       acrossai-abilities-manager

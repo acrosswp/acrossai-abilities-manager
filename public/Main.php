@@ -2,14 +2,14 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       https://github.com/WPBoilerplate/acrossai-abilities-manager
+ * @link       https://github.com/acrosswp/acrossai-abilities-manager
  * @since      0.0.1
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/public
  */
 
-namespace AcrossAI_Abilities_Manager\Public;
+namespace AcrossAI_Abilities_Manager\Front;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/public
- * @author     WPBoilerplate <contact@wpboilerplate.com>
+ * @author     AcrossWP <deepak@acrosswp.com>
  */
 class Main {
 

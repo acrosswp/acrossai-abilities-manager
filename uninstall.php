@@ -35,8 +35,8 @@ if ( $acrossai_delete_data ) {
 		$wpdb->prepare( 'DROP TABLE IF EXISTS %i', $acrossai_access_control_table )
 	);
 	\delete_option( 'wpb_access_control_db_version' );
-}
 
-// Always remove plugin settings options on uninstall (not data — configuration).
-\delete_option( 'acrossai_abilities_log_retention_days' );
-\delete_option( 'acrossai_abilities_uninstall_delete_data' );
+	// Remove plugin settings options on uninstall.
+	\delete_option( 'acrossai_abilities_log_retention_days' );
+	\delete_option( 'acrossai_abilities_uninstall_delete_data' );
+}

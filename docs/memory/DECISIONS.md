@@ -1080,3 +1080,39 @@ the production plugin surface or wait until the baseline is fixed.
 **Impact on AGENTS.md**: The `$_instance` example in the Singleton pattern block is now stale. Future features must use `$instance` (no underscore). Update AGENTS.md code examples when next editing that section.
 
 **Evidence**: `9da22d7` — 21 production classes + `AbilityOverrideProcessorTest.php` updated. `composer run phpcs`: 0 errors across 49 files.
+
+---
+
+### 2026-05-31 — `$wpdb->prepare()` with dynamic parameter arrays must use spread operator (DEC-WPDB-PREPARE-SPREAD)
+
+**Status**: Active
+
+**Why this is durable**
+When building a parameter array dynamically via `array_merge()` (e.g. table name + WHERE values + pagination values), passing the array as a single second argument to `$wpdb->prepare()` triggers PHPCS/Plugin Check noise. The spread operator form is the accepted pattern and must be used consistently.
+
+**Decision**
+Always spread the parameter array into `$wpdb->prepare()`:
+```php
+// Correct
+$wpdb->prepare( $sql, ...$params )
+
+// Wrong — triggers linter noise
+$wpdb->prepare( $sql, $params )
+```
+When the parameter array is built via `array_merge()` (typical for dynamic WHERE + table identifier + pagination), construct the full params array first with a descriptive name, then spread it:
+```php
+$params = array_merge( array( $table ), $where_values, array( $per_page, $offset ) );
+$results = $wpdb->get_results( $wpdb->prepare( $sql, ...$params ) ); // phpcs:ignore ... -- SQL fragments allowlisted; spread operator for linter clarity.
+```
+
+**Tradeoffs**
+Spread form requires PHP 5.6+. This plugin requires PHP 7.4+, so spread is always safe. Inline phpcs:ignore must remain because the SQL string is built from fixed fragments and cannot be a literal string constant.
+
+**Future mistake prevented**
+Do not pass a dynamically-built array as the second positional argument to `$wpdb->prepare()`. The PHPCS/Plugin Check flag will block CI. Use the spread operator.
+
+**Evidence**
+Feature 023 T004: `AcrossAI_Logger_Query.php` — both `$count_values` → `...$count_params` and `$final_values` → `...$select_params` refactored. PR #29.
+
+**Where to look next**
+`includes/Modules/Logger/AcrossAI_Logger_Query.php` (`get_logs_paginated` — count and select queries, canonical spread example).

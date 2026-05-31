@@ -2,7 +2,7 @@
 /**
  * Fired during plugin deactivation.
  *
- * @link       https://github.com/WPBoilerplate/acrossai-abilities-manager
+ * @link       https://github.com/acrosswp/acrossai-abilities-manager
  * @since      0.0.1
  *
  * @package    AcrossAI_Abilities_Manager
@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  * @since      0.0.1
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes
- * @author     WPBoilerplate <contact@wpboilerplate.com>
+ * @author     AcrossWP <deepak@acrosswp.com>
  */
 class AcrossAI_Deactivator {
 

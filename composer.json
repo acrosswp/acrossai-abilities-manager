@@ -17,7 +17,7 @@
         "plugin"
     ],
     "support": {
-        "issues": "https://github.com/wpboilerplate/acrossai-abilities-manager/issues"
+        "issues": "https://github.com/acrosswp/acrossai-abilities-manager/issues"
     },
     "authors": [
         {
@@ -28,7 +28,7 @@
         "psr-4": {
             "AcrossAI_Abilities_Manager\\Includes\\": "includes/",
             "AcrossAI_Abilities_Manager\\Admin\\": "admin/",
-            "AcrossAI_Abilities_Manager\\Public\\": "public/"
+            "AcrossAI_Abilities_Manager\\Front\\": "public/"
         }
     },
     "require-dev": {

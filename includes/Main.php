@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the admin area.
  *
- * @link       https://github.com/WPBoilerplate/acrossai-abilities-manager
+ * @link       https://github.com/acrosswp/acrossai-abilities-manager
  * @since      0.0.1
  *
  * @package    AcrossAI_Abilities_Manager
@@ -36,7 +36,7 @@ defined( 'ABSPATH' ) || exit;
  * @since      0.0.1
  * @package    AcrossAI_Abilities_Manager
  * @subpackage AcrossAI_Abilities_Manager/includes
- * @author     WPBoilerplate <contact@wpboilerplate.com>
+ * @author     AcrossWP <deepak@acrosswp.com>
  */
 final class Main {
 
@@ -160,12 +160,12 @@ final class Main {
 	/**
 	 * Define constant if not already set.
 	 *
-	 * @param  string      $constant_name  The constant name.
-	 * @param  string|bool $constant_value The constant value.
+	 * @param  string      $acrossai_name  The constant name.
+	 * @param  string|bool $acrossai_value The constant value.
 	 */
-	private function define( $constant_name, $constant_value ) {
-		if ( ! defined( $constant_name ) ) {
-			define( $constant_name, $constant_value );
+	private function define( $acrossai_name, $acrossai_value ) {
+		if ( ! defined( $acrossai_name ) ) {
+			define( $acrossai_name, $acrossai_value );
 		}
 	}
 
@@ -294,7 +294,7 @@ final class Main {
 	 */
 	private function define_public_hooks() {
 
-		$plugin_public = new \AcrossAI_Abilities_Manager\Public\Main( $this->get_plugin_name(), $this->get_version() );
+		$plugin_public = new \AcrossAI_Abilities_Manager\Front\Main( $this->get_plugin_name(), $this->get_version() );
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 

@@ -1,6 +1,6 @@
 === AcrossAI Abilities Manager ===
 Contributors: raftaar1191
-Donate link: https://github.com/WPBoilerplate/acrossai-abilities-manager
+Donate link: https://github.com/acrosswp/acrossai-abilities-manager
 Tags: abilities, ability management, access control, site management, ai
 Requires at least: 6.9
 Tested up to: 7.0

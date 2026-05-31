@@ -833,3 +833,51 @@ resolve it without `{ virtual: true }` in the mock call.
 **Future mistake prevented**: Never use workflow-level `ignore-codes` for forbidden-function findings. Remove or replace the function instead. See `PATTERN-REGISTERED-CALLBACK-TRUST` for the canonical eval() replacement.
 
 **Where to look**: `includes/Modules/Abilities/AcrossAI_Abilities_Processor.php` (`registered_callback` case), `docs/memory/DECISIONS.md` (DEC-PLUGIN-CHECK-PRODUCTION-SURFACE), `specs/021-plugin-check-remaining-cleanup/plan.md` (CHANGE-4).
+
+---
+
+### 2026-05-31 — `namespace AcrossAI_Abilities_Manager\Public` is invalid PHP — `public` is a reserved keyword (BUG-PUBLIC-NAMESPACE-RESERVED)
+
+**Status**: Active
+
+**Symptoms**
+PHPCompatibility CI flagged `public/Main.php` with a reserved-keyword error. The workaround was `--ignore=public/Main.php` in `phpcompat.yml`, silently excluding the file from compatibility scanning.
+
+**Root Cause**
+`public` is a reserved keyword in PHP. Using it as a namespace component (`namespace AcrossAI_Abilities_Manager\Public`) causes a parse error in strict PHP Compatibility tooling. The boilerplate generated this namespace by convention from the `public/` directory name without checking for reserved words.
+
+**Future mistake prevented**
+Never use a PHP reserved keyword (`public`, `private`, `protected`, `class`, `abstract`, `interface`, `static`, `final`, `new`, `return`, etc.) as a namespace component. When converting a directory path to a PSR-4 namespace, always verify each segment is a valid PHP identifier. This plugin uses `Front` as the canonical replacement for `Public` in the `public/` directory namespace.
+
+**Evidence**
+Feature 023: `public/Main.php` renamed from `namespace AcrossAI_Abilities_Manager\Public` to `namespace AcrossAI_Abilities_Manager\Front`; `includes/Main.php` and `composer.json` PSR-4 map updated to match; `--ignore=public/Main.php` removed from `phpcompat.yml`. Branch `023-fix-public-namespace-reserved-keyword`, PR #29.
+
+**Prevention / Detection**
+When adding a new directory under the plugin root, verify its namespace component is not a PHP reserved keyword before generating files. CI gate: `composer run phpcs` and `phpcompat.yml` must both pass with no `--ignore` flags.
+
+**Where to look next**
+`public/Main.php` (canonical `Front` namespace), `includes/Main.php` (`define_public_hooks` — `\AcrossAI_Abilities_Manager\Front\Main`), `composer.json` (PSR-4 autoload map — `AcrossAI_Abilities_Manager\\Front\\`).
+
+---
+
+### 2026-05-31 — `uninstall.php` removed options unconditionally, violating the data-preservation gate (BUG-UNINSTALL-OPTIONS-OUTSIDE-GATE)
+
+**Status**: Active
+
+**Symptoms**
+When a user uninstalled the plugin without enabling "delete all data", the `acrossai_abilities_log_retention_days` and `acrossai_abilities_uninstall_delete_data` options were deleted anyway. Admin settings were silently wiped on every uninstall.
+
+**Root Cause**
+The two `delete_option()` calls lived outside the `if ( $acrossai_delete_data )` block. Only the `DROP TABLE` was gated; the option deletion was unconditional.
+
+**Future mistake prevented**
+In `uninstall.php`, every `delete_option()`, `delete_post_meta_by_key()`, and destructive data removal call MUST be inside the `$acrossai_delete_data` gate. The gate is the explicit user consent boundary. Do not move option cleanup outside the gate to "always clean up config" — config options are data, and users may reinstall later expecting their settings to survive.
+
+**Evidence**
+Feature 023: `delete_option('acrossai_abilities_log_retention_days')` and `delete_option('acrossai_abilities_uninstall_delete_data')` moved inside the `if ( $acrossai_delete_data )` block in `uninstall.php`. PR #29.
+
+**Prevention / Detection**
+After editing `uninstall.php`, grep for `delete_option\|delete_post_meta\|drop table` outside the gate block. Any match outside `if ( $acrossai_delete_data )` is a violation.
+
+**Where to look next**
+`uninstall.php` (data gate — canonical correct form), `docs/memory/ARCHITECTURE.md` (`PATTERN-UNINSTALL-DATA-GATE`).

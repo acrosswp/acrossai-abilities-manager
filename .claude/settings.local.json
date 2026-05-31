@@ -39,7 +39,9 @@
       "Bash(vendor/bin/phpcs --standard=/tmp/phpcs-test.xml.dist .)",
       "Bash(vendor/bin/phpcs --standard=/tmp/phpcs-test.xml.dist --report=full .)",
       "Bash(vendor/bin/phpcs --standard=phpcs.xml.dist admin/)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(composer dump-autoload *)",
+      "Bash(vendor/bin/phpstan analyse *)"
     ]
   }
 }
