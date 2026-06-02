@@ -51,6 +51,11 @@
 		"@wordpress/dataviews": "^14.2.0",
 		"@wordpress/icons": "latest"
 	},
+	"peerDependencies": {
+		"@wordpress/data": "*",
+		"@wordpress/element": "*",
+		"@wordpress/i18n": "*"
+	},
 	"prettier": "@wordpress/prettier-config",
 	"stylelint": {
 		"extends": "@wordpress/stylelint-config/scss"

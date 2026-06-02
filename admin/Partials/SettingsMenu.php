@@ -103,6 +103,32 @@ class SettingsMenu {
 			)
 		);
 
+		// Per-page display option.
+		register_setting(
+			'acrossai_abilities_settings',
+			'acrossai_abilities_per_page',
+			array(
+				'sanitize_callback' => array( $this, 'sanitize_per_page' ),
+				'default'           => 20,
+			)
+		);
+
+		// Section 0: Display settings.
+		add_settings_section(
+			'acrossai_display_settings_section',
+			__( 'Display Settings', 'acrossai-abilities-manager' ),
+			'__return_false',
+			'acrossai-abilities-settings'
+		);
+
+		add_settings_field(
+			'acrossai_abilities_per_page',
+			__( 'Abilities per page', 'acrossai-abilities-manager' ),
+			array( $this, 'render_per_page_field' ),
+			'acrossai-abilities-settings',
+			'acrossai_display_settings_section'
+		);
+
 		// Section 1: Log settings.
 		add_settings_section(
 			'acrossai_log_settings_section',
@@ -133,6 +159,35 @@ class SettingsMenu {
 			array( $this, 'render_uninstall_field' ),
 			'acrossai-abilities-settings',
 			'acrossai_uninstall_settings_section'
+		);
+	}
+
+	/**
+	 * Sanitizes the abilities per-page value.
+	 *
+	 * Accepts integers in [1, 200]; returns 20 for anything outside that range.
+	 *
+	 * @since 0.1.0
+	 * @param mixed $value Raw submitted value.
+	 * @return int
+	 */
+	public function sanitize_per_page( $value ): int {
+		$int = absint( $value );
+		return ( $int < 1 || $int > 200 ) ? 20 : $int;
+	}
+
+	/**
+	 * Renders the abilities per-page number input field.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	public function render_per_page_field(): void {
+		$value = (int) get_option( 'acrossai_abilities_per_page', 20 );
+		printf(
+			'<input type="number" id="acrossai_abilities_per_page" name="acrossai_abilities_per_page" value="%s" min="1" max="200" step="1" /><p class="description">%s</p>',
+			esc_attr( (string) $value ),
+			esc_html__( 'Number of abilities shown per page. Default: 20. Min: 1. Max: 200.', 'acrossai-abilities-manager' )
 		);
 	}
 

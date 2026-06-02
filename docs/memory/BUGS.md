@@ -932,6 +932,81 @@ When `$overridable_fields` gains a new top-level field, immediately add a matchi
 
 ---
 
+### 2026-06-03 — BUG-ESLINT-DISABLE-LINE-EXACT: `eslint-disable-next-line` covers exactly one line
+
+**Status**: Active
+
+**Symptoms**
+`window.confirm()` inside a `no-alert` ESLint rule was not suppressed despite a `// eslint-disable-next-line no-alert` comment appearing a few lines above it. The lint run still reported the violation.
+
+**Root Cause**
+`// eslint-disable-next-line <rule>` suppresses the rule on the single line immediately following the comment. Placing the comment before a wrapping `if (` statement or assignment means the directive applies to that `if` line, not to the `window.confirm(` line further down.
+
+**Future mistake prevented**
+The directive must be on the line directly above the offending call — no intervening lines. If `window.confirm(` is inside an `if (window.confirm(...)) {` block, the comment goes on the line immediately before `if (window.confirm(`.
+
+**Evidence**
+Fixed in `src/js/abilities/components/AbilitiesList.jsx` — the `// eslint-disable-next-line no-alert` comment sits directly above the `if ( window.confirm(` line in the Clear All Overrides handler. Feature 025.
+
+**Prevention / Detection**
+After adding any `eslint-disable-next-line` comment, verify with `npm run lint:js` that the rule violation count decreases. A comment in the wrong position leaves the violation count unchanged.
+
+**Where to look next**
+`src/js/abilities/components/AbilitiesList.jsx` (Clear All Overrides handler in the `else` branch of `isCustom ? ... : ...`).
+
+---
+
+### 2026-06-03 — BUG-PHP-ABSINT-NEGATIVE-RANGE: `absint()` converts negatives to their absolute value, not zero
+
+**Status**: Active
+
+**Symptoms**
+A PHPUnit test for `sanitize_per_page(-5)` expected `20` (the out-of-range default) but the function returned `5`, causing a test failure.
+
+**Root Cause**
+PHP's `absint()` returns the absolute integer value: `absint(-5) = 5`. The value `5` is inside the valid range [1, 200], so `sanitize_per_page(-5)` correctly returns `5`, not `20`. The test was written with the incorrect assumption that all negative inputs are out-of-range.
+
+**Future mistake prevented**
+When writing range-check tests for sanitizers that use `absint()`, test the boundary correctly: small negative inputs (whose absolute value falls within [min, max]) return their absolute value; only large negative inputs (e.g., `-300` → `absint = 300 > 200`) fall back to the default.
+
+**Evidence**
+`tests/phpunit/abilities/SettingsMenuTest.php`:
+- `test_sanitize_per_page_negative_converts_via_absint()` — input `-5`, expects `5` (pass).
+- `test_sanitize_per_page_large_negative_returns_default()` — input `-300`, expects `20` (pass, because `absint(-300) = 300 > 200`).
+Feature 025.
+
+**Prevention / Detection**
+Whenever a sanitizer uses `absint()` before a range check, add explicit tests for both a small negative (in-range after abs) and a large negative (out-of-range after abs).
+
+**Where to look next**
+`admin/Partials/SettingsMenu.php` (`sanitize_per_page()` method), `tests/phpunit/abilities/SettingsMenuTest.php`.
+
+---
+
+### 2026-06-03 — BUG-PHPUNIT-TYPED-PROPERTY-SETUP: Typed class properties not initialized via `set_up()` in WP_UnitTestCase
+
+**Status**: Active
+
+**Symptoms**
+A `WP_UnitTestCase` subclass with a typed property (`private SettingsMenu $menu`) initialized in a `set_up()` (or `setUp()`) override produced tests that never had `$this->menu` populated — calling methods on it caused fatal errors or undefined-variable notices.
+
+**Root Cause**
+The property-initialization code in `set_up()` did not run as expected under the `WP_UnitTestCase` lifecycle when using typed properties. Whether this is a lifecycle ordering issue or a PHP typed-property strict-mode interaction, the property remained uninitialized.
+
+**Future mistake prevented**
+Avoid storing singleton references in typed class properties initialized via `set_up()` in `WP_UnitTestCase`. Call the singleton directly in each test method (`SettingsMenu::instance()->sanitize_per_page($value)`) — this is simpler, always works, and eliminates the setup/teardown surface.
+
+**Evidence**
+`tests/phpunit/abilities/SettingsMenuTest.php` — final version has no `setUp()` method and no class-level typed property. All 12 tests call `SettingsMenu::instance()` inline. Feature 025.
+
+**Prevention / Detection**
+When writing new PHPUnit tests that target singleton classes, default to inline calls rather than a `setUp()`-initialized property. If shared state is needed, use `setUpBeforeClass()` with a `static` property.
+
+**Where to look next**
+`tests/phpunit/abilities/SettingsMenuTest.php` (example of inline singleton calls), `admin/Partials/SettingsMenu.php` (`instance()` method).
+
+---
+
 ### 2026-06-02 — BUG-NORMALIZE-REGISTRY-SOURCE-DEFAULT: `normalize_registry()` string-cast prevented Source Detector from firing
 
 **Status**: Active

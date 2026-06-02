@@ -1218,3 +1218,56 @@ Six hint props fixed in `src/js/abilities/components/AbilityForm.jsx` (CHANGE-3:
 
 **Where to look next**
 `src/js/abilities/components/AbilityForm.jsx` (all `hint=` props that contain `'Plugin declares:'` — verify each uses `._registry.`).
+
+---
+
+### 2026-06-03 — AbilitiesList pagination is REST-driven; perPage injected from DB via window.acrossaiAbilitiesManager (DEC-ABILITIES-LIST-UX-025)
+
+**Context**
+Feature 025 replaced the frozen `const [page] = useState(1)` and hardcoded `PER_PAGE = 20` in AbilitiesList.jsx with stateful pagination driven by the REST endpoint's `page` / `per_page` query parameters. The per-page value is now stored in a WordPress Settings API option and injected into the admin JS context.
+
+**Decision**
+- The per-page value is stored in WP option `acrossai_abilities_per_page` (integer, default 20, range 1–200), registered via `SettingsMenu::sanitize_per_page()` with `absint()` + clamp.
+- It is injected into the existing `window.acrossaiAbilitiesManager` object via `wp_add_inline_script` in `Admin\Main::enqueue_scripts()`: `'perPage' => (int) get_option('acrossai_abilities_per_page', 20)`.
+- In JS, `perPage` is read with a security clamp: `Math.min(200, Math.max(1, parseInt(window.acrossaiAbilitiesManager?.perPage, 10) || 20))` (FINDING-SEC-01).
+- The global object is `window.acrossaiAbilitiesManager` — the spec originally said `window.acrossaiAbilities` (corrected in Feature 025 analysis).
+
+**Rule**
+Any future JS feature that needs a server-injected configuration value MUST read it from `window.acrossaiAbilitiesManager` (not `window.acrossaiAbilities` — that object does not exist). Always apply a client-side clamp on numeric values.
+
+**Future mistake prevented**
+Using the wrong global object name (`window.acrossaiAbilities`) causes a silent `undefined` that falls through to the default — the wrong name will never throw an error, making the bug hard to detect.
+
+**Evidence**
+`admin/Main.php:218` `'perPage' => (int) get_option('acrossai_abilities_per_page', 20)`;
+`src/js/abilities/components/AbilitiesList.jsx` — `const perPage = Math.min(200, Math.max(1, parseInt(window.acrossaiAbilitiesManager?.perPage, 10) || 20))`;
+spec corrected at `specs/025-abilities-list-ux-improvements/spec.md` lines 113 and 191.
+
+**Where to look next**
+`admin/Main.php` (`enqueue_scripts()` — `window.acrossaiAbilitiesManager` object definition),
+`admin/Partials/SettingsMenu.php` (`sanitize_per_page()`, `render_per_page_field()`),
+`src/js/abilities/components/AbilitiesList.jsx` (`perPage` constant, `fetchAbilities` dispatch call).
+
+---
+
+### 2026-06-03 — Column visibility uses localStorage merge-with-defaults pattern (DEC-COLUMN-VISIBILITY-LOCALSTORAGE)
+
+**Context**
+Feature 025 added a Columns toggle panel in AbilitiesList.jsx that lets admins show/hide any of the 8 hideable columns. Preferences must survive page reloads and must not break when new columns are added in future features (FR-025).
+
+**Decision**
+- Preferences are stored in `localStorage` under key `acrossai_abilities_columns` as a JSON object of `{ columnKey: boolean }` pairs.
+- On load, `loadColumnPrefs()` starts from `COLUMN_DEFAULTS` (all 8 columns `true`) and only overrides keys that are present in the saved object: `Object.keys(COLUMN_DEFAULTS).forEach(key => { if (key in saved) result[key] = !!saved[key] })`.
+- Saved values are normalised with `!!val` (FINDING-SEC-02): truthy non-booleans become `true`, falsy non-booleans become `false`.
+- Unknown saved keys are silently ignored (no prototype pollution possible because iteration is over `COLUMN_DEFAULTS` keys only).
+- If `localStorage` is unavailable or contains invalid JSON, the function catches the error and returns `{ ...COLUMN_DEFAULTS }` (all visible).
+
+**Rule**
+Any future column added to `COLUMN_DEFAULTS` will automatically be visible for all users (including those with existing saved prefs) because the merge only applies saved values for keys that already exist in `COLUMN_DEFAULTS`. New columns must be added to `COLUMN_DEFAULTS` with `true` — they must never be added with `false`.
+
+**Future mistake prevented**
+If a future column were added to `COLUMN_DEFAULTS` with `false`, existing users with a saved pref object would see it hidden on first load (the saved pref would override the default only if the key exists in the saved object — but new keys are not in old saves, so the default is used). The concern is ensuring `COLUMN_DEFAULTS` defaults are all `true`.
+
+**Evidence**
+`src/js/abilities/components/AbilitiesList.jsx` — `COLUMN_DEFAULTS`, `loadColumnPrefs()`, `toggleColumn()`;
+`tests/jest/abilities/column-prefs.test.js` — 8 tests covering empty prefs, partial hide, new-column default, value normalisation, corrupt JSON fallback, null fallback, unknown key ignored.

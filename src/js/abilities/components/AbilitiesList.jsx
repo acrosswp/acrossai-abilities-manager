@@ -121,6 +121,71 @@ function McpCell({ item }) {
 	);
 }
 
+function DescriptionCell({ item }) {
+	const desc = item.description || item._registry?.description || '';
+	if (!desc) {
+		return <span>—</span>;
+	}
+	const short = desc.length > 80 ? desc.slice(0, 80) + '…' : desc;
+	return <span title={desc}>{short}</span>;
+}
+
+function ShowInRestCell({ item }) {
+	const val = item.show_in_rest ?? item._registry?.show_in_rest ?? false;
+	return val ? (
+		<span className="mcp-y">
+			{__('✓ Yes', 'acrossai-abilities-manager')}
+		</span>
+	) : (
+		<span className="mcp-n">
+			{__('○ No', 'acrossai-abilities-manager')}
+		</span>
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Column visibility constants
+// ---------------------------------------------------------------------------
+
+const COLUMN_DEFAULTS = {
+	label: true,
+	category: true,
+	source: true,
+	status: true,
+	type: true,
+	description: true,
+	show_in_rest: true,
+	mcp: true,
+};
+
+const COLUMN_LABELS = {
+	label: __('Label', 'acrossai-abilities-manager'),
+	category: __('Category', 'acrossai-abilities-manager'),
+	source: __('Source', 'acrossai-abilities-manager'),
+	status: __('Status', 'acrossai-abilities-manager'),
+	type: __('Type', 'acrossai-abilities-manager'),
+	description: __('Description', 'acrossai-abilities-manager'),
+	show_in_rest: __('Show in REST', 'acrossai-abilities-manager'),
+	mcp: __('MCP', 'acrossai-abilities-manager'),
+};
+
+const LS_KEY = 'acrossai_abilities_columns';
+
+function loadColumnPrefs() {
+	try {
+		const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+		const result = { ...COLUMN_DEFAULTS };
+		Object.keys(COLUMN_DEFAULTS).forEach((key) => {
+			if (key in saved) {
+				result[key] = !!saved[key];
+			}
+		});
+		return result;
+	} catch {
+		return { ...COLUMN_DEFAULTS };
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -128,7 +193,7 @@ function McpCell({ item }) {
 /**
  * AbilitiesList component.
  *
- * @return {JSX.Element}
+ * @return {import('react').ReactElement} Rendered abilities table.
  */
 export default function AbilitiesList() {
 	// ---- filter / sort / search state ----
@@ -136,12 +201,22 @@ export default function AbilitiesList() {
 	const [sourceFilter, setSourceFilter] = useState('');
 	const [statusFilter, setStatusFilter] = useState('');
 	const [sortDir, setSortDir] = useState('asc');
-	const [page] = useState(1);
-	const PER_PAGE = 20;
+	const [page, setPage] = useState(1);
+	const perPage = Math.min(
+		200,
+		Math.max(
+			1,
+			parseInt(window.acrossaiAbilitiesManager?.perPage, 10) || 20
+		)
+	);
 
 	// ---- checkbox state ----
 	const [selected, setSelected] = useState(new Set());
 	const [bulkAction, setBulkAction] = useState('');
+
+	// ---- column visibility state ----
+	const [visibleColumns, setVisibleColumns] = useState(loadColumnPrefs);
+	const [columnsOpen, setColumnsOpen] = useState(false);
 
 	const { abilities, total, isLoading, error } = useSelect(
 		(select) => ({
@@ -155,11 +230,30 @@ export default function AbilitiesList() {
 
 	const dispatch = useDispatch(STORE_NAME);
 
+	// ---- derived pagination values ----
+	const totalPages = Math.ceil(total / perPage) || 1;
+
+	// ---- column visibility helpers ----
+	function toggleColumn(key) {
+		setVisibleColumns((prev) => {
+			const next = { ...prev, [key]: !prev[key] };
+			try {
+				localStorage.setItem(LS_KEY, JSON.stringify(next));
+			} catch {
+				// localStorage unavailable — silent fallback
+			}
+			return next;
+		});
+	}
+
+	const visibleCount = Object.values(visibleColumns).filter(Boolean).length;
+	const tableColSpan = visibleCount + 3; // +1 checkbox, +1 Slug, +1 Actions
+
 	// Fetch whenever filters change.
 	useEffect(() => {
 		dispatch.fetchAbilities({
 			page,
-			per_page: PER_PAGE,
+			per_page: perPage,
 			search: search || undefined,
 			orderby: 'ability_slug',
 			order: sortDir,
@@ -168,6 +262,25 @@ export default function AbilitiesList() {
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [page, search, sourceFilter, statusFilter, sortDir]);
+
+	// Reset to page 1 whenever filters/search/sort change.
+	useEffect(() => {
+		setPage(1);
+	}, [search, sourceFilter, statusFilter, sortDir]);
+
+	// Close columns panel when clicking outside.
+	useEffect(() => {
+		if (!columnsOpen) {
+			return;
+		}
+		const handler = (e) => {
+			if (!e.target.closest('.columns-toggle')) {
+				setColumnsOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, [columnsOpen]);
 
 	// ---- counts from current page (approximate) ----
 	const publishedCount = abilities.filter(
@@ -429,10 +542,83 @@ export default function AbilitiesList() {
 					/>
 				</div>
 
+				<div
+					className="columns-toggle"
+					style={{ position: 'relative' }}
+				>
+					<button
+						type="button"
+						className="button"
+						onClick={() => setColumnsOpen((o) => !o)}
+					>
+						{__('Columns', 'acrossai-abilities-manager')}{' '}
+						{columnsOpen ? '▴' : '▾'}
+					</button>
+					{columnsOpen && (
+						<div className="columns-panel">
+							{Object.keys(COLUMN_DEFAULTS).map((key) => (
+								<label
+									key={key}
+									htmlFor={`col-toggle-${key}`}
+									className="columns-panel-item"
+								>
+									<input
+										id={`col-toggle-${key}`}
+										type="checkbox"
+										checked={!!visibleColumns[key]}
+										onChange={() => toggleColumn(key)}
+									/>{' '}
+									{COLUMN_LABELS[key]}
+								</label>
+							))}
+						</div>
+					)}
+				</div>
+
 				<div className="tn-pages">
 					{isLoading
 						? __('Loading…', 'acrossai-abilities-manager')
 						: `${abilities.length} ${__('of', 'acrossai-abilities-manager')} ${total} ${__('items', 'acrossai-abilities-manager')}`}
+				</div>
+
+				<div className="tablenav-pages">
+					<span className="displaying-num">
+						{total} {__('items', 'acrossai-abilities-manager')}
+					</span>
+					<span className="pagination-links">
+						<button
+							className="button"
+							disabled={1 === page}
+							onClick={() => setPage(1)}
+						>
+							«
+						</button>
+						<button
+							className="button"
+							disabled={1 === page}
+							onClick={() => setPage((p) => p - 1)}
+						>
+							‹
+						</button>
+						<span className="paging-input">
+							{page} {__('of', 'acrossai-abilities-manager')}{' '}
+							{totalPages}
+						</span>
+						<button
+							className="button"
+							disabled={page >= totalPages}
+							onClick={() => setPage((p) => p + 1)}
+						>
+							›
+						</button>
+						<button
+							className="button"
+							disabled={page >= totalPages}
+							onClick={() => setPage(totalPages)}
+						>
+							»
+						</button>
+					</span>
 				</div>
 			</div>
 
@@ -441,12 +627,18 @@ export default function AbilitiesList() {
 				<colgroup>
 					<col style={{ width: '32px' }} />
 					<col className="col-slug" />
-					<col className="col-lbl" />
-					<col className="col-cat" />
-					<col className="col-src" />
-					<col className="col-sta" />
-					<col className="col-typ" />
-					<col className="col-mcp" />
+					{!!visibleColumns.label && <col className="col-lbl" />}
+					{!!visibleColumns.category && <col className="col-cat" />}
+					{!!visibleColumns.source && <col className="col-src" />}
+					{!!visibleColumns.status && <col className="col-sta" />}
+					{!!visibleColumns.type && <col className="col-typ" />}
+					{!!visibleColumns.description && (
+						<col className="col-desc" />
+					)}
+					{!!visibleColumns.show_in_rest && (
+						<col className="col-rest" />
+					)}
+					{!!visibleColumns.mcp && <col className="col-mcp" />}
 					<col className="col-act" />
 				</colgroup>
 				<thead>
@@ -470,12 +662,46 @@ export default function AbilitiesList() {
 							{__('Slug', 'acrossai-abilities-manager')}{' '}
 							{'asc' === sortDir ? '↑' : '↓'}
 						</th>
-						<th>{__('Label', 'acrossai-abilities-manager')}</th>
-						<th>{__('Category', 'acrossai-abilities-manager')}</th>
-						<th>{__('Source', 'acrossai-abilities-manager')}</th>
-						<th>{__('Status', 'acrossai-abilities-manager')}</th>
-						<th>{__('Type', 'acrossai-abilities-manager')}</th>
-						<th>{__('MCP', 'acrossai-abilities-manager')}</th>
+						{!!visibleColumns.label && (
+							<th>{__('Label', 'acrossai-abilities-manager')}</th>
+						)}
+						{!!visibleColumns.category && (
+							<th>
+								{__('Category', 'acrossai-abilities-manager')}
+							</th>
+						)}
+						{!!visibleColumns.source && (
+							<th>
+								{__('Source', 'acrossai-abilities-manager')}
+							</th>
+						)}
+						{!!visibleColumns.status && (
+							<th>
+								{__('Status', 'acrossai-abilities-manager')}
+							</th>
+						)}
+						{!!visibleColumns.type && (
+							<th>{__('Type', 'acrossai-abilities-manager')}</th>
+						)}
+						{!!visibleColumns.description && (
+							<th>
+								{__(
+									'Description',
+									'acrossai-abilities-manager'
+								)}
+							</th>
+						)}
+						{!!visibleColumns.show_in_rest && (
+							<th>
+								{__(
+									'Show in REST',
+									'acrossai-abilities-manager'
+								)}
+							</th>
+						)}
+						{!!visibleColumns.mcp && (
+							<th>{__('MCP', 'acrossai-abilities-manager')}</th>
+						)}
 						<th>{__('Actions', 'acrossai-abilities-manager')}</th>
 					</tr>
 				</thead>
@@ -483,7 +709,7 @@ export default function AbilitiesList() {
 					{isLoading && (
 						<tr>
 							<td
-								colSpan="9"
+								colSpan={tableColSpan}
 								style={{
 									textAlign: 'center',
 									padding: '20px',
@@ -497,7 +723,7 @@ export default function AbilitiesList() {
 					{!isLoading && 0 === abilities.length && (
 						<tr>
 							<td
-								colSpan="9"
+								colSpan={tableColSpan}
 								style={{
 									textAlign: 'center',
 									padding: '20px',
@@ -535,24 +761,48 @@ export default function AbilitiesList() {
 								<td>
 									<SlugCell item={item} />
 								</td>
-								<td>
-									<LabelCell item={item} />
-								</td>
-								<td>
-									<CategoryCell item={item} />
-								</td>
-								<td>
-									<SourceBadge source={item.source || 'db'} />
-								</td>
-								<td>
-									<StatusCell item={item} />
-								</td>
-								<td>
-									<TypeCell item={item} />
-								</td>
-								<td>
-									<McpCell item={item} />
-								</td>
+								{!!visibleColumns.label && (
+									<td>
+										<LabelCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.category && (
+									<td>
+										<CategoryCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.source && (
+									<td>
+										<SourceBadge
+											source={item.source || 'db'}
+										/>
+									</td>
+								)}
+								{!!visibleColumns.status && (
+									<td>
+										<StatusCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.type && (
+									<td>
+										<TypeCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.description && (
+									<td>
+										<DescriptionCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.show_in_rest && (
+									<td>
+										<ShowInRestCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.mcp && (
+									<td>
+										<McpCell item={item} />
+									</td>
+								)}
 								<td>
 									<div className="racts">
 										{isCustom ? (
@@ -649,6 +899,37 @@ export default function AbilitiesList() {
 														'acrossai-abilities-manager'
 													)}
 												</button>
+												{item.has_override && (
+													<>
+														<span className="ra-sep">
+															|
+														</span>
+														<button
+															type="button"
+															className="ra"
+															onClick={() => {
+																if (
+																	// eslint-disable-next-line no-alert
+																	window.confirm(
+																		__(
+																			'Clear all overrides for this ability? This cannot be undone.',
+																			'acrossai-abilities-manager'
+																		)
+																	)
+																) {
+																	dispatch.clearOverrides(
+																		item.ability_slug
+																	);
+																}
+															}}
+														>
+															{__(
+																'Clear All Overrides',
+																'acrossai-abilities-manager'
+															)}
+														</button>
+													</>
+												)}
 											</>
 										)}
 									</div>
@@ -658,6 +939,46 @@ export default function AbilitiesList() {
 					})}
 				</tbody>
 			</table>
+
+			<div className="tablenav-pages tablenav-pages-below">
+				<span className="displaying-num">
+					{total} {__('items', 'acrossai-abilities-manager')}
+				</span>
+				<span className="pagination-links">
+					<button
+						className="button"
+						disabled={1 === page}
+						onClick={() => setPage(1)}
+					>
+						«
+					</button>
+					<button
+						className="button"
+						disabled={1 === page}
+						onClick={() => setPage((p) => p - 1)}
+					>
+						‹
+					</button>
+					<span className="paging-input">
+						{page} {__('of', 'acrossai-abilities-manager')}{' '}
+						{totalPages}
+					</span>
+					<button
+						className="button"
+						disabled={page >= totalPages}
+						onClick={() => setPage((p) => p + 1)}
+					>
+						›
+					</button>
+					<button
+						className="button"
+						disabled={page >= totalPages}
+						onClick={() => setPage(totalPages)}
+					>
+						»
+					</button>
+				</span>
+			</div>
 		</div>
 	);
 }
