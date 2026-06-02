@@ -261,6 +261,84 @@ $warn:    #dba617;
 	}
 }
 
+// Pagination nav (above and below table)
+.tablenav-pages {
+	display:     flex;
+	align-items: center;
+	gap:         8px;
+	margin-left: auto;
+	font-size:   13px;
+	color:       $muted;
+
+	.displaying-num { margin-right: 4px; }
+
+	.pagination-links {
+		display:     flex;
+		align-items: center;
+		gap:         4px;
+	}
+
+	.paging-input {
+		padding: 0 6px;
+		color:   $txt;
+	}
+
+	.button {
+		height:        28px;
+		min-width:     28px;
+		padding:       0 8px;
+		border:        1px solid $border-dk;
+		border-radius: 3px;
+		font-family:   inherit;
+		font-size:     13px;
+		background:    $row;
+		color:         $txt;
+		cursor:        pointer;
+		display:       inline-flex;
+		align-items:   center;
+		justify-content: center;
+
+		&:disabled {
+			opacity: 0.4;
+			cursor:  default;
+		}
+	}
+}
+
+.tablenav-pages-below {
+	margin-top: 8px;
+}
+
+// Column visibility toggle panel
+.columns-toggle {
+	position: relative;
+}
+
+.columns-panel {
+	position:         absolute;
+	top:              calc(100% + 4px);
+	left:             0;
+	z-index:          100;
+	background:       #fff;
+	border:           1px solid $border-dk;
+	border-radius:    3px;
+	box-shadow:       0 2px 6px rgba(0, 0, 0, .12);
+	padding:          8px 12px;
+	min-width:        160px;
+	display:          flex;
+	flex-direction:   column;
+	gap:              6px;
+}
+
+.columns-panel-item {
+	display:       flex;
+	align-items:   center;
+	gap:           6px;
+	font-size:     13px;
+	cursor:        pointer;
+	white-space:   nowrap;
+}
+
 // Search input wrapper
 .tablenav-search {
 	display:       flex;
@@ -293,7 +371,7 @@ $warn:    #dba617;
 // ---------------------------------------------------------------------------
 .subsubsub {
 	list-style:  none;
-	display:     flex;
+	display:     none; // hidden Feature 025 — JSX preserved for future re-enable
 	align-items: center;
 	gap:         0;
 	margin:      6px 0 10px;

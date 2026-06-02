@@ -41,7 +41,27 @@
       "Bash(vendor/bin/phpcs --standard=phpcs.xml.dist admin/)",
       "Bash(gh pr *)",
       "Bash(composer dump-autoload *)",
-      "Bash(vendor/bin/phpstan analyse *)"
+      "Bash(vendor/bin/phpstan analyse *)",
+      "Bash(bash /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.specify/scripts/bash/check-prerequisites.sh --json)",
+      "Bash(gh repo *)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh *)",
+      "Bash(npx wp-scripts *)",
+      "Bash(npm install *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"EXIT_CODE:$?\")",
+      "Bash(python3 *)",
+      "Bash(echo \"PHPSTAN_EXIT:$?\")",
+      "Bash(npx jest *)",
+      "Bash(vendor/bin/phpunit tests/phpunit/abilities/SettingsMenuTest.php --no-coverage)",
+      "Bash(echo \"PHPSTAN:$?\")",
+      "Bash(.specify/scripts/bash/detect-changed-files.sh *)",
+      "Bash(shasum -a 256 /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-commit/SKILL.md)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; cat \"{}\"')",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-feature)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-initialize)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-remote)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-validate)",
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-architecture-guard-governed-plan)"
     ]
   }
 }

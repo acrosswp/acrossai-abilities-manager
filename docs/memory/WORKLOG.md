@@ -262,6 +262,15 @@ Customize Phase 1 tests based on library criticality and integration depth.
 
 ---
 
+### 2026-06-03 — Feature 025: Abilities List UX Improvements (pagination, per-page setting, CSS tab hide, Clear All Overrides, Description/Show-in-REST columns, column visibility toggle)
+
+- **Why durable**: Six admin-UI improvements in one feature. Key durable lessons: (1) the correct global injection object is `window.acrossaiAbilitiesManager` (not `window.acrossaiAbilities`); (2) `eslint-disable-next-line` must be directly before the offending call; (3) `absint(-5) = 5` (in-range, not default); (4) WordPress peer deps belong in `peerDependencies`; (5) browser-API Jest tests require `npx wp-scripts test-unit-js`; (6) typed WP_UnitTestCase properties initialized in `set_up()` are unreliable — call singletons inline.
+- **Future mistake prevented**: Wrong global object name (`window.acrossaiAbilities`) silently falls through to default — always check `window.acrossaiAbilitiesManager`. Column visibility merge-with-defaults pattern ensures new columns always default visible without breaking old saved prefs.
+- **Evidence**: Branch `025-abilities-list-ux-improvements`. 10 source files changed. PHPCS ✅, PHPStan L8 ✅, Jest 8/8 ✅ (new column-prefs suite), PHPUnit 12/12 ✅ (new SettingsMenu suite), `npm run build` ✅, security review 0 findings. All 34 tasks complete.
+- **Where to look**: `src/js/abilities/components/AbilitiesList.jsx` (pagination, column visibility, Clear All Overrides, Description/ShowInRest cells), `admin/Partials/SettingsMenu.php` (`sanitize_per_page()`, `render_per_page_field()`), `admin/Main.php` (`perPage` injection), `src/scss/abilities/admin.scss` (`.subsubsub { display: none }`, column toggle panel), `tests/jest/abilities/column-prefs.test.js`, `tests/phpunit/abilities/SettingsMenuTest.php`.
+
+---
+
 ### 2026-06-02 — Feature 024: Ability Form and List Display Fixes (source badge, Type badge, Plugin-declares hints, Callback read-only, inject label/desc/cat, Force Block merge fix)
 
 - **Why durable**: Six admin-UI and pipeline bugs fixed in a single feature. Three new durable bug patterns (BUG-MERGER-BOOL-STRING-CAST, BUG-INJECT-MISSING-TOP-LEVEL-FIELDS, BUG-NORMALIZE-REGISTRY-SOURCE-DEFAULT) and two new JS decisions (DEC-TYPECELL-REGISTRY-FALLBACK, DEC-FORM-HINT-REGISTRY-PATH) prevent the same class of mistake across every future overridable field addition and form hint addition.

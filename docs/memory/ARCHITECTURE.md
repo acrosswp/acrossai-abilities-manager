@@ -692,3 +692,33 @@ The canonical CI pattern for running Plugin Check is to inline the steps manuall
 **Why**: One workflow per concern means failures are immediately attributable; PHPCompatibility scoped to production dirs avoids false positives from test stubs.
 
 **Evidence**: `.github/workflows/phpcs.yml`, `phpstan.yml`, `phpcompat.yml`; commit `9da22d7` on branch `022-ci-workflows-phpcs-cleanup`.
+
+---
+
+### PATTERN-WORDPRESS-PEER-DEPENDENCIES (Feature 025, 2026-06-03)
+
+**Pattern**: `@wordpress/data`, `@wordpress/element`, and `@wordpress/i18n` are WordPress script globals — they are provided by WordPress at runtime via `wp_enqueue_script` dependency handles, not bundled. Declare them in `peerDependencies` in `package.json` to prevent the ESLint `import/no-extraneous-dependencies` rule from flagging import statements for these packages.
+
+**Key rules**:
+- Add all `@wordpress/*` packages that are imported in source files but not bundled (i.e., provided by WordPress at runtime) to the `peerDependencies` object with version `"*"`.
+- Do NOT add them to `devDependencies` — doing so would cause ESLint to treat them as local packages and potentially conflict with the `import/no-extraneous-dependencies` peer-vs-dev distinction.
+- Packages that ARE bundled (e.g., `@wordpress/dataviews`, `@wordpress/icons`) belong in `dependencies` or `devDependencies` depending on whether they are production or build-only.
+
+**Why**: ESLint's `import/no-extraneous-dependencies` rule raises an error for any import whose package is not listed in `dependencies`, `devDependencies`, or `peerDependencies`. WordPress globals are neither dependencies (not bundled) nor devDependencies (not test-only); `peerDependencies` is the semantically correct category.
+
+**Evidence**: `package.json` `peerDependencies` block added in Feature 025 for `@wordpress/data`, `@wordpress/element`, `@wordpress/i18n`. ESLint reported 3× `import/no-extraneous-dependencies` errors before the fix; 0 after.
+
+---
+
+### PATTERN-JESTENV-WPSCRIPTS (Feature 025, 2026-06-03)
+
+**Pattern**: Any Jest test that depends on browser APIs (`localStorage`, `sessionStorage`, `window`, `document`, etc.) must be run via `npx wp-scripts test-unit-js`, not plain `npx jest`. The `@wordpress/scripts` test runner uses `@wordpress/jest-preset-default` which sets `testEnvironment: 'jsdom'`.
+
+**Key rules**:
+- Use `npx wp-scripts test-unit-js` as the canonical test runner for all Jest tests in this project.
+- Plain `npx jest` defaults to a Node environment where `localStorage` is `undefined`, causing `ReferenceError: localStorage is not defined` at module evaluation time.
+- If a test file uses `jest.mock()` for `@wordpress/*` packages, those mocks must still cover all named exports the module under test imports — the jsdom environment does not change mock requirements.
+
+**Why**: `@wordpress/jest-preset-default` configures jsdom and also sets up `@wordpress/jest-console` and other WP-specific test utilities. Running outside `wp-scripts` loses all of this setup.
+
+**Evidence**: `tests/jest/abilities/column-prefs.test.js` — 8 tests fail with `ReferenceError: localStorage is not defined` under plain `npx jest`; all 8 pass under `npx wp-scripts test-unit-js`. Feature 025.

@@ -30,6 +30,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-MCP-SERVER-SANITIZE | sanitize_mcp_servers_array(): null-passthrough, per-element sanitize+255-substr, array_slice(100), REST args schema as defence-in-depth | Abilities/REST/Sanitizer | mcp-servers, sanitize, rest-args, defence-in-depth | Active | DECISIONS.md |
 | DEC-MCP-CAPABILITY-FILTER-WARN | wpb_mcp_servers_list_rest_capability filter wiring point MUST include a manage_options warning comment | Abilities/Main | mcp, capability, filter, warning-comment | Active | DECISIONS.md |
 | DEC-SETTINGS-API-DEVIATION | WP Settings API accepted for scalar-field (≤5 fields) settings pages; DataForm required for dynamic UI | Admin/Settings | settings-api, dataform, constitution-deviation, 019 | Active | DECISIONS.md |
+| DEC-ABILITIES-LIST-UX-025 | Pagination state driven by REST params; perPage injected from DB via window.acrossaiAbilitiesManager (NOT window.acrossaiAbilities) | Abilities/Admin | pagination, per-page, window, localize-script | Active | DECISIONS.md |
+| DEC-COLUMN-VISIBILITY-LOCALSTORAGE | Column prefs in localStorage with merge-over-COLUMN_DEFAULTS; new columns always default visible (FR-025) | Abilities/Admin | column-visibility, localstorage, merge-defaults, fr-025 | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -109,6 +111,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | ARCH-ABILITYFORM-SECTION-ORDER | AbilityForm section order is 1–7: Identity → SitePermissions → MCP → Annotations → UserAccess → Callback → Schema (updated Feature 018) | Abilities/React | section-order, abilityform, user-access | ARCHITECTURE.md |
 | PATTERN-AC-COMPONENT-INTEGRATION | Named import + AccessControl.js alias + SCSS + three-branch rendering + module-level abilitiesConfig + no onSave | Abilities/React | access-control, wpb-ac, webpack, named-import, three-branch | ARCHITECTURE.md |
 | PATTERN-JEST-SECTION-SCOPE | Scope test assertions to correct .sect via sect-num to avoid false matches from sibling sections | Testing/Jest | jest, section, selector, dom, abilityform | ARCHITECTURE.md |
+| PATTERN-WORDPRESS-PEER-DEPENDENCIES | @wordpress/* globals go in peerDependencies (not devDependencies) to satisfy import/no-extraneous-dependencies | Build | package.json, peer-dependencies, eslint, wordpress-globals | ARCHITECTURE.md |
+| PATTERN-JESTENV-WPSCRIPTS | Browser-API tests (localStorage) must use npx wp-scripts test-unit-js, not plain npx jest | Testing/Jest | jest, wp-scripts, jsdom, localstorage, test-environment | ARCHITECTURE.md |
 | ARCH-PHPUNIT-BOOTSTRAP | ABSPATH define MUST precede autoloader; phpunit.xml.dist must exclude BerlinDB-loading test files | Testing | phpunit, bootstrap, abspath, berlinddb | ARCHITECTURE.md |
 
 ## Bug Patterns (continued)
@@ -129,6 +133,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-PHPUNIT-ABSPATH-SILENT-EXIT | ABSPATH define must precede autoloader; wrong order silently produces 0 tests with no errors | Testing | phpunit, abspath, silent-exit, bootstrap | BUGS.md |
 | BUG-PHPUNIT-BERLINDDB-SCOPE | phpunit.xml.dist must be narrowly scoped; BerlinDB Table constructors fatal under stub bootstrap | Testing | phpunit, berlinddb, scope, fatal | BUGS.md |
 | BUG-ABILITIES-STRIP-PROTECTED-PREEXISTING | Pre-existing test/code mismatch: strip_protected_fields test expects broader stripping than implementation provides (line 470) | Testing | phpunit, preexisting, strip-protected, mismatch | BUGS.md |
+| BUG-ESLINT-DISABLE-LINE-EXACT | eslint-disable-next-line covers exactly one line; must be directly before the offending call, not before a wrapping if() | JS/ESLint | eslint, no-alert, disable-next-line, position | BUGS.md |
+| BUG-PHP-ABSINT-NEGATIVE-RANGE | absint(-5)=5, valid in [1,200]; only large negatives (absint > max) fall back to default — test both cases | PHP | absint, negative, sanitize, range-check | BUGS.md |
+| BUG-PHPUNIT-TYPED-PROPERTY-SETUP | WP_UnitTestCase typed class property uninitialized if set_up() is used — call singleton inline per test instead | Testing/PHPUnit | phpunit, typed-property, wp_unittestcase, singleton | BUGS.md |
 
 ## Worklog Milestones (continued)
 | 2026-05-20 | 4-Phase library upgrade workflow validated; zero-code dependency upgrade with 100% test pass rate | Feature 007 | workflow, library-upgrade, zero-code, testing | WORKLOG.md |
@@ -166,3 +173,4 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-TYPECELL-REGISTRY-FALLBACK | DataViews cell renderers: read `item.field` first, fall back to `item._registry?.field` — non-db abilities have null top-level fields | JS/DataViews | typecell, _registry, non-db, callback_type, dataviews | Active | DECISIONS.md |
 | DEC-FORM-HINT-REGISTRY-PATH | "Plugin declares" hints must use `savedAbility._registry.field` — merged value is the admin's own override, not the registry default | JS/Form | form-hint, _registry, plugin-declares, non-db, savedAbility | Active | DECISIONS.md |
 | 2026-06-02 | Feature 024: source badge, Type badge, Plugin-declares hints, Callback read-only, inject label/desc/cat, Force Block merge fix | Abilities/JS | feature-024, merger, force-block, site_allowed, inject, source-badge | WORKLOG.md |
+| 2026-06-03 | Feature 025: Pagination, per-page Settings API option, CSS tab hide, Clear All Overrides row action, Description/Show-in-REST columns, column visibility toggle — 34 tasks, 0 security findings | Abilities/Admin | feature-025, pagination, column-visibility, localstorage, settings-api, security-pass | WORKLOG.md |
