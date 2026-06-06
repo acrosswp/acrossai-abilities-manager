@@ -66,7 +66,11 @@
       "Bash(specify --version)",
       "Bash(specify --help)",
       "Bash(specify integration *)",
-      "Bash(bash *)"
+      "Bash(bash *)",
+      "Read(//Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-includes/abilities-api/**)",
+      "Read(//Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-includes/**)",
+      "Bash(.specify/extensions/git/scripts/bash/create-new-feature.sh *)",
+      "Bash(.specify/extensions/git/scripts/bash/auto-commit.sh after_specify *)"
     ]
   }
 }
