@@ -2,8 +2,8 @@
 description: Perform a framework-agnostic architecture review validating implementation
   against spec.md, plan.md, tasks.md, and the governance and architecture constitutions.
 scripts:
-  sh: .specify/scripts/bash/detect-changed-files.sh
-  ps: .specify/scripts/powershell/detect-changed-files.ps1
+  sh: ../scripts/bash/detect-changed-files.sh
+  ps: ../scripts/powershell/detect-changed-files.ps1
 ---
 
 
@@ -12,6 +12,8 @@ scripts:
 # Architecture Review Command
 
 You are running `architecture-guard`, a framework-agnostic architecture review extension designed for high-integrity governance.
+When `flash-mem` is available, treat `memory-synthesis.md` as the first context source, and keep any token-savings banner visible if the surrounding workflow emits one.
+If `flash-mem` is available, use `/speckit.memory-md.prepare-context` or the MCP tools exposed by `flash-mem`; compatibility tool names such as `speckit_memory_*` are provided by `flash-mem` when the host still expects them.
 
 ## Operating Constraints
 
@@ -73,18 +75,43 @@ This pattern enables flexibility: fast execution for typical PRs, powerful execu
 1. **Normalize Arguments**: Parse "$ARGUMENTS" to identify the `mode` (`architecture` or `performance`) and `focus` aspects (`general`, `db`, `api`, or `async`).
 2. **Identify Changed Files**:
    - If the user provided a file list or explicit instructions, follow them.
-   - Otherwise, you **MUST** execute the `.specify/scripts/bash/detect-changed-files.sh` with `--json` to detect changed files since the merge-base or in the working directory.
+   - Otherwise, you **MUST** execute the `../scripts/bash/detect-changed-files.sh` with `--json` to detect changed files since the merge-base or in the working directory.
    - Use the `changed_files` list as the primary review set.
 
 ## Input & Context Loading
 
-Review any available artifacts:
-- **Governance Constitution**: `.specify/memory/constitution.md`.
-- **Architecture Constitution**: `.specify/memory/architecture_constitution.md`.
-- **Security Constraints**: `specs/<feature>/security-constraints.md`.
-- **Memory Context**: `specs/<feature>/memory-synthesis.md`.
-- **Feature Design**: `spec.md`, `plan.md`, `tasks.md`, `data-model.md`.
-- **Implementation**: The detected `changed_files` and their respective directories.
+Review any available artifacts from these common locations. **IMPORTANT**: You MUST read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore` and may be excluded from default context:
+
+1. **Governance & Security Constitution**:
+    - `.specify/memory/constitution.md`
+    - `.specify/memory/security_constitution.md`
+
+2. **Architecture Constitution**:
+    - `.specify/memory/architecture_constitution.md`
+
+3. **flash-mem Optimizer (Recommended)**:
+
+    #### SQLite / MCP Flow (Required for `flash-mem`)
+    Because `flash-mem` uses SQLite as its source of truth, you **MUST** use its MCP tools to retrieve context. Do not read the `.md` memory files directly, as they are only backups.
+
+    1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature> --query "architecture constraints boundaries dependencies coupling abstractions"`.
+    2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` to identify the "Why" behind the current design.
+    3. **Token Report**: Execute the `speckit_memory_token_report` MCP tool provided by `flash-mem` with `feature: "<feature>"` and display the token savings in the report.
+
+    #### Markdown-Only Flow (Fallback)
+    If `flash-mem` is unavailable, you **MUST** read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
+
+    - `docs/memory/INDEX.md` (Read this first to identify relevant source sections)
+    - `docs/memory/` for durable repository memory (Read only the sections identified in the index)
+    - `.specify/memory/` for project-wide architecture rules and standards
+    - `specs/<feature>/memory.md` for active feature memory
+    - `specs/<feature>/memory-synthesis.md` for the concise working summary
+    - `specs/<feature>/security-constraints.md` for security boundaries
+    - `.github/copilot-instructions.md` for repo-scoped Copilot guidance
+
+4. **Implementation Context**:
+    - `spec.md`, `plan.md`, `tasks.md`, `data-model.md`
+    - The detected `changed_files` and their respective directories.
 
 ## Semantic Modeling
 
@@ -117,12 +144,14 @@ Detect violations such as:
 
 ## Review Procedure
 
-1. **Identify Scope**: Run `.specify/scripts/bash/detect-changed-files.sh` or use user-provided files.
+1. **Identify Scope**: Run `../scripts/bash/detect-changed-files.sh` or use user-provided files.
 2. **Model Context**: Load artifacts and build the Semantic Models for the identified scope.
 3. **Verify Evidence**: Check if task-referenced files exist and contain expected implementation logic.
 4. **Analyze Alignment**: Compare `spec.md` intent vs. `plan.md` architecture vs. implementation behavior.
 5. **Scan Principles**: Apply Review Principles across the implemented boundaries.
-6. **Security Cross-Check**: If `security-constraints.md` is breached, log it as a critical violation.
+6. **Security & Governance Cross-Check**:
+   - If `security-constraints.md` or `security_constitution.md` is breached, log it as a critical violation.
+   - Cross-reference architecture decisions with security trust boundaries.
 7. **Performance Scan (if mode=performance)**: Skip violations; focus on optimizations.
 7b. **Code Quality Scan (SonarLint)**: If `mode=architecture`, optionally scan for coupling/complexity violations.
 8. **Generate Refactors**: Produce structured tasks for each confirmed violation.
@@ -132,12 +161,15 @@ Detect violations such as:
 ## Code Quality Scan (SonarLint) — Optional Step 7b
 
 This step runs code quality checks using bundled SonarLint rules. It is **optional** and complements architecture violations.
+The rules bundle is repository-native and IDE-agnostic, so it works the same in VS Code, Cursor, JetBrains, or CLI-only workflows.
+When the extension is installed, load the bundle from `.specify/extensions/architecture-guard/.github/sonar-rules/sonarlint-rules.json`.
 
 ### Activation
 
 - Run only if `mode=architecture` (not for performance mode)
 - Skip if user explicitly disables with `--no-sonarlint`
-- Skip if `.github/sonar-rules/sonarlint-rules.json` is missing or empty
+- Skip if the repository does not contain a SonarLint rules bundle or the bundle is empty
+- If skipped, continue the rest of the architecture review and note that the optional SonarLint scan was unavailable
 
 ### Scope-Based Delegation (Hybrid Model)
 
@@ -156,7 +188,7 @@ This step runs code quality checks using bundled SonarLint rules. It is **option
 ### Procedure
 
 **If inline**:
-1. **Load Rules**: Read `.github/sonar-rules/sonarlint-rules.json` (architecture-relevant rules only)
+1. **Load Rules**: Read the installed extension bundle at `.specify/extensions/architecture-guard/.github/sonar-rules/sonarlint-rules.json` first; if running from the extension source checkout, use `.github/sonar-rules/sonarlint-rules.json`
 2. **Scan Changed Files**: Simulate or invoke SonarLint logic on `changed_files` list
 3. **Filter Results**: Keep only CRITICAL/HIGH severity findings related to complexity, coupling, structure
 4. **Map to Boundaries**: Correlate findings with architecture boundaries (Entry/App/Domain/Data/External)
@@ -274,8 +306,9 @@ Findings that correlate with architecture concerns:
 1. **Critical Fixes**: Address Constitution and Security violations first.
 2. **Architecture Alignment**: Resolve boundary erosion and contract mismatches.
 3. **Code Quality**: Address SonarLint findings that map to architectural concerns (if any).
-4. **Next Step**: [e.g. Run /speckit.architecture-guard.architecture-apply]
-5. **Remediation**: [Concrete remediation direction for the top issues, or "None needed"]
+4. **Durable Memory Preservation (Mandatory Check)**: If new architectural patterns, decisions, or repeatable lessons were identified, you **MUST automatically execute** `/speckit.memory-md.capture` immediately after providing the report. Do not just recommend it; run the command to propose entries and wait for user approval.
+5. **Next Step**: [e.g. Run /speckit.architecture-guard.architecture-apply]
+6. **Remediation**: [Concrete remediation direction for the top issues, or "None needed"]
 
 ## Framework Preset Guidance
 

@@ -259,6 +259,38 @@ final class Main {
 		$this->loader->add_action( 'admin_menu', $settings_menu, 'register_submenu' );
 		$this->loader->add_action( 'admin_init', $settings_menu, 'register_settings' );
 
+		// Add-ons submenu page (Feature 026).
+		// The AddonsPage constructor self-registers all WordPress hooks — no Loader wiring needed.
+		// Accepted deviation from Boot Flow Rule: external package API does not expose individual hook methods.
+		// Guarded per Constitution §V Integration Resilience: fails gracefully when vendor is absent.
+		if ( class_exists( \WPBoilerplate\AddonsPage\AddonsPage::class ) ) {
+			try {
+				new \WPBoilerplate\AddonsPage\AddonsPage(
+					'acrossai-abilities-manager',
+					ACROSSAI_ABILITIES_MANAGER_PLUGIN_FILE,
+					array(
+						'fs_product_id' => '31230',
+						'fs_public_key' => 'pk_0f116582ac1b8e608827094024b1f',
+						'fs_slug'       => 'acrossai-abilities-manager',
+					)
+				);
+			} catch ( \Throwable $e ) {
+				$error_message = $e->getMessage();
+				add_action(
+					'admin_notices',
+					function () use ( $error_message ) {
+						if ( ! current_user_can( 'manage_options' ) ) {
+							return;
+						}
+						printf(
+							'<div class="notice notice-error"><p><strong>AcrossAI Abilities Manager:</strong> %s</p></div>',
+							esc_html( $error_message )
+						);
+					}
+				);
+			}
+		}
+
 		// Abilities DB table setup — BerlinDB hooks maybe_upgrade() to admin_init.
 		// Named variable before Loader call — Boot Flow Rule variable-first pattern (AC-HOOKS-MAIN).
 		$abilities_table = \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Table::instance();

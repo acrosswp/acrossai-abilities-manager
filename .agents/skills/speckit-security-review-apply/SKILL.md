@@ -4,7 +4,7 @@ description: Apply approved security follow-up items into Spec-Kit planning arti
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: security-review:prompts/security-review-apply.prompt.md
+  source: security-review:commands/security-review-apply.md
 ---
 
 # Security Review - Apply Follow-Ups
@@ -30,7 +30,18 @@ When project memory exists, use it as design context. Compare the requested upda
 
 ## Scope
 
-Review the following artifacts when present:
+Before applying updates, check the Spec-Kit memory hub context.
+
+### Optimizer-Aware Flow
+
+When `.specify/extensions/memory-md/config.yml` has `optimizer.enabled: true` and the CLI is available:
+
+1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature> --query "security constraints vulnerabilities authentication authorization data-leakage"`.
+2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` (or the search results) first.
+
+### Markdown-Only Flow
+
+When the optimizer is disabled or unavailable, you **MUST** read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
 
 - latest security review findings or follow-up plan
 - `tasks.md`
@@ -40,6 +51,7 @@ Review the following artifacts when present:
 - `data-model.md`
 - `contracts/`
 - `quickstart.md`
+- `docs/memory/INDEX.md`
 - `docs/memory/`
 - `specs/<feature>/memory.md`
 - `specs/<feature>/memory-synthesis.md`
@@ -74,6 +86,7 @@ Review the following artifacts when present:
 5. Update `tasks.md` with any approved security tasks.
 6. Update `plan.md` only if the security design or sequencing needs to change.
 7. Summarize the files changed and the rationale for each change.
+8. **Proactive Durable Memory Preservation**: If applying these follow-ups reveals new security patterns or repeatable lessons (e.g., a specific way to handle CORS in this repo), proactively execute `/speckit.memory-md.capture`.
 
 ## Output Format
 

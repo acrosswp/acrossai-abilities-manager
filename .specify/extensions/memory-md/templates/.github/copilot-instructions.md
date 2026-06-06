@@ -1,56 +1,17 @@
 # Copilot Instructions
 
-This repository is built to work with VS Code Copilot agents memory.
+This repository is built to work with VS Code Copilot agents and Spec Kit Memory Hub.
 
-For any non-trivial task, memory is part of the workflow, not optional documentation.
+## Mandatory Workflow
+1. **Core Governance**: You MUST follow the memory-first workflow defined in [.specify/memory/workflow.md](file://.specify/memory/workflow.md).
+2. **Proactive Check**: Before planning or tasking, you MUST execute:
+   `/speckit.memory-md.prepare-context`
+3. **Capture Lessons**: After implementation, you MUST execute:
+   `/speckit.memory-md.capture`
 
-## Memory Layers
+## Memory Source of Truth
+- **Governance**: `.specify/memory/` (Constitution, Architecture, Workflow)
+- **Durable**: `docs/memory/` (History, Decisions, Patterns)
+- **Active**: `specs/<feature>/` (Local context and synthesis)
 
-- Constitution / principles:
-  Read the current constitution or project principles first.
-  Store only stable operating principles there. Never store feature-specific notes there.
-- Durable project memory:
-  `docs/memory/INDEX.md` is the compact routing map.
-  `docs/memory/PROJECT_CONTEXT.md`
-  `docs/memory/ARCHITECTURE.md`
-  `docs/memory/DECISIONS.md`
-  `docs/memory/BUGS.md`
-  `docs/memory/WORKLOG.md`
-- Active feature memory:
-  `specs/<feature>/memory.md`
-  `specs/<feature>/memory-synthesis.md`
-- Ephemeral run context:
-  Use the current prompt, diff, terminal output, and temporary notes only. Do not commit them to durable memory.
-
-## Required Workflow
-
-These requirements are enforced in this repository by prompts, shared instructions, and review expectations.
-They are not yet backed by separate `/tasks` or `/verify` extension commands.
-
-Before `/specify`:
-- Read constitution or principles only if present and small.
-- Read `docs/memory/INDEX.md` first, then only selected source sections when needed.
-- Do not load all durable memory files during `/specify`.
-- Produce or refresh a compact `memory-synthesis.md` section for constraints, reused decisions, bug patterns, boundaries, conflicts, assumptions, and watchpoints.
-
-Before `/plan` and `/tasks`:
-- Read the active spec plus `memory.md` and `memory-synthesis.md`.
-- Normal downstream flow should consume `memory-synthesis.md`, not the whole memory folder.
-- Do not proceed if there is an unresolved hard conflict with project memory or architecture boundaries.
-
-Before `/implement`:
-- Re-read `memory-synthesis.md`.
-- Treat implementation and verification watchpoints as requirements, not suggestions.
-
-After `/implement` and after `/verify`:
-- Review the diff, task completion, tests, and findings.
-- Propose durable memory and `INDEX.md` updates first.
-- Update durable memory only after explicit approval and only when the lesson is durable, evidenced, reusable, and non-obvious.
-- Refuse changelog-style or speculative memory updates.
-
-Treat docs/memory as the repository memory layer.
-Keep entries concise, durable, and reviewable in Git.
-Do not assume hidden state outside the repository.
-Keep `memory-synthesis.md` under the configured retrieval word budget.
-
-A task is not fully complete until memory has been reviewed.
+A task is not fully complete until memory has been reviewed and systemic lessons are captured.

@@ -2,7 +2,7 @@
 
 > Durable project memory and context for AI-assisted development.
 
-[![Version](https://img.shields.io/badge/version-0.8.0-22c55e)](extension.yml)
+[![Version](https://img.shields.io/badge/version-0.8.3-22c55e)](extension.yml)
 [![Spec Kit](https://img.shields.io/badge/Spec%20Kit-compatible-2563eb)](https://spec-kit.dev)
 [![Repo-native](https://img.shields.io/badge/storage-repo--native-f59e0b)](https://spec-kit.dev)
 [![Pre-1.0](https://img.shields.io/badge/status-pre--1.0-ef4444)](extension.yml)
@@ -119,24 +119,8 @@ Examples:
 memory-synthesis.md
 ```
 
-### Capture
-
-Capture persists new durable memory.
-
-It should be intentional and human-approved.
-
-Architecture Guard orchestration should not automatically capture memory without approval.
-
-Instead, governed workflows may produce capture candidates, such as:
-
-* accepted architecture decisions
-* approved deviations
-* security constraints
-* migration lessons
-* repeated failure patterns
-
-The user can then decide whether to run memory capture.
-
+Capture persists new durable memory. It should be **intentional and human-approved**.
+While Architecture Guard orchestration does not automatically mutate project memory without approval, it now includes a **Mandatory Self-Learning Check** as the penultimate step in every implementation and review flow. This ensures the agent evaluates the execution for architectural lessons and is forced to propose any high-signal findings via `/speckit.memory-md.capture` before finalizing the governance summary.
 Capture commands show proposed durable entries and index rows first. They write only after explicit approval.
 
 ---
@@ -200,7 +184,7 @@ Memory Hub is a **context and knowledge layer** that runs alongside Spec Kit wor
 | **Milestone: Foundation** | `bootstrap` | Once at project setup | Create the memory structure and initial project context. |
 | **Milestone: Synthesis** | `plan-with-memory` | After `/specify` | Read the memory index, retrieve selected entries, and synthesize active constraints. |
 | **Milestone: Strategy** | `plan-with-memory` | After `/tasks` | Ensure the technical plan and tasks respect known constraints. |
-| **Milestone: Capture** | `capture` | After implementation | Extract and store only the durable lessons for future features. |
+| **Milestone: Self-Learning** | `capture` | **Mandatory Step** after `/verify` | Extract and store only the durable lessons for future features (Approval Gated). |
 
 ---
 
@@ -278,6 +262,35 @@ The optimizer is described in [docs/optimizer-roadmap.md](docs/optimizer-roadmap
 
 The cache must always be rebuildable from repository sources.
 
+To enable the optimizer in a project, update `.specify/extensions/memory-md/config.yml` and set `optimizer.enabled: true` after bootstrap. Bootstrap should ask whether you want that opt-in path and explain the minimum requirements first.
+When the user approves, bootstrap can prepare the optimizer automatically by verifying or installing the required Node dependencies once, then continue in one-shot CLI mode.
+
+Minimum requirements for the optional optimizer:
+
+- Node.js 18+
+- npm
+- local filesystem access to the repo
+- ability to install the `better-sqlite3` native dependency if a prebuilt binary is unavailable
+
+If you skip the optimizer, Memory Hub continues in markdown-first mode with no SQLite dependency.
+
+Phase 1 commands:
+
+```text
+# If using the installed extension (standard):
+npx .specify/extensions/memory-md speckit-memory index-memory
+npx .specify/extensions/memory-md speckit-memory search-memory "query"
+npx .specify/extensions/memory-md speckit-memory synthesize --feature specs/<feature>
+npx .specify/extensions/memory-md speckit-memory refresh-memory
+npx .specify/extensions/memory-md speckit-memory rebuild-memory
+npx .specify/extensions/memory-md speckit-memory audit-memory
+npx .specify/extensions/memory-md speckit-memory token-report --feature specs/<feature>
+```
+
+For local development inside this repository, run `npm install` and `npm run build`, then execute `node dist/bin/speckit-memory.js ...` against a project root.
+
+When the optimizer is enabled, the Memory Hub command flow should refresh the cache, generate `memory-synthesis.md`, and then consume that synthesis first. When it is disabled or unavailable, the markdown-first index and synthesis prompts still work on their own.
+
 ### Why Memory Synthesis Exists
 The goal is not to load all memory. The goal is to provide the minimum high-value context needed for accurate reasoning. Memory synthesis acts as a focused lens, translating years of project history into exactly what matters for the current feature.
 
@@ -300,6 +313,14 @@ Expensive operations:
 These should be intentional, not automatic.
 
 Manual trigger is intentional. Capture is manual. Synthesis can be run before planning, tasks, or implementation. The extension is useful only when memory prevents repeated mistakes or improves future features.
+`token-report` uses estimated token counts; it is a planning aid, not provider billing telemetry.
+
+If you want a command-palette mapping for a future VS Code wrapper, these are the intended labels:
+
+- `Spec Kit Memory: Refresh Cache`
+- `Spec Kit Memory: Generate Synthesis`
+- `Spec Kit Memory: Audit Cache`
+- `Spec Kit Memory: Token Report`
 
 ## Relationship to Architecture Guard
 - **Memory Hub** provides contextual synthesis (the "What did we decide?").
@@ -373,9 +394,9 @@ memory-md does not:
 ## Quick Start
 
 1. **Install** the extension (see [Installation](#installation) section below for all methods)
-2. **Bootstrap** the memory structure:
+2. **Initialize** the memory structure:
    ```text
-   /speckit.memory-md.bootstrap
+   /speckit.memory-md.init
    ```
 3. **Fill in** the two most important source files and the index:
    - `docs/memory/PROJECT_CONTEXT.md` — what this project is, key constraints
@@ -406,7 +427,7 @@ specify extension add memory-md
 
 ```text
 specify extension add memory-md --from \
-  https://github.com/DyanGalih/spec-kit-memory-hub/archive/refs/tags/v0.8.0.zip
+  https://github.com/DyanGalih/spec-kit-memory-hub/archive/refs/tags/v0.8.3.zip
 ```
 
 ### Local Development
@@ -433,24 +454,38 @@ scripts/check-memory.sh /path/to/project
 
 # Smoke test the hub itself
 scripts/test-install.sh
+
+# Smoke test the optimizer CLI
+scripts/test-cli.sh
 ```
 
 ---
 
 ## Memory Structure
 
+### Governance Layer (`.specify/memory/`)
+
+These files define the **Project Law**—stable rules and standards that govern all work:
+
+| File | Purpose |
+| --- | --- |
+| `constitution.md` | Core product principles and stable operating rules |
+| `architecture_constitution.md` | Authoritative technical and architecture standards |
+| `DECISIONS.md` | High-level governance decisions |
+| `BUGS.md` | Systemic or high-risk failure patterns requiring oversight |
+
 ### Durable Memory (`docs/memory/`)
 
-These files hold knowledge that helps **all future features**, not just the current one:
+These files hold the **Project History**—knowledge that helps **all future features**:
 
 | File | Purpose | Example Content |
 | --- | --- | --- |
 | `INDEX.md` | Compact routing map for selecting relevant memory | "D3: API writes stay server-side -> DECISIONS.md#d3" |
 | `PROJECT_CONTEXT.md` | Product identity, domain language, key constraints | "Customer notes must stay inside the internal admin system" |
 | `ARCHITECTURE.md` | System shape, ownership boundaries, integrations | "Only the API service writes customer note records" |
-| `DECISIONS.md` | Cross-feature decisions with rationale and tradeoffs | "Chose Repository pattern because we need to swap DB later" |
-| `BUGS.md` | Recurring failure patterns, root causes, prevention | "Always filter by permission before returning search results" |
-| `WORKLOG.md` | Small durable lessons that don't fit elsewhere | "The CSV export endpoint needs 2x the normal timeout" |
+| `DECISIONS.md` | Technical decisions with rationale and tradeoffs | "Chose Repository pattern because we need to swap DB later" |
+| `BUGS.md` | Recurring implementation patterns and mitigations | "Always filter by permission before returning search results" |
+| `WORKLOG.md` | Sequential ledger of durable lessons | "The CSV export endpoint needs 2x the normal timeout" |
 
 ### Feature Memory (`specs/<feature>/`)
 
@@ -458,11 +493,12 @@ These files help the **current feature only**:
 
 | File | Purpose |
 | --- | --- |
-| `memory.md` | Active notes, open questions, relevant durable memory for this feature |
+| `memory.md` | Active notes, open questions, and watchpoints for this feature |
 | `memory-synthesis.md` | Compact AI-facing summary: constraints, reused decisions, conflicts, watchpoints |
 
 **Rule of thumb:**
-- If it helps future unrelated features → `docs/memory/`
+- If it governs how we work (principles/standards) → `.specify/memory/`
+- If it helps future unrelated features (history/implementation) → `docs/memory/`
 - If it only matters during this feature → `specs/<feature>/`
 
 ---
@@ -471,12 +507,13 @@ These files help the **current feature only**:
 
 | Command | When To Use | What It Does |
 | --- | --- | --- |
-| `bootstrap` | Once, at project setup | Creates durable memory folder, `INDEX.md`, feature memory starter files, `.github/copilot-instructions.md`, and `.specify/extensions/memory-md/config.yml` |
+| `init` | Once, at project setup | Creates durable memory folder, `INDEX.md`, feature memory starter files, `.github/copilot-instructions.md`, and `.specify/extensions/memory-md/config.yml` |
 | `plan-with-memory` | Before planning each feature | Reads the memory index, retrieves selected source sections, synthesizes relevant constraints and decisions, surfaces conflicts and watchpoints for this feature |
 | `capture` | After meaningful work is done | Reviews what happened, extracts durable lessons from the full feature journey (Spec → Plan → Code → Tests) |
 | `capture-from-diff` | After implementation (fast mode) | Extracts lessons directly from code diffs when you skipped formal spec process (useful for bug fixes or rapid iteration) |
 | `audit` | When memory feels noisy or stale | Finds duplicates, stale entries, contradictions, misplaced content; suggests cleanup and rewrites |
 | `log-finding` | When audit finds something actionable | Converts a high-signal audit finding into a tracked task for GitHub, GitLab, Jira, or other issue tracker |
+| `token-report` | When evaluating optimizer ROI | Compares estimated token usage between full memory reads and optimized synthesis |
 
 All commands use the fully-qualified form: `speckit.memory-md.<command>`.
 
@@ -488,7 +525,7 @@ All commands use the fully-qualified form: `speckit.memory-md.<command>`.
 
 **Before you start any features**, initialize the memory system:
 
-1. Run `/speckit.memory-md.bootstrap` to create the memory folder structure and starter templates.
+1. Run `/speckit.memory-md.init` to create the memory folder structure and starter templates.
 2. Fill in `docs/memory/PROJECT_CONTEXT.md` — product identity, domain language, key constraints.
 3. Fill in `docs/memory/ARCHITECTURE.md` — system shape, module boundaries, integrations, and key technologies.
 4. Optional: Fill in `docs/memory/DECISIONS.md` and `docs/memory/BUGS.md` if you have existing lessons.
@@ -531,13 +568,31 @@ After running audit:
 2. This converts the finding into a tracker-ready issue (GitHub, GitLab, Jira, etc.).
 3. Reduces back-and-forth between memory review and task tracking.
 
+### Upgrading from a Previous Version
+
+To upgrade your global extension to the latest version:
+1. Run `specify extension update memory-md` in your terminal.
+2. The new prompt files and templates will be downloaded to `.specify/extensions/memory-md/`.
+
+**Migrating an Existing Project:**
+
+If your project was using an older version of `memory-hub` (especially versions prior to v0.8.0 that lacked `INDEX.md` or the SQLite Optimizer):
+
+1. **Re-run Init**: You **should** run `/speckit.memory-md.init` again. The init command is completely safe—it **will not** overwrite your existing memory files. It will only inject missing files (like a missing `INDEX.md` or `config.yml`).
+2. **Re-index Memory**: If an `INDEX.md` was just generated for the first time, you will need to manually review your existing `docs/memory/*.md` files and populate the new `INDEX.md` with pointers to your existing decisions.
+3. **Build the Optimizer**: If you want to use the local SQLite optimizer, it requires a Node.js binary. Because `specify extension update` does not run `npm install` for you, you must navigate to the extension directory and build it:
+   ```bash
+   cd .specify/extensions/memory-md
+   npm install && npm run build
+   ```
+
 ---
 
 ## Templates and Prompts
 
 ### What Are Templates?
 
-When you run `/speckit.memory-md.bootstrap`, Memory Hub creates starter files in your project from the hub's `templates/` directory:
+When you run `/speckit.memory-md.init`, Memory Hub creates starter files in your project from the hub's `templates/` directory:
 
 | Template Files | Created In Project | Purpose |
 | --- | --- | --- |
@@ -595,7 +650,10 @@ Then edit the YAML file:
 | `memory_synthesis_filename` | `memory-synthesis.md` | Filename for per-feature synthesis | Change if you prefer `constraints.md` or `synthesis.txt` |
 | `require_memory_synthesis_before_plan` | `true` | Gate planning on current synthesis | Set to `false` to allow planning without synthesis |
 | `require_memory_review_before_verify` | `true` | Gate verification on memory review | Set to `false` to allow verification without memory capture |
-| `retrieval.*` | See defaults | Budgets for index entries, selected memory, synthesis size, and full memory reads | Tune for larger repos or stricter token limits |
+| `retrieval.max_index_entries` | `20` | Max index rows considered by memory planning workflows | Keeps index-first retrieval compact |
+| `retrieval.max_memory_results` | `10` | Max durable memory results considered for search and synthesis | Raise only if the cache is very broad |
+| `retrieval.max_synthesis_words` | `900` | Maximum size for generated `memory-synthesis.md` | Lower for stricter token budgets |
+| `retrieval.full_scan_allowed` | `false` | Whether expensive full memory scans are allowed | Keep `false` for normal lightweight use |
 | `optimizer.*` | See defaults | Optional SQLite cache for faster search and synthesis | Keep disabled for basic markdown-only usage |
 | `indexing.*` | See defaults | File globs for optional optimizer indexing | Tune what gets cached locally |
 
@@ -718,10 +776,34 @@ These are the hub's infrastructure files:
 
 ```text
 spec-kit-memory-hub/
+├── package.json                 ← Node package for the optimizer CLI
+├── package-lock.json            ← Locked dependency graph
+├── tsconfig.json                ← TypeScript build config
+├── bin/
+│   └── speckit-memory.ts        ← CLI entrypoint source
+├── src/
+│   ├── cli/
+│   ├── db/
+│   ├── indexing/
+│   ├── retrieval/
+│   ├── synthesis/
+│   ├── audit/
+│   ├── config/
+│   ├── utils/
+│   └── types/
 ├── extension.yml                 ← Extension manifest
 ├── config-template.yml           ← Default configuration template
 ├── commands/                     ← Spec Kit command definitions
-│   └── speckit.memory-md.*.md       ← 6 main commands
+│   └── speckit.memory-md.*.md       ← 7 main commands
+├── scripts/
+│   ├── bash/
+│   │   └── detect-changed-files.sh
+│   ├── powershell/
+│   │   └── detect-changed-files.ps1
+│   ├── install-into-project.sh
+│   ├── check-memory.sh
+│   ├── test-install.sh
+│   └── test-cli.sh
 └── templates/                    ← Starter files
     ├── prompts/                      ← Instruction prompts (NOT deployed)
     │   ├── bootstrap.memory.prompt.md
@@ -741,12 +823,50 @@ spec-kit-memory-hub/
     │   └── 001-example-feature/      ← Example feature template
     ├── .github/
     │   └── copilot-instructions.md   ← Template instructions
+    ├── scripts/
+    │   └── test-cli.sh               ← CLI smoke test for the optimizer
     └── docs/                         ← Extension documentation
 ```
 
 **Key distinction:**
 - **Deployed to projects**: Memory files, config, instructions
 - **Stays in hub**: Prompts, templates (as reference), documentation
+
+---
+
+## Optional: Local SQLite Optimizer
+
+For massive projects where reading multiple markdown files consumes too many tokens, Memory Hub includes a **local SQLite cache optimizer**.
+
+When enabled, the CLI (`npx speckit-memory`) parses all markdown memory files, chunks them by section, calculates token costs, and stores them in a local `.specify/extensions/memory-md/cache.db`.
+
+### How it is Wired to the LLM Commands
+
+You do **not** need to run `npx speckit-memory` manually. The LLM commands (like `/speckit.memory-md.plan-with-memory`) are explicitly programmed to detect if the optimizer is enabled. 
+
+When the LLM runs a command, it follows this internal logic:
+1. It reads `.specify/extensions/memory-md/config.yml`.
+2. If `optimizer.enabled: true`, the LLM executes the command line hook (`{SCRIPT}` or direct `npx speckit-memory refresh-memory`).
+3. The Node.js binary updates the SQLite cache in the background.
+4. The LLM runs `npx speckit-memory synthesize` to generate a highly compressed `memory-synthesis.md`.
+5. The LLM reads only the final compressed synthesis file, saving thousands of context tokens.
+
+### Enabling the Optimizer
+
+If you run `/speckit.memory-md.bootstrap`, the AI will ask if you want to enable the optimizer and will attempt to run `npm install` automatically for you. 
+
+If that fails, or if you are enabling it manually on an existing setup:
+1. Edit `.specify/extensions/memory-md/config.yml` in your project and set:
+   ```yaml
+   optimizer:
+     enabled: true
+   ```
+2. Navigate to the extension directory and build the Node.js binary:
+   ```bash
+   cd .specify/extensions/memory-md
+   npm install && npm run build
+   ```
+3. That's it! The LLM prompts will automatically switch to using the `npx speckit-memory` caching workflows.
 
 ---
 

@@ -1,3 +1,6 @@
+---
+description: Audit memory quality, index integrity, freshness, and synthesis hygiene.
+---
 
 
 <!-- Extension: memory-md -->
@@ -6,10 +9,13 @@
 
 You are running a high-integrity audit of the project's durable and feature memory for `memory-hub`.
 
+> **Scope note**: When the optimizer is enabled, `npx speckit-memory audit-memory` validates **SQLite cache integrity** only (stale hashes, orphaned rows, missing files, synthesis word budget). It does not evaluate content quality. Full content-quality checks (stale decisions, contradictions, leakage, noise) are performed by **this AI command only** — they require reading the markdown files and applying the rubric below.
+
 ## Goal
 Validate the quality, accuracy, and density of memory artifacts (`{memory_root}/*.md` and `{specs_root}/<feature>/memory*.md`). Identify stale, contradictory, or low-signal entries that degrade the project's long-term intelligence.
 
-Audit is intentionally expensive and may read all memory files. Normal synthesis must not; it should use `{memory_root}/INDEX.md` and selected source sections only.
+Audit is intentionally expensive and may read all memory files. Normal synthesis must not; it should use `{memory_root}/INDEX.md` and selected source sections only. **IMPORTANT**: You MUST read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`.
+When the optimizer is enabled and available, run `cd .specify/extensions/memory-md && npx speckit-memory audit-memory` to validate the SQLite cache, then fall back to markdown-only audit checks if the cache is unavailable.
 
 ## Operating Constraints
 - **STRICTLY READ-ONLY**: This command is analytical. Do **not** modify any files.
@@ -26,6 +32,7 @@ Check for:
 - **Synthesis Drift**: `{memory_synthesis_filename}` is out of sync with selected memory.
 - **Synthesis Budget**: `{memory_synthesis_filename}` exceeds configured `retrieval.max_synthesis_words`.
 - **Formatting Issues**: Entries that are too long, vague, or repetitive.
+- **Cache Integrity**: Missing source files, invalid references, orphaned DB rows, duplicate memory entries, and stale hashes in the local SQLite cache.
 
 ## Severity Guide
 - **CRITICAL**: Contradicts the Constitution, contains dangerous/incorrect security guidance, or is fundamentally stale.
@@ -56,6 +63,8 @@ Check for:
 2. **Refactoring**: Merge duplicates and move leaked feature notes to their respective `specs/`.
 3. **Synthesis Refresh**: Update `{memory_synthesis_filename}` to reflect current implementation.
 4. **Remediation**: "Would you like me to suggest concrete cleanup edits for the top issues?"
+
+`audit-memory` may be expensive because it validates the entire cache.
 
 ---
 ## Cleanup Rubric

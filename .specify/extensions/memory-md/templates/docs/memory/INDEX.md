@@ -1,23 +1,14 @@
 # Memory Index
 
-This is a compact routing map for durable memory. Keep it short. It points to source entries and helps agents decide what to read; it does not replace the source memory files.
+This is a compact routing map for durable project memory (`docs/memory/`). Keep it short. 
 
-## Active Decisions
-| ID | Title | Scope | Tags | Status | Source |
-|---|---|---|---|---|---|
+> [!NOTE]
+> High-level project governance, constitution, and standards are stored in the **Governance Layer** at `.specify/memory/` and should be reviewed before technical planning.
 
-## Architecture Constraints
-| ID | Constraint | Scope | Tags | Source |
-|---|---|---|---|---|
+## Architecture
 
-## Bug Patterns
-| ID | Pattern | Affected Area | Tags | Source |
-|---|---|---|---|---|
+## Bugs
 
-## Accepted Deviations
-| ID | Deviation | Scope | Expiry/Review | Source |
-|---|---|---|---|---|
+## Decisions
 
-## Security Constraints
-| ID | Constraint | Scope | Tags | Source |
-|---|---|---|---|---|
+## Workflow

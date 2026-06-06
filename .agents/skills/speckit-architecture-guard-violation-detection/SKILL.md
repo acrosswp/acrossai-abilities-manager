@@ -13,6 +13,7 @@ metadata:
 You are detecting architecture violations for `architecture-guard`, a high-integrity governance extension.
 
 Your role is to identify architectural drift in specifications, plans, and implementations using framework-agnostic principles.
+If `flash-mem` is available, use `/speckit.memory-md.prepare-context` or the MCP tools exposed by `flash-mem`; compatibility tool names such as `speckit_memory_*` are provided by `flash-mem` when the host still expects them.
 
 ## Operating Constraints
 
@@ -112,11 +113,29 @@ A Security-Architecture Conflict occurs when security requirements and architect
 ## Review Procedure
 
 1. **Model Context**: Load artifacts and build the Semantic Models.
+
+    #### SQLite / MCP Flow (Required for `flash-mem`)
+    Because `flash-mem` uses SQLite as its source of truth, you **MUST** use its MCP tools to retrieve context. Do not read the `.md` memory files directly, as they are only backups.
+
+    1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature> --query "architecture constraints boundaries decisions <feature>"`.
+    2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` first.
+    3. **Token Report**: Execute the `speckit_memory_token_report` MCP tool provided by `flash-mem` with `feature: "<feature>"` and display the token savings in the output.
+
+    #### Markdown-Only Flow (Fallback)
+    If `flash-mem` is unavailable, you **MUST** read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
+
+    - `.specify/memory/constitution.md`
+    - `.specify/memory/architecture_constitution.md`
+    - `.specify/memory/security_constitution.md`
+    - `specs/<feature>/security-constraints.md`
+    - `specs/<feature>/memory-synthesis.md`
+    - `spec.md`, `plan.md`, `tasks.md`, `data-model.md`
 2. **Verify Evidence**: Check if task-referenced files exist and contain expected implementation logic.
 3. **Analyze Alignment**: Compare `spec.md` intent vs. `plan.md` architecture vs. actual behavior.
 4. **Scan Principles**: Apply detection scope across boundaries and contracts.
-5. **Assign Severity**:
-   - `Critical`: Constitution MUST breach, Security Constraint violation, or zero evidence for a required boundary.
+5. **Security & Governance Cross-Check**: Ensure architecture decisions do not violate `security_constitution.md` or `security-constraints.md`.
+6. **Assign Severity**:
+   - `Critical`: Constitution MUST breach (including Security), Security Constraint violation, or zero evidence for a required boundary.
    - `High`: Significant boundary erosion, contract inconsistency, or intent divergence.
    - `Medium`: Local drift or debt.
    - `Low`: Minor shape or naming drift.

@@ -32,6 +32,8 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-SETTINGS-API-DEVIATION | WP Settings API accepted for scalar-field (≤5 fields) settings pages; DataForm required for dynamic UI | Admin/Settings | settings-api, dataform, constitution-deviation, 019 | Active | DECISIONS.md |
 | DEC-ABILITIES-LIST-UX-025 | Pagination state driven by REST params; perPage injected from DB via window.acrossaiAbilitiesManager (NOT window.acrossaiAbilities) | Abilities/Admin | pagination, per-page, window, localize-script | Active | DECISIONS.md |
 | DEC-COLUMN-VISIBILITY-LOCALSTORAGE | Column prefs in localStorage with merge-over-COLUMN_DEFAULTS; new columns always default visible (FR-025) | Abilities/Admin | column-visibility, localstorage, merge-defaults, fr-025 | Active | DECISIONS.md |
+| DEC-EXTERNAL-PACKAGE-HOOK-CTOR | External Composer packages whose constructor self-registers hooks MAY bypass Loader; instantiate in define_admin_hooks() with class_exists() guard; cite this decision ID | Plugin-wide | external-package, boot-flow-rule, constructor, class_exists | Active | DECISIONS.md |
+| DEC-FREEMIUS-PER-PLUGIN-INIT | fs_dynamic_init() keyed per product_id; each consumer passes own credentials (id, public_key, slug); never hardcode in shared package | Plugin-wide/Freemius | freemius, per-plugin, product-id, multi-instance | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -86,6 +88,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | ID | Deviation | Scope | Expiry/Review | Source |
 |---|---|---|---|---|
 | ARCH-ADV-001 | `boot()` wires hooks directly (bypasses Boot Flow Rule) when PATH-A/B conditional loading required — **scope: Override Processor only** (Logger boot() removed Feature 017) | Sitewide/Override | Review if Boot Flow Rule gains conditional-load support | DECISIONS.md |
+| DEC-EXTERNAL-PACKAGE-HOOK-CTOR | External Composer package constructor bypasses Loader (AddonsPage — Feature 026); instantiate in define_admin_hooks() with class_exists() guard | Plugin-wide/External | None — permanent for packages without hookable public methods | DECISIONS.md |
 | DEV1 | `McpVisibilityControl` uses compound-control pattern instead of DataForm | Sitewide/Admin | Review if DataForm gains compound-control support | memory-synthesis.md |
 | DEC-SETTINGS-API-DEVIATION | WP Settings API instead of DataForm for scalar-field settings pages (≤5 fields); DataForm required for dynamic UI | Admin/Settings | None — permanent exception for scalar settings pages | DECISIONS.md |
 
@@ -144,6 +147,9 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | 2026-05-27 | Feature 016: allowed-servers checkbox list, PHPUnit bootstrap established, MCP server sanitizer constants + REST args schema (T019, T020) | Feature 016 | feature-016, phpunit, mcp-servers, sanitizer, react | WORKLOG.md |
 | BUG-ABILITYFORM-PANEL-PREMATURE-CLOSE | Script-based JSX edits can misplace .panel closing div; verify tab-5 </div> position after every AbilityForm.jsx edit | React/JSX | abilityform, panel, div-nesting, script-edit | BUGS.md |
 | BUG-ABILITYFORM-REBASE-SECTION-SCRAMBLE | Rebase onto main silently scrambles AbilityForm.jsx .sect order; grep section markers after every rebase | React/JSX | abilityform, rebase, section-order, scramble | BUGS.md |
+| BUG-ADMIN-POST-NONCE-PARAM | check_admin_referer() uses _wpnonce by default; pass the actual URL nonce key as second arg | Admin/WP | admin-post, nonce, check_admin_referer | BUGS.md |
+| BUG-EXTERNAL-PACKAGE-CTOR-SILENT | External constructor in bare try/catch registers nothing silently; catch must add admin_notices | Plugin-wide | external-package, try-catch, admin-notices, silent-fail | BUGS.md |
+| BUG-FREEMIUS-CONNECT-AGAIN-LOOP | Freemius connect_again() redirects internally; wrapping in admin-post redirect causes infinite loop | Admin/Freemius | freemius, connect_again, redirect-loop, admin-post | BUGS.md |
 | ARCH-ABILITYFORM-SECTION-ORDER | Canonical AbilityForm.jsx section order 1-6 (Identity→SitePerm→MCP→Annotations→Callback→Schema); all inside single .panel | Architecture | abilityform, section-order, panel, jsx | ARCHITECTURE.md |
 
 | 2026-05-29 | Feature 018: User Access section + AC integration pattern + 4 Jest gotchas | Abilities | feature-018, access-control, jest, react18 | WORKLOG.md |
@@ -174,3 +180,5 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-FORM-HINT-REGISTRY-PATH | "Plugin declares" hints must use `savedAbility._registry.field` — merged value is the admin's own override, not the registry default | JS/Form | form-hint, _registry, plugin-declares, non-db, savedAbility | Active | DECISIONS.md |
 | 2026-06-02 | Feature 024: source badge, Type badge, Plugin-declares hints, Callback read-only, inject label/desc/cat, Force Block merge fix | Abilities/JS | feature-024, merger, force-block, site_allowed, inject, source-badge | WORKLOG.md |
 | 2026-06-03 | Feature 025: Pagination, per-page Settings API option, CSS tab hide, Clear All Overrides row action, Description/Show-in-REST columns, column visibility toggle — 34 tasks, 0 security findings | Abilities/Admin | feature-025, pagination, column-visibility, localstorage, settings-api, security-pass | WORKLOG.md |
+| 2026-06-04 | Feature 026: wpboilerplate/addons-page Composer path integration; DEC-EXTERNAL-PACKAGE-HOOK-CTOR accepted deviation recorded; 0 security findings; PHPStan+PHPCS clean | Admin/Composer | feature-026, addons-page, composer-path, boot-flow-rule, freemius, readme | WORKLOG.md |
+| 2026-06-06 | Feature 026 UX: Freemius SDK fixes (v0.0.6→v0.0.16), deactivate button, inline confirmation flash — 4 new patterns | Admin/Freemius | feature-026, freemius, deactivate, confirmation-flash | WORKLOG.md |

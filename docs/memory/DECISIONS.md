@@ -2,6 +2,29 @@
 
 ---
 
+### 2026-06-04 — External Composer packages that self-register hooks may bypass the Loader (DEC-EXTERNAL-PACKAGE-HOOK-CTOR)
+
+**Context**
+Feature 026 integrates `wpboilerplate/addons-page` by calling `new \WPBoilerplate\AddonsPage\AddonsPage(menu_slug, plugin_file)` directly inside `define_admin_hooks()`. The AddonsPage constructor's private `boot()` method calls `add_action()` / `add_filter()` directly, bypassing `$this->loader`. This technically violates the Boot Flow Rule ("includes/Main.php is the single source of all hook registration via the Loader").
+
+**Why the Boot Flow Rule cannot be satisfied here**
+The `boot()` method is `private` — it is not accessible for Loader wiring. The package does not expose individual hookable methods (unlike `McpServersList::collect()` or `RestEndpoint::register()`). The only public API is the constructor. Creating an adapter class with `plugins_loaded P25` hook-wiring is feasible but adds fragility: it ties the adapter to the package's hook timing assumptions, and the spec explicitly calls for direct instantiation in `define_admin_hooks()`.
+
+**Decision**
+External Composer packages whose sole API is a constructor that self-registers hooks MAY be instantiated directly inside `define_admin_hooks()` without going through the Loader. The instantiation point MUST still live in `includes/Main.php` to preserve single-entry-point traceability. The call MUST be wrapped in a `class_exists()` guard per Constitution §V Integration Resilience. A code comment MUST explain the deviation.
+
+**Scope**
+`wpboilerplate/addons-page` (Feature 026). ARCH-ADV-001 is NOT extended — that deviation covers internal processor classes with conditional PATH A/B boot logic. This is a separate, narrower deviation scoped to external packages only.
+
+**Rule**
+When integrating a Composer package whose constructor self-registers hooks: (1) instantiate directly in `define_admin_hooks()`; (2) wrap in `class_exists()`; (3) add a comment citing this decision ID; (4) do not create an intermediate adapter unless the package's hook timing makes direct instantiation unsafe.
+
+**Evidence**
+`includes/Main.php` — AddonsPage block after the Settings submenu section;
+`specs/026-addons-page-integration/spec.md` — FR-004, FR-005, FR-006.
+
+---
+
 ### 2026-05-24 — Abilities module is now the single source of truth for override DB logic (DEC-012-SUPERSESSION)
 
 **Context**
@@ -1271,3 +1294,26 @@ If a future column were added to `COLUMN_DEFAULTS` with `false`, existing users 
 **Evidence**
 `src/js/abilities/components/AbilitiesList.jsx` — `COLUMN_DEFAULTS`, `loadColumnPrefs()`, `toggleColumn()`;
 `tests/jest/abilities/column-prefs.test.js` — 8 tests covering empty prefs, partial hide, new-column default, value normalisation, corrupt JSON fallback, null fallback, unknown key ignored.
+
+---
+
+### 2026-06-06 — DEC-FREEMIUS-PER-PLUGIN-INIT: Freemius `fs_dynamic_init()` must be called with per-consumer product credentials keyed by product_id
+
+**Status**: Active
+
+**Context**
+`wpboilerplate/addons-page` is a shared Composer package consumed by multiple plugins. Initially `FreemiusInitializer` held a single shared instance. Using shared/hardcoded credentials would cause analytics and opt-in data to route to the wrong Freemius product when two plugins using the package were active simultaneously.
+
+**Decision**
+`FreemiusInitializer::init()` accepts `$product_id`, `$public_key`, and `$slug` as parameters. Instances are memoized in a static array keyed by `$product_id`. Each consumer plugin must pass its own Freemius product credentials; the package never hardcodes them.
+
+**Rule**
+When calling `new AddonsPage(...)`, always pass `fs_product_id`, `fs_public_key`, and `fs_slug` in the `$args` array. Missing credentials throw `InvalidArgumentException`. Credentials live in the consuming plugin (e.g., `includes/Main.php`), never in the shared package.
+
+**Evidence**
+`wpb-addons-page/src/FreemiusInitializer.php` — `init()` signature accepts `$product_id`, `$public_key`, `$slug`; static `$instances` array keyed by `$product_id`.
+`includes/Main.php` — AddonsPage instantiation with `'fs_product_id' => '31230', 'fs_public_key' => 'pk_0f116582ac1b8e608827094024b1f'`.
+
+**Tradeoffs**
+- Gained: per-plugin Freemius isolation, correct analytics per product, multi-plugin safe
+- Reconsider: if the package ever needs an anonymous/no-Freemius mode, the init path would need an optional bypass

@@ -1,6 +1,7 @@
 ---
 name: speckit-memory-md-log-finding
-description: 'Spec-kit workflow command: speckit-memory-md-log-finding'
+description: Turn a high-signal audit finding into a tracker-ready follow-up for GitHub,
+  GitLab, Jira, or another issue system.
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
@@ -39,3 +40,5 @@ If no write integration exists, produce a tracker-ready draft that can be pasted
 
 Do not rewrite memory here.
 Do not create noisy or speculative follow-up items.
+
+If the finding is approved as durable memory after tracking, refresh the local cache with `cd .specify/extensions/memory-md && npx speckit-memory refresh-memory` (or `npx . refresh-memory` if in the extension repo) when the optimizer is enabled and available.

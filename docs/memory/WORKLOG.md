@@ -3,6 +3,17 @@
 Use concise high-value entries only.
 This is not a changelog. Do not record routine releases, version bumps, or implementation summaries.
 
+---
+
+### 2026-06-04 — Feature 026: wpboilerplate/addons-page Composer path integration
+
+- **What happened**: Integrated `wpboilerplate/addons-page` via a Composer path repository pointing at a local clone. Instantiated `AddonsPage` inside `define_admin_hooks()` with a `class_exists()` guard. Appended three README.txt sections (Installation, External Services, Privacy Policy) verbatim from the package template.
+- **Architecture finding**: Boot Flow Rule violation — `AddonsPage::boot()` is `private` and self-registers hooks via `add_action()`. No Loader wiring is possible. Constitution §V Integration Resilience allows external packages, and the constructor runs at plugin-load time (before any hooks fire), so all registrations are valid. New accepted deviation `DEC-EXTERNAL-PACKAGE-HOOK-CTOR` recorded.
+- **Why durable**: First integration of a self-bootstrapping Composer package (constructor-centric API). Establishes the pattern: `class_exists()` guard + direct instantiation in `define_admin_hooks()` + code comment citing `DEC-EXTERNAL-PACKAGE-HOOK-CTOR`. Applies to any future package whose `boot()`/constructor is private.
+- **Future mistake prevented**: Do not create an adapter wrapper class with `plugins_loaded P25` hook for these packages — that approach has timing risks (hooks registered inside `add_action('admin_menu')` would miss if the adapter fires too late). Instantiate directly in `define_admin_hooks()`.
+- **Composer path note**: The relative URL in `composer.json` is `../../wpb-addons-page` (two levels up from the plugin dir to `wp-content/`), not three. The spec had `../../../` which was wrong. Verify with `python3 -c "import os; print(os.path.relpath(...))"` before running `composer update`.
+- **Evidence**: `composer.json` (path repo + require), `includes/Main.php` (AddonsPage block), `README.txt` (three appended sections). PHPStan L8 ✅, PHPCS ✅, 0 security findings.
+
 ## Template
 
 ### YYYY-MM-DD - Summary
@@ -268,6 +279,16 @@ Customize Phase 1 tests based on library criticality and integration depth.
 - **Future mistake prevented**: Wrong global object name (`window.acrossaiAbilities`) silently falls through to default — always check `window.acrossaiAbilitiesManager`. Column visibility merge-with-defaults pattern ensures new columns always default visible without breaking old saved prefs.
 - **Evidence**: Branch `025-abilities-list-ux-improvements`. 10 source files changed. PHPCS ✅, PHPStan L8 ✅, Jest 8/8 ✅ (new column-prefs suite), PHPUnit 12/12 ✅ (new SettingsMenu suite), `npm run build` ✅, security review 0 findings. All 34 tasks complete.
 - **Where to look**: `src/js/abilities/components/AbilitiesList.jsx` (pagination, column visibility, Clear All Overrides, Description/ShowInRest cells), `admin/Partials/SettingsMenu.php` (`sanitize_per_page()`, `render_per_page_field()`), `admin/Main.php` (`perPage` injection), `src/scss/abilities/admin.scss` (`.subsubsub { display: none }`, column toggle panel), `tests/jest/abilities/column-prefs.test.js`, `tests/phpunit/abilities/SettingsMenuTest.php`.
+
+---
+
+### 2026-06-06 — Feature 026 UX iteration: Freemius SDK fixes (v0.0.6→v0.0.16), deactivate button, inline confirmation flash
+
+- **Why durable**: Eight versions of `wpboilerplate/addons-page` were shipped to resolve Freemius integration bugs (nonce key mismatch, redirect loop, silent constructor throw). Four new durable patterns captured: BUG-ADMIN-POST-NONCE-PARAM, BUG-EXTERNAL-PACKAGE-CTOR-SILENT, BUG-FREEMIUS-CONNECT-AGAIN-LOOP, DEC-FREEMIUS-PER-PLUGIN-INIT.
+- **Future mistake prevented**: (1) `check_admin_referer()` second param must match the actual URL nonce key. (2) External package constructor try/catch must always emit `admin_notices` on throw. (3) Freemius `connect_again()` redirects internally — never wrap in an admin-post redirect chain. (4) `FreemiusInitializer` must key instances by `product_id` with per-consumer credentials.
+- **Also shipped**: Active add-on plugins now expose an enabled "Deactivate" button (via `wp_ajax_wpb_addons_deactivate`) instead of the disabled "● Active" state. All install/activate/deactivate buttons show a 1.5s inline confirmation flash (`✓ Activated` / `✓ Deactivated`) before transitioning to the server-returned stable state.
+- **Evidence**: `wpb-addons-page` v0.0.16 tag, `composer.json` `^0.0.16`, `includes/Main.php` (try/catch + admin_notices + credentials), `wpb-addons-page/src/AjaxHandlers.php` (deactivate handler), `wpb-addons-page/src/ButtonState.php` (deactivate action for active plugins), `wpb-addons-page/src/assets/js/modules/install.js` (confirmation flash).
+- **Where to look**: `wpb-addons-page/src/FreemiusInitializer.php`, `wpb-addons-page/src/FreemiusBridge.php` (`trigger_connect_again()`), `wpb-addons-page/src/AddonsPage.php` (`handle_connect_again()`, `boot()`), `includes/Main.php` (AddonsPage instantiation pattern).
 
 ---
 

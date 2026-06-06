@@ -61,7 +61,12 @@
       "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-initialize)",
       "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-remote)",
       "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-git-validate)",
-      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-architecture-guard-governed-plan)"
+      "Bash(mkdir -p /Users/raftaar1191/local-sites/acrossai/app/public/wp-content/plugins/acrossai-abilities-manager/.claude/skills/speckit-architecture-guard-governed-plan)",
+      "Bash(npx specify *)",
+      "Bash(specify --version)",
+      "Bash(specify --help)",
+      "Bash(specify integration *)",
+      "Bash(bash *)"
     ]
   }
 }

@@ -1,15 +1,11 @@
 ---
 name: speckit-security-review-audit
-description: 'Spec-kit workflow command: speckit-security-review-audit'
+description: Performs broader or full-system security review across the codebase.
+  Recommended for milestone reviews, release reviews, or major architecture validation.
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: security-review:prompts/security-review.prompt.md
----
-
-scripts:
-  sh: .specify/scripts/bash/detect-changed-files.sh
-  ps: .specify/scripts/powershell/detect-changed-files.ps1
+  source: security-review:commands/security-review.md
 ---
 
 # Security Review — Full Project
@@ -19,7 +15,7 @@ scripts:
 1. **Identify Aspects**: Parse "$ARGUMENTS" to identify specific security `aspects` (e.g., `auth`, `injection`, `data-leakage`, `supply-chain`) or `all`.
 2. **Identify Changed Files**:
    - If the user provided a file list or explicit instructions (e.g., "only staged changes"), follow them.
-   - Otherwise, you **MUST** execute the `{SCRIPT}` with `--json` to detect changed files since the merge-base or in the working directory.
+   - Otherwise, you **MUST** execute the `.specify/scripts/bash/detect-changed-files.sh` with `--json` to detect changed files since the merge-base or in the working directory.
    - Use the `changed_files` list as the primary audit set.
 
 ## Role
@@ -32,11 +28,25 @@ Perform a comprehensive security audit. Analyze the identified `changed_files` a
 
 ## Memory and Design Context
 
-Before reviewing the code, check the Spec-Kit memory hub context when it exists:
+Before reviewing the code, check the Spec-Kit memory hub context.
 
-- `docs/memory/` for durable repository memory
+### Optimizer-Aware Flow
+
+When `.specify/extensions/memory-md/config.yml` has `optimizer.enabled: true` and the CLI is available:
+
+1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature> --query "security constraints vulnerabilities authentication authorization data-leakage"`.
+2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` (or the search results) first to understand active security constraints and historical lessons.
+
+### Markdown-Only Flow
+
+When the optimizer is disabled or unavailable, you **MUST** read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
+
+- `docs/memory/INDEX.md` (Read this first to identify relevant source sections)
+- `docs/memory/` for durable repository memory (Read only the sections identified in the index)
+- `.specify/memory/security_constitution.md` for project-wide security rules and standards
 - `specs/<feature>/memory.md` for active feature memory
 - `specs/<feature>/memory-synthesis.md` for the concise working summary
+- `specs/<feature>/security-constraints.md` for feature-specific security rules
 - `.github/copilot-instructions.md` for repo-scoped Copilot guidance
 - Other memory or architecture notes the project uses to preserve decisions
 
@@ -356,6 +366,51 @@ Check for:
 
 ---
 
+## Document Header
+
+Before writing the report body, emit a YAML frontmatter block at the very start of the output document. Populate all values from your analysis. Copy the `field_summaries` section verbatim — it is static schema documentation that enables any LLM or indexer reading only the header to understand the full field schema without parsing the report body.
+
+````yaml
+---
+document_type: security-review
+review_type: audit
+assessment_date: <YYYY-MM-DD>
+codebase_analyzed: <project name or path>
+total_files_analyzed: <integer>
+total_findings: <integer>
+overall_risk: <CRITICAL|HIGH|MODERATE|LOW|INFORMATIONAL>
+critical_count: <integer>
+high_count: <integer>
+medium_count: <integer>
+low_count: <integer>
+informational_count: <integer>
+owasp_categories: [<A01>, <A05>, ...]
+cwe_ids: [<CWE-89>, ...]
+field_summaries:
+  document_type: "Always 'security-review'. Allows indexers to skip non-review documents."
+  review_type: "Which command generated this document: audit, branch, staged, plan, tasks, or followup."
+  assessment_date: "ISO 8601 date the review was performed (YYYY-MM-DD)."
+  overall_risk: "Highest severity tier with active findings (CRITICAL, HIGH, MODERATE, LOW, INFORMATIONAL)."
+  critical_count: "Number of Critical findings (CVSS 9.0-10.0)."
+  high_count: "Number of High findings (CVSS 7.0-8.9)."
+  medium_count: "Number of Medium findings (CVSS 4.0-6.9)."
+  low_count: "Number of Low findings (CVSS 0.1-3.9)."
+  informational_count: "Number of Informational findings."
+  owasp_categories: "OWASP Top 10 2025 categories (A01-A10) that have at least one finding."
+  cwe_ids: "CWE identifiers referenced in this document."
+  finding_id: "Unique finding identifier (SEC-NNN) for cross-referencing and task linkage."
+  location: "File path and line number of the vulnerable code (path/to/file.ext:line)."
+  owasp_category: "OWASP Top 10 2025 category for this finding (AXX:2025-Name)."
+  cwe: "Common Weakness Enumeration identifier with short name (CWE-NNN: Name)."
+  cvss_score: "CVSS v3.1 base score (0.0-10.0). 9.0+=Critical, 7.0-8.9=High, 4.0-6.9=Medium, 0.1-3.9=Low."
+  spec_kit_task: "Spec-Kit task ID for backlog tracking and remediation follow-up (TASK-SEC-NNN)."
+---
+````
+
+Then follow with the report body.
+
+---
+
 ## Output Format
 
 Produce a comprehensive **SECURITY REVIEW REPORT** with the following structure:
@@ -563,14 +618,16 @@ Produce a comprehensive **SECURITY REVIEW REPORT** with the following structure:
 ### D. Action Plan
 1. **Critical Remediation**: Fix all Critical/High vulnerabilities before merge.
 2. **Architecture Hardening**: Resolve trust boundary and data flow risks.
-3. **Hygiene**: Update dependencies and clear informational secrets.
-4. **Remediation**: "Would you like me to suggest concrete remediation edits for the top issues?"
+3. **Report Findings**: For each finding, report severity, location, OWASP category, description, remediation, and Spec-Kit task.
+4. **Action Plan**: Provide a prioritized action plan for fixing findings.
+5. **Proactive Durable Memory Preservation**: If systemic vulnerabilities or reusable security patterns were identified, you **MUST** proactively execute `/speckit.memory-md.capture` as the final part of this turn. Use the formal capture flow to propose entries and wait for user approval.
 
 ### E. Next Steps
 1. Review findings with development team
 2. Prioritize remediation tasks
-3. Schedule follow-up assessment
-4. Integrate security checks into CI/CD
+3. **Preserve Durable Lessons**: If systemic vulnerabilities or reusable security patterns were identified, run `/speckit.memory-md.capture`.
+4. Schedule follow-up assessment
+5. Integrate security checks into CI/CD
 
 ```
 
@@ -656,8 +713,6 @@ TASK-SEC-[NNN]: [Actionable Title]
 
 These tasks should be ready to import into Spec-Kit's task tracking system.
 
----
-
 ## Final Instructions
 
 1. Analyze the ENTIRE codebase thoroughly
@@ -668,6 +723,24 @@ These tasks should be ready to import into Spec-Kit's task tracking system.
 6. Prioritize findings by risk and exploitability
 7. Be constructive—focus on remediation, not just problems
 8. Consider the business context when assessing impact
+9. **Proactive Durable Memory Preservation**: If systemic vulnerabilities or reusable security patterns were identified, you **MUST** proactively execute `/speckit.memory-md.capture` as the final action.
+
+## Memory Hub INDEX.md Row
+
+After the report, output the following proposed routing row for the user to paste into their `docs/memory/INDEX.md`. This enables LLM-based filtering without loading the full document.
+
+```text
+| <relative path where this doc is saved> | audit | <assessment_date> | <overall_risk> | C:<critical_count> H:<high_count> M:<medium_count> L:<low_count> | <owasp_categories comma-separated> |
+```
+
+Example:
+
+```text
+| docs/security-reviews/2026-05-07-api.md | audit | 2026-05-07 | HIGH | C:2 H:4 M:6 L:4 | A01,A05,A07 |
+```
+
+See `docs/field-registry.md` in the security-review-extension for the full INDEX.md table format and SQLite Phase 1 column mapping.
+
+---
 
 Begin the security review now.
-```

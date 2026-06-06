@@ -1,6 +1,7 @@
 ---
 name: speckit-memory-md-plan-with-memory
-description: 'Spec-kit workflow command: speckit-memory-md-plan-with-memory'
+description: Use index-first retrieval to synthesize constraints and gate planning
+  on conflicts.
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
@@ -9,11 +10,23 @@ metadata:
 
 # Plan With Memory
 
-Before planning the feature, resolve configuration. If `.specify/extensions/memory-md/config.yml` exists, read it for `memory_root`, `specs_root`, `feature_memory_filename`, `memory_synthesis_filename`, `require_memory_synthesis_before_plan`, and `retrieval`.
+Before planning the feature, resolve configuration. If `.specify/extensions/memory-md/config.yml` exists, read it for `memory_root`, `specs_root`, `feature_memory_filename`, `memory_synthesis_filename`, `require_memory_synthesis_before_plan`, `optimizer`, and `retrieval`.
 Otherwise use defaults: `memory_root: docs/memory`, `specs_root: specs`, `feature_memory_filename: memory.md`, `memory_synthesis_filename: memory-synthesis.md`, `require_memory_synthesis_before_plan: true`, and the retrieval defaults below.
 If `require_memory_synthesis_before_plan` is `false`, skip the synthesis gate but still produce a synthesis when possible.
 
+### Optimizer-Aware Flow
+
+When `.specify/extensions/memory-md/config.yml` has `optimizer.enabled: true` and the CLI is available:
+
+1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature>`.
+2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` to identify constraints and decisions.
+3. Open additional durable memory files only if synthesis is insufficient or the user explicitly requests a deeper audit.
+
+When `optimizer.enabled` is `false`, missing, or unavailable, keep using markdown-only, index-first retrieval.
+
 ## Retrieval Order
+
+**IMPORTANT**: You MUST read the following files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
 
 1. Read config.
 2. Read constitution or project principles only if present and small.
@@ -25,6 +38,7 @@ If `require_memory_synthesis_before_plan` is `false`, skip the synthesis gate bu
 8. Create or refresh `{specs_root}/<feature>/{memory_synthesis_filename}`.
 
 Do not read or paste entire durable memory files unless the index is missing, incomplete, or the user explicitly requests a full audit.
+Do not load all durable memory files during normal planning when the optimizer is enabled.
 
 ## Semantic Modeling
 
@@ -96,7 +110,11 @@ Conflict rules:
 - Soft conflict: warn when memory suggests a preferred approach but the spec can still proceed with a justified alternative.
 - Ask for clarification when the spec cannot satisfy memory without changing scope, requirements, or an existing durable decision.
 
+### Orchestration Note
+This command (and its optimizer-aware `prepare-context` equivalent) is **automatically executed** by `spec-kit-architecture-guard` as part of its `governed-*` workflows. Manual execution is optional and typically only necessary for manual context refreshes outside of a formal governed turn.
+
 Output:
 - a concise planning synthesis
 - Include only selected summaries in the plan.
 - Do not continue to task breakdown or implementation with unresolved hard conflicts.
+- **Durable Memory Preservation (Mandatory Check)**: If the planning process identified new architectural patterns, critical decisions, or repeatable lessons (e.g. from conflict resolution), you **MUST** execute `/speckit.memory-md.capture` after providing the synthesis. Use the formal capture flow to propose entries and wait for user approval.

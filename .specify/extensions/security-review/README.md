@@ -2,7 +2,7 @@
 
 > Continuous security governance and OWASP auditing for AI-assisted development.
 
-[![Version](https://img.shields.io/badge/version-1.4.5-22c55e)](extension.yml)
+[![Version](https://img.shields.io/badge/version-1.5.0-22c55e)](extension.yml)
 [![Spec Kit](https://img.shields.io/badge/Spec%20Kit-compatible-2563eb)](https://spec-kit.dev)
 [![OWASP](https://img.shields.io/badge/OWASP-2025-ef4444)](https://owasp.org/Top10/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b)](LICENSE)
@@ -41,6 +41,31 @@ This extension acts as a cooperative citizen in the Spec Kit ecosystem by sharin
 4. **`/speckit.architecture-guard.governed-implement`** -> Orchestrates implementation with memory context and post-implementation governance review.
 
 By using explicit markdown files, extensions remain decoupled, and all constraints and decisions are fully reviewable in Git.
+
+---
+
+# Installation
+
+### From Registry
+
+```text
+specify extension add security-review
+```
+
+### From GitHub
+
+```text
+specify extension add security-review --from \
+  https://github.com/DyanGalih/spec-kit-security-review/archive/refs/tags/v1.5.0.zip
+```
+
+### Local Development
+
+```text
+specify extension add --dev /path/to/spec-kit-security-review
+```
+
+---
 
 # Recommended Security Lifecycle
 
@@ -280,6 +305,25 @@ Use `audit` for:
 * systemic security analysis
 * broader trust-boundary validation
 
+## Governance Artifacts
+
+Security Review respects the following project governance artifacts when they exist:
+
+| Artifact | Purpose |
+| --- | --- |
+| `security_constitution.md` | **The Source of Truth.** Repository-wide security rules, standards, and requirements that every feature must follow. |
+| `specs/<feature>/security-constraints.md` | Feature-specific security rules generated during planning or specification. |
+| `docs/memory/` | Durable repository memory containing historical security decisions. |
+
+## Optimizer-Aware Memory Retrieval
+
+This extension integrates with [spec-kit-memory-hub](https://github.com/DyanGalih/spec-kit-memory-hub)'s local SQLite optimizer. When enabled, the extension uses the `speckit-memory` CLI to perform targeted searches across your project's durable memory rather than reading full directories.
+
+To enable this:
+1. Ensure `spec-kit-memory-hub` is installed.
+2. Set `optimizer.enabled: true` in your `.specify/extensions/memory-md/config.yml`.
+3. The security review agent will automatically switch to the **Optimizer-Aware Flow** (Refresh -> Search -> Synthesize -> Read).
+
 ---
 
 # Commands
@@ -295,6 +339,7 @@ Use `audit` for:
 | `tasks` | Task Generation | After `/speckit.tasks` | Task sequencing, missing security requirements |
 | `followup` | Remediation Planning | After findings are reviewed | Convert findings to tasks or technical debt |
 | `apply` | Integration | After followup decisions | Inject security tasks into plan.md and tasks.md |
+| `export` | Reporting | For whitebox testing/compliance | Formal Executive and Technical Pentest Report |
 
 ---
 
@@ -383,6 +428,19 @@ Converts findings into remediation tasks (`Implement now`), technical debt (`Tra
 
 Writes approved security tasks into `tasks.md` and `plan.md`. Supports dry-run preview.
 
+### Formal Report Export
+
+Synthesizes multiple review artifacts into a single, professional **Whitebox Security Assessment Report**.
+
+```text
+/speckit.security-review.export
+```
+
+Use this when you need to provide a formal report to stakeholders or clients. It produces:
+- **Executive Summary**: High-level risk and business impact.
+- **Technical Findings**: Detailed exploit walk-throughs and code-level remediation.
+- **Strategic Roadmap**: Long-term security hardening advice based on project memory.
+
 ---
 
 # Workflow Integration
@@ -396,6 +454,7 @@ Writes approved security tasks into `tasks.md` and `plan.md`. Supports dry-run p
 /speckit.security-review.branch    → Focused security review
 /speckit.security-review.followup  → Convert findings to tasks
 /speckit.security-review.apply     → Apply approved tasks
+/speckit.security-review.export    → Export formal report
 ```
 
 ## With Companion Extensions
@@ -464,14 +523,15 @@ security-review-extension/
 ├── README.md
 ├── config-template.yml                ← Team brief template (not auto-read)
 ├── extension.yml                      ← Extension manifest
-├── prompts/                           ← Spec Kit command definitions (self-contained)
-│   ├── security-review.prompt.md            ← Full audit (655 lines)
-│   ├── security-review-staged.prompt.md     ← Staged changes
-│   ├── security-review-branch.prompt.md     ← Branch/PR diff
-│   ├── security-review-plan.prompt.md       ← Plan review
-│   ├── security-review-tasks.prompt.md      ← Task review
-│   ├── security-review-followup.prompt.md   ← Finding follow-up
-│   └── security-review-apply.prompt.md      ← Apply approved items
+├── commands/                          ← Spec Kit command definitions (self-contained)
+│   ├── security-review.md                   ← Full audit (655 lines)
+│   ├── security-review-staged.md            ← Staged changes
+│   ├── security-review-branch.md            ← Branch/PR diff
+│   ├── security-review-plan.md              ← Plan review
+│   ├── security-review-tasks.md             ← Task review
+│   ├── security-review-followup.md          ← Finding follow-up
+│   ├── security-review-apply.md             ← Apply approved items
+│   └── init.md                              ← Bootstrap security rules
 ├── docs/
 │   ├── design.md
 │   ├── installation.md
@@ -488,6 +548,14 @@ security-review-extension/
 ---
 
 # Output Format
+
+Generated reports include a **YAML frontmatter header** before the report body. This header contains structured metadata (risk level, finding counts, OWASP categories, and field definitions) that enables header-first processing:
+
+- An LLM reads the header and decides whether the document is relevant before loading the body
+- The header fields map directly to `docs/memory/INDEX.md` routing rows for token-efficient retrieval
+- The same fields become SQL columns when memory-hub SQLite Phase 1 is enabled — no rework needed
+
+See [docs/field-registry.md](docs/field-registry.md) for the full field schema and [docs/usage.md](docs/usage.md) for INDEX.md integration instructions.
 
 ## Example Report
 

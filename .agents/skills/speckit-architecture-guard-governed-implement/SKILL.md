@@ -13,11 +13,13 @@ metadata:
 You are orchestrating the `governed-implement` workflow for `architecture-guard`.
 
 This command coordinates implementation and post-implementation review to ensure the output respects architectural, historical, and security constraints.
+The orchestrator should be memory-first: load the synthesis and active watchpoints before coding, then fall back to targeted reads only when the synthesis is insufficient.
+If `flash-mem` is available, use `/speckit.memory-md.prepare-context` or the MCP tools exposed by `flash-mem`; compatibility tool names such as `speckit_memory_*` are provided by `flash-mem` when the host still expects them.
 
 ## Goal
 
 Provide a single command that ensures:
-1. Implementation is historical-context aware (Memory Hub).
+1. Implementation is historical-context aware (`flash-mem`).
 2. Implementation is performed (`/speckit.implement`).
 3. The output is reviewed for security vulnerabilities (Security Review).
 4. The output is reviewed for architectural drift (Architecture Guard).
@@ -27,38 +29,36 @@ Provide a single command that ensures:
 ### Step 1 — Detect Optional Extensions
 
 Check for the existence of:
-- `spec-kit-memory-hub`
+- `flash-mem`
 - `spec-kit-security-review`
 
-If they are missing, degrade gracefully by skipping their respective steps.
+**Detection Logic**:
+1. Read `.specify/extensions.yml` and check the `installed` list. If an extension ID is present there, consider it available.
+2. Fall back to checking for the extension directory in `.specify/extensions/` only if the YAML is missing or the list is empty.
+3. If they are missing from both, degrade gracefully by skipping their respective steps.
 
-### Step 2 — Memory Synthesis
+### Step 2 — Memory Synthesis (Optional)
 
-IF `spec-kit-memory-hub` is available:
+IF `flash-mem` is available:
+
+#### SQLite / MCP Flow (Required for `flash-mem`)
+Because `flash-mem` uses SQLite as its source of truth, you **MUST** use its MCP tools to retrieve context. Do not read the `.md` memory files directly, as they are only backups.
+
+1. **Prepare Context**: Execute `/speckit.memory-md.prepare-context --feature specs/<feature> --query "architecture decisions implementation pitfalls constraints <feature>"`.
+2. **Read Synthesis**: Read `specs/<feature>/memory-synthesis.md` first.
+3. If `flash-mem` emits a token banner, keep it visible so the savings remain observable during normal implementation runs.
+4. **Token Report**: Execute the `speckit_memory_token_report` MCP tool provided by `flash-mem` with `feature: "<feature>"` and display the token savings in the summary.
+
+#### Markdown-Only Flow (Fallback)
+If `flash-mem` is unavailable, use the standard synthesis command:
+
+1. **Execute Synthesis**: Run `/speckit.memory-md.plan-with-memory` to synthesize and refresh `specs/<feature>/memory-synthesis.md`.
 
 **[OPTIONAL SUB-AGENT DELEGATION]**
-- If memory hub has ≥ 20 decision documents: Consider sub-agent for synthesis
+- If `flash-mem` has ≥ 20 decision documents: Consider sub-agent for synthesis
 - Sub-agent command: `/speckit.memory-md.plan-with-memory`
 - Sub-agent benefits: Faster traversal, better filtering, detailed synthesis
 - LLM decides: Inline for quick decisions, sub-agent for complex memory
-
-1. **Execute Synthesis**: Run `/speckit.memory-md.plan-with-memory` to synthesize and refresh `specs/<feature>/memory-synthesis.md`.
-2. For implementation, prioritize:
-    - Accepted architecture rules and task scope.
-    - Known deviations and prior implementation pitfalls.
-    - Security constraints and migration rules.
-
-#### Memory Synthesis Scope
-
-When calling memory synthesis, define scope as:
-
-- **File Scope**: Limit context to `docs/memory/<feature>/` and `specs/<feature>/` directories only
-- **Decision Limit**: Include max 3–5 most relevant past architecture decisions
-- **Content Filter**: Architecture decisions only (exclude operational, infrastructure, testing decisions)
-- **Recency**: Prioritize decisions from current feature branch or recent commits
-- **Format**: Output as `specs/<feature>/memory-synthesis.md` with Clear decisions, Conflicts, and Assumptions sections
-
-Do NOT attempt to synthesize memory for unrelated features or system-wide decisions.
 
 ---
 
@@ -67,13 +67,17 @@ Do NOT attempt to synthesize memory for unrelated features or system-wide decisi
 You must orchestrate the `/speckit.implement` (core implementation) workflow directly.
 
 **CRITICAL INSTRUCTION**: You must NOT just advise the user or stop here. You must perform the implementation by following the `tasks.md` breakdown:
-1. **Execute Tasks**: Sequentially or in parallel (as marked) execute the tasks defined in `specs/<feature>/tasks.md`.
+1. **Execute Tasks**: Run `/speckit.implement`. If `/speckit.implement` is not available as a registered command, fall back to inline implementation:
+   - Read `specs/<feature>/tasks.md` and execute each unchecked task sequentially.
+   - Read all applicable constitution files and `specs/<feature>/memory-synthesis.md` before coding.
+   - Perform the actual coding work (writing files, running tests) for each task.
+   - Note in the Governance Summary that `/speckit.implement` was unavailable and implementation was performed inline.
 2. **Write Code**: Perform the actual coding work (writing files, running tests) required by the tasks.
 3. **Sync the tasks**: You MUST update `specs/<feature>/tasks.md` to mark completed tasks with `[x]`, check them off, and add any new subtasks discovered during implementation.
-4. The implementation MUST follow:
-   - Current tasks and the Project Constitution (`.specify/memory/constitution.md`).
-   - `.specify/memory/architecture_constitution.md`.
-   - `security-constraints.md` (if available).
+4. The implementation MUST follow current tasks and context. **IMPORTANT**: You MUST read these files explicitly using your file-reading tools (absolute or relative paths). Do not rely solely on workspace search or semantic indexers, as these files are often in `.gitignore`:
+   - `specs/<feature>/tasks.md`
+   - `.specify/memory/constitution.md`, `.specify/memory/architecture_constitution.md`, and `.specify/memory/security_constitution.md`.
+   - `specs/<feature>/security-constraints.md` (if available).
    - Architecture migration plan (if available).
 
 NOTE: The core Spec Kit command is `speckit.implement`. Do not use `speckit.implementation` as it is not a registered command.
@@ -126,13 +130,19 @@ IF architecture violations exist:
 2. Generate non-blocking refactor, migration, or correction tasks.
 3. Skip performance refactors unless explicitly requested.
 
-### Step 7 — Implementation Governance Summary
+### Step 7 — Proactive Durable Memory Preservation
+
+If the implementation review or security audit identified new architectural patterns, critical decisions, or repeatable lessons:
+1. **Proactive Execution**: You **MUST automatically execute** `/speckit.memory-md.capture` as the final part of this turn. Do not just recommend it; run the command.
+2. **Standard**: Use the formal capture flow to propose entries and wait for user approval. Do not ask the user if they want to capture; identify the lessons and trigger the command immediately after the summary.
+
+### Step 8 — Implementation Governance Summary
 
 Produce a final `Governed Implementation Summary`.
 
 ## Graceful Degradation
 
-**Without Memory Hub**:
+**Without `flash-mem`**:
 - Skip Step 2 (Memory Synthesis)
 - Continue to `/speckit.implement` directly
 - Assume no historical implementation constraints beyond Constitution
@@ -186,6 +196,8 @@ The command MUST return:
 - [e.g., Merge changes]
 - [e.g., Revise implementation to address Security Conflict]
 - [e.g., Run /speckit.architecture-guard.architecture-apply]
+- **Durable Memory Preservation**: (Proactively triggered) Review the proposed memory entries below.
+- **Verification Gate**: Run `/speckit.architecture-guard.architecture-verify` to ensure all tasks are delivered and requirements are met.
 ```
 
 ## Security + Architecture Conflict Handling
@@ -205,3 +217,4 @@ If implementation repeatedly violates a standard because the standard is outdate
 - **Modular**: Do not mix security findings into a generic architecture list.
 - **Framework-Agnostic**: Maintain boundary concepts (Entry, Domain, Data).
 - **Non-Blocking**: Adhere to the non-blocking philosophy for architecture findings.
+- **Memory-First**: Prefer cached synthesis and selected index entries before broad file reads.

@@ -1028,3 +1028,76 @@ When adding auto-detection logic gated by `empty()`, trace every upstream writer
 
 **Where to look next**
 `includes/Utilities/AcrossAI_Ability_Merger.php` (`normalize_registry()` line ~183), `includes/Utilities/AcrossAI_Ability_Registry_Query.php` (line ~79, `empty()` guard), `includes/Utilities/AcrossAI_Ability_Source_Detector.php` (`detect()` — correct, no change needed).
+
+---
+
+### 2026-06-06 — BUG-ADMIN-POST-NONCE-PARAM: `check_admin_referer()` uses `_wpnonce` by default; must pass `'nonce'` explicitly when URL uses that key
+
+**Status**: Active
+
+**Symptoms**
+WordPress "The link you followed has expired" page when clicking an admin-post handler built with `check_admin_referer('wpb_addons_connect')`. The nonce in the URL was `nonce=abc123` but WordPress was looking for `_wpnonce`.
+
+**Root Cause**
+`check_admin_referer( $action )` looks for `$_REQUEST['_wpnonce']` by default. When the URL builder uses `add_query_arg([ 'nonce' => wp_create_nonce(...) ])`, the param is `nonce`, not `_wpnonce`, and the check fails.
+
+**Future mistake prevented**
+Whenever the outgoing URL uses a custom nonce key (e.g. `nonce=`), pass that key as the second argument: `check_admin_referer('wpb_addons_connect', 'nonce')`. Never assume `_wpnonce` is the only valid key — always match the key to what `add_query_arg` / the form actually generates.
+
+**Evidence**
+`wpb-addons-page/src/AddonsPage.php` — `handle_connect_again()` now uses `check_admin_referer('wpb_addons_connect', 'nonce')`. Feature 026 UX iteration.
+
+**Prevention / Detection**
+When writing a new `admin-post` handler, grep for the nonce key used in the corresponding URL builder (`add_query_arg` or `<input type="hidden">`). Confirm the key matches the second arg of `check_admin_referer()`.
+
+**Where to look next**
+`wpb-addons-page/src/AddonsPage.php` (`handle_connect_again()`) — correct pattern.
+
+---
+
+### 2026-06-06 — BUG-EXTERNAL-PACKAGE-CTOR-SILENT: External package constructor wrapped in bare try/catch registers nothing and shows no error
+
+**Status**: Active
+
+**Symptoms**
+Add-ons page submenu never appeared; AJAX actions for install/activate were unregistered. No PHP error was thrown. The plugin appeared to load cleanly.
+
+**Root Cause**
+`AddonsPage::__construct()` throws `InvalidArgumentException` when `fs_product_id` / `fs_public_key` are absent. The initial integration didn't pass credentials, so the constructor threw and the exception was swallowed by an empty `catch {}` — all `boot()` hook registrations were skipped silently.
+
+**Future mistake prevented**
+A bare `try/catch` on an external package constructor means zero hooks get registered with no visible signal. The catch block MUST always wire `admin_notices` to surface the error to `manage_options` users. Never use `catch ( \Throwable $e ) {}` with an empty body for external package constructors.
+
+**Evidence**
+`includes/Main.php` — the AddonsPage block now has a full catch that calls `add_action('admin_notices', ...)` to display the exception message to admins. Feature 026 fix.
+
+**Prevention / Detection**
+Whenever wrapping an external constructor in try/catch, add an `admin_notices` fallback in the catch block. If the package is required (not optional), rethrow instead.
+
+**Where to look next**
+`includes/Main.php` `define_admin_hooks()` — reference implementation of `class_exists` guard + `try/catch` + `admin_notices` fallback.
+
+---
+
+### 2026-06-06 — BUG-FREEMIUS-CONNECT-AGAIN-LOOP: Freemius `connect_again()` redirects internally; wrapping it in another admin-post redirect causes ERR_TOO_MANY_REDIRECTS
+
+**Status**: Active
+
+**Symptoms**
+Browser showed `ERR_TOO_MANY_REDIRECTS` when clicking the "Login / Connect" button on the Add-ons page.
+
+**Root Cause**
+The handler generated a new `admin-post.php?action=wpb_addons_connect_again` URL and redirected to it. That handler then called `$fs->connect_again()`, which itself calls `fs_redirect(get_activation_url())`. The cycle repeated indefinitely.
+
+**Future mistake prevented**
+Never redirect to a handler that calls `$fs->connect_again()` — that method already handles its own redirect internally (Freemius hooks `_prepare_admin_menu` at priority 999999999 and calls `fs_redirect()`). Call `$fs->connect_again()` directly in the `admin_post` handler. Use `wp_safe_redirect()` only as a fallback when `connect_again()` is unavailable.
+
+**Evidence**
+`wpb-addons-page/src/FreemiusBridge.php` — `trigger_connect_again()` calls `$this->fs->connect_again()` directly with no further redirect.
+`wpb-addons-page/src/AddonsPage.php` — `handle_connect_again()` calls `$this->fs_bridge->trigger_connect_again()` then a fallback `wp_safe_redirect()`.
+
+**Prevention / Detection**
+For any Freemius activation/connect flow: call the SDK method directly and let Freemius handle its own redirect. Never build a URL pointing back at a handler that calls another Freemius redirect method.
+
+**Where to look next**
+`wpb-addons-page/src/FreemiusBridge.php` (`trigger_connect_again()`), `wpb-addons-page/src/AddonsPage.php` (`handle_connect_again()`).

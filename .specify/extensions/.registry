@@ -34,9 +34,9 @@
       "installed_at": "2026-05-11T10:21:49.278606+00:00"
     },
     "security-review": {
-      "version": "1.4.5",
+      "version": "1.5.0",
       "source": "local",
-      "manifest_hash": "sha256:f0c3a5faaada6628d9903d038c36ac6d39efe1c0d4499c4bec5357691c8e53c1",
+      "manifest_hash": "sha256:6845e1d761f2eeb49d395425f7bc1bb18dddc4bbc287a5de81c573ae6c215025",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -47,7 +47,20 @@
           "speckit.security-review.plan",
           "speckit.security-review.tasks",
           "speckit.security-review.followup",
-          "speckit.security-review.apply"
+          "speckit.security-review.apply",
+          "speckit.security-review.export",
+          "speckit.security-review.init"
+        ],
+        "claude": [
+          "speckit.security-review.audit",
+          "speckit.security-review.staged",
+          "speckit.security-review.branch",
+          "speckit.security-review.plan",
+          "speckit.security-review.tasks",
+          "speckit.security-review.followup",
+          "speckit.security-review.apply",
+          "speckit.security-review.export",
+          "speckit.security-review.init"
         ],
         "codex": [
           "speckit.security-review.audit",
@@ -56,7 +69,9 @@
           "speckit.security-review.plan",
           "speckit.security-review.tasks",
           "speckit.security-review.followup",
-          "speckit.security-review.apply"
+          "speckit.security-review.apply",
+          "speckit.security-review.export",
+          "speckit.security-review.init"
         ],
         "copilot": [
           "speckit.security-review.audit",
@@ -65,51 +80,65 @@
           "speckit.security-review.plan",
           "speckit.security-review.tasks",
           "speckit.security-review.followup",
-          "speckit.security-review.apply"
+          "speckit.security-review.apply",
+          "speckit.security-review.export",
+          "speckit.security-review.init"
         ]
       },
       "registered_skills": [],
       "installed_at": "2026-05-11T17:05:12.124683+00:00"
     },
     "memory-md": {
-      "version": "0.8.0",
+      "version": "0.8.5",
       "source": "local",
-      "manifest_hash": "sha256:266d5c792117e7ee485a698b4e5396b83d1126afff83dcbf09a02c75ca62dff6",
+      "manifest_hash": "sha256:b0368e6d1d4d3eb0e2662d68fed547210f0647466b0162ff1f78d6fa39d281af",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
         "agy": [
-          "speckit.memory-md.bootstrap",
+          "speckit.memory-md.init",
           "speckit.memory-md.plan-with-memory",
           "speckit.memory-md.capture",
           "speckit.memory-md.capture-from-diff",
           "speckit.memory-md.audit",
-          "speckit.memory-md.log-finding"
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report"
+        ],
+        "claude": [
+          "speckit.memory-md.init",
+          "speckit.memory-md.plan-with-memory",
+          "speckit.memory-md.capture",
+          "speckit.memory-md.capture-from-diff",
+          "speckit.memory-md.audit",
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report"
         ],
         "codex": [
-          "speckit.memory-md.bootstrap",
+          "speckit.memory-md.init",
           "speckit.memory-md.plan-with-memory",
           "speckit.memory-md.capture",
           "speckit.memory-md.capture-from-diff",
           "speckit.memory-md.audit",
-          "speckit.memory-md.log-finding"
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report"
         ],
         "copilot": [
-          "speckit.memory-md.bootstrap",
+          "speckit.memory-md.init",
           "speckit.memory-md.plan-with-memory",
           "speckit.memory-md.capture",
           "speckit.memory-md.capture-from-diff",
           "speckit.memory-md.audit",
-          "speckit.memory-md.log-finding"
+          "speckit.memory-md.log-finding",
+          "speckit.memory-md.token-report"
         ]
       },
       "registered_skills": [],
       "installed_at": "2026-05-11T17:05:24.189935+00:00"
     },
     "architecture-guard": {
-      "version": "1.8.0",
+      "version": "1.8.9",
       "source": "local",
-      "manifest_hash": "sha256:2ebeac88a78e7483dd60660fd7f150ccf7e794f80b696442976e6663bb519c9f",
+      "manifest_hash": "sha256:9e537d4fbcdb593b1679dda7d0bf44229ff7dc1d264d98ae5cabd5c5d425df85",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -122,7 +151,20 @@
           "speckit.architecture-guard.violation-detection",
           "speckit.architecture-guard.refactor-generator",
           "speckit.architecture-guard.architecture-apply",
-          "speckit.architecture-guard.init"
+          "speckit.architecture-guard.init",
+          "speckit.architecture-guard.architecture-verify"
+        ],
+        "claude": [
+          "speckit.architecture-guard.governed-plan",
+          "speckit.architecture-guard.governed-tasks",
+          "speckit.architecture-guard.governed-implement",
+          "speckit.architecture-guard.architecture-workflow",
+          "speckit.architecture-guard.architecture-review",
+          "speckit.architecture-guard.violation-detection",
+          "speckit.architecture-guard.refactor-generator",
+          "speckit.architecture-guard.architecture-apply",
+          "speckit.architecture-guard.init",
+          "speckit.architecture-guard.architecture-verify"
         ],
         "codex": [
           "speckit.architecture-guard.governed-plan",
@@ -133,7 +175,8 @@
           "speckit.architecture-guard.violation-detection",
           "speckit.architecture-guard.refactor-generator",
           "speckit.architecture-guard.architecture-apply",
-          "speckit.architecture-guard.init"
+          "speckit.architecture-guard.init",
+          "speckit.architecture-guard.architecture-verify"
         ],
         "copilot": [
           "speckit.architecture-guard.governed-plan",
@@ -144,7 +187,8 @@
           "speckit.architecture-guard.violation-detection",
           "speckit.architecture-guard.refactor-generator",
           "speckit.architecture-guard.architecture-apply",
-          "speckit.architecture-guard.init"
+          "speckit.architecture-guard.init",
+          "speckit.architecture-guard.architecture-verify"
         ]
       },
       "registered_skills": [],
