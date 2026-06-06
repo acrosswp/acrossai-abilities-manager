@@ -7,8 +7,8 @@
 	"minimum-stability": "dev",
 	"repositories": [
 		{
-			"type": "path",
-			"url": "../../wpb-addons-page"
+			"type": "vcs",
+			"url": "https://github.com/WPBoilerplate/wpb-addons-page"
 		}
 	],
 	"require": {

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "77f7902069add8a62f7decdfbb5c89f8",
+    "content-hash": "ce995f2adabbb858285a246447b982ce",
     "packages": [
         {
             "name": "automattic/jetpack-autoloader",
@@ -158,10 +158,16 @@
         {
             "name": "wpboilerplate/addons-page",
             "version": "0.0.16",
-            "dist": {
-                "type": "path",
-                "url": "../../wpb-addons-page",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/WPBoilerplate/wpb-addons-page.git",
                 "reference": "76810ed2caf0e392a48bf37654d1447e8fd0538d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/WPBoilerplate/wpb-addons-page/zipball/76810ed2caf0e392a48bf37654d1447e8fd0538d",
+                "reference": "76810ed2caf0e392a48bf37654d1447e8fd0538d",
+                "shasum": ""
             },
             "require": {
                 "automattic/jetpack-autoloader": "^5.0",
@@ -189,9 +195,11 @@
                 "GPL-2.0-or-later"
             ],
             "description": "Reusable WordPress Add-ons page with free and paid add-ons support via Freemius.",
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/WPBoilerplate/wpb-addons-page/tree/v0.0.16",
+                "issues": "https://github.com/WPBoilerplate/wpb-addons-page/issues"
+            },
+            "time": "2026-06-04T02:09:00+00:00"
         },
         {
             "name": "wpboilerplate/wpb-access-control",
