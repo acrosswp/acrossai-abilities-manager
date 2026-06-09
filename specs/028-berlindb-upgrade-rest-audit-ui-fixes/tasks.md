@@ -157,6 +157,40 @@
 
 ---
 
+---
+
+## Phase 9: Additional BerlinDB v3 Compliance Fixes (Discovered After Wiki Review)
+
+**Purpose**: Bugs and API gaps identified by reading the BerlinDB v3 wiki and comparing the v2→v3 diff against all 8 Database-layer files. Fixed on the same branch.
+
+### Fix B — BerlinDB v3 Schema `'null'` key removal (PHP 8.2 dynamic property deprecation)
+
+- [x] T031 [CHANGE-1] Fix `includes/Modules/Abilities/Database/AcrossAI_Abilities_Schema.php` — remove `'null' => false` from `ability_slug`, `source`, `created_at`, `updated_at` column definitions; BerlinDB v3 `Base` trait sets `$column->null` dynamically but `Column` only declares `$allow_null`, causing PHP 8.2 deprecation warnings; `allow_null` defaults to `false` so NOT NULL constraint is preserved
+- [x] T032 [CHANGE-1] Fix `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Schema.php` — same removal of `'null' => false` from `ability_slug`, `source`, `status`, `created_at` columns
+
+**Checkpoint**: `grep -rn "'null'" includes/Modules/*/Database/*Schema.php` returns nothing.
+
+### Fix C — BerlinDB v3 "phantom version" — table not recreated after manual drop
+
+- [x] T033 [CHANGE-1] Override `maybe_upgrade()` in `includes/Modules/Abilities/Database/AcrossAI_Abilities_Table.php` — add method that calls `$this->exists()` (BerlinDB v3 `SHOW TABLES LIKE` check); if table absent, call `delete_option($this->db_version_key)` to clear the phantom stored version so `parent::maybe_upgrade()` treats the next run as a fresh install
+- [x] T034 [CHANGE-1] Same override in `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Table.php`
+- [x] T035 [CHANGE-1] Edit `includes/AcrossAI_Activator.php` — add `use AcrossAI_Ability_Logs_Table` import and call `( new AcrossAI_Ability_Logs_Table() )->maybe_upgrade()` in `activate()` so the logger table is created on plugin (re)activation alongside the abilities table
+
+**Checkpoint**: drop both tables manually → deactivate/reactivate plugin → both `wp_acrossai_abilities` and `wp_acrossai_ability_logs` tables exist.
+
+### Fix D — Full BerlinDB 3.0 API adoption (prompted by BerlinDB v3 wiki review)
+
+- [x] T036 [CHANGE-1] Update all 8 Database-layer files — change `use BerlinDB\Database\{Schema,Table,Query,Row}` to `use BerlinDB\Database\Kern\{Schema,Table,Query,Row}` (canonical v3 namespace; old paths work via `class_alias` shim but `Kern\*` is the authoritative surface)
+- [x] T037 [CHANGE-1] Add `declare(strict_types=1)` to all 8 Database-layer files matching BerlinDB v3 source convention (PHP 8.1+ target; strict_types is file-scoped and safe for these DB-layer files which only call BerlinDB methods and our own well-typed utilities)
+- [x] T038 [CHANGE-1] Add missing v3 Query properties to `AcrossAI_Abilities_Query` — `$item_name = 'ability'`, `$item_name_plural = 'abilities'`, `$cache_group = 'acrossai-abilities'`, `$table_alias = 'aa'`; without these, BerlinDB generates hook names like `pre_get_items` and uses an unscoped cache group
+- [x] T039 [CHANGE-1] Same for `AcrossAI_Ability_Logs_Query` — `$item_name = 'ability_log'`, `$item_name_plural = 'ability_logs'`, `$cache_group = 'acrossai-ability-logs'`, `$table_alias = 'aal'`
+- [x] T040 [CHANGE-1] Edit `AcrossAI_Ability_Logs_Schema.php` `$indexes` array — add explicit `'type' => 'key'` to all four composite index definitions (Index class defaults to `'key'` but explicit declaration removes ambiguity)
+- [x] T041 [CHANGE-1] Clean v2-migration docblock comments in both Table classes — remove "BerlinDB v3: property, not overridden method" from `$schema` docblock (no longer a migration note; this is simply how Table works); update Logs Table constructor comment to remove old `BerlinDB\Database\Table` class path reference
+
+**Checkpoint**: `grep -rn "BerlinDB.Database.Schema\|BerlinDB.Database.Table\|BerlinDB.Database.Query\|BerlinDB.Database.Row" includes/Modules/*/Database/` returns nothing (all replaced with Kern paths); `grep -rn "declare.*strict_types" includes/Modules/*/Database/` returns 8 matches.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
