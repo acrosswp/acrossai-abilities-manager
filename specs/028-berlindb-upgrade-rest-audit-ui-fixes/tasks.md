@@ -107,9 +107,9 @@
 
 ### Implementation for CHANGE-5
 
-- [x] T020 [CHANGE-5] Edit `src/scss/abilities/admin.scss` — find the `.tablenav-pages-below` rule (around line 308) and add `text-align:  right;` after the existing `margin-top: 8px;` line — do not add `text-align` to the generic `.tablenav-pages` rule above it; do not change any other rule
+- [x] T020 [CHANGE-5] Edit `src/scss/abilities/admin.scss` — add `justify-content: flex-end` to the `.tablenav-pages` rule (right-aligns flex children in both top and bottom contexts); add `text-align: right` to `.tablenav-pages-below`; add a nested `.tablenav .tablenav-pages` rule inside `.tablenav {}` to override WordPress `list-tables.css` specificity-20 rule (`margin: 0 0 9px`) that zeroed out `margin-left: auto` — nested rule generates specificity 20 and loads after WP's rule so it wins
 
-**Checkpoint (pre-build)**: `grep -n "text-align.*right" src/scss/abilities/admin.scss` returns a match scoped to `.tablenav-pages-below`.
+**Checkpoint (pre-build)**: `grep -n "justify-content.*flex-end" src/scss/abilities/admin.scss` returns a match; `grep -n "tablenav .tablenav-pages" src/scss/abilities/admin.scss` returns the override rule.
 
 ---
 
@@ -133,6 +133,27 @@
 - [x] T027 [P] Manual UI smoke test: load abilities list page → confirm no `X of Y items` text in top nav, no JS console errors → confirm bottom pagination is right-aligned → confirm top pagination alignment is unchanged (SC-005, SC-006)
 
 **Checkpoint**: All gates pass → PR is ready to open.
+
+---
+
+---
+
+## Phase 8: Post-Implementation Bug Fixes (Discovered During Testing)
+
+**Purpose**: Bugs uncovered by manual testing after all planned phases passed quality gates. Fixed on the same branch.
+
+### BerlinDB v3 Table Migration
+
+- [x] T028 [CHANGE-1] Fix `includes/Modules/Abilities/Database/AcrossAI_Abilities_Table.php` — BerlinDB v3 made `Table::set_schema()` private; child overrides are silently ignored, leaving `schema_object = null` and causing `Table::create()` to bail — replace the `protected function set_schema()` method with `protected $schema = AcrossAI_Abilities_Schema::class;` property; add `use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Schema;` import
+- [x] T029 [CHANGE-1] Fix `includes/Modules/Logger/Database/AcrossAI_Ability_Logs_Table.php` — same BerlinDB v3 breaking change — replace `protected function set_schema()` with `protected $schema = AcrossAI_Ability_Logs_Schema::class;` property; add `use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Schema;` import
+
+**Checkpoint**: deactivate plugin → drop tables manually → reactivate → both `wp_acrossai_abilities` and `wp_acrossai_ability_logs` tables exist.
+
+### Pagination CSS Specificity Fix
+
+- [x] T030 [CHANGE-5] Additional SCSS fix — WordPress `list-tables.css` has `.tablenav .tablenav-pages { margin: 0 0 9px }` (specificity 20) which zeros out `margin-left` on our `.tablenav-pages { margin-left: auto }` (specificity 10); add a nested `.tablenav-pages` block inside the `.tablenav {}` rule in `src/scss/abilities/admin.scss` with `float: none; margin: 0; margin-left: auto;` — the SCSS nesting compiles to `.tablenav .tablenav-pages` (specificity 20, later cascade = wins); run `npm run build`
+
+**Checkpoint**: compiled `build/css/abilities.css` contains `.tablenav .tablenav-pages{float:none;margin:0 0 0 auto}`.
 
 ---
 
