@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0d3fe81c525312e99f24c27c654eb792",
+    "content-hash": "225b4e7e274af6d96bef85299e099ea7",
     "packages": [
         {
             "name": "automattic/jetpack-autoloader",
@@ -228,16 +228,16 @@
         },
         {
             "name": "wpboilerplate/wpb-access-control",
-            "version": "v1.2.0",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WPBoilerplate/wpb-access-control.git",
-                "reference": "be711a68d63106782314342529240bf89a9a588e"
+                "reference": "9c73892b422e238b35312acd28b4d815205b8e99"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/be711a68d63106782314342529240bf89a9a588e",
-                "reference": "be711a68d63106782314342529240bf89a9a588e",
+                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/9c73892b422e238b35312acd28b4d815205b8e99",
+                "reference": "9c73892b422e238b35312acd28b4d815205b8e99",
                 "shasum": ""
             },
             "require": {
@@ -306,7 +306,7 @@
                 "issues": "https://github.com/WPBoilerplate/wpb-access-control/issues",
                 "source": "https://github.com/WPBoilerplate/wpb-access-control"
             },
-            "time": "2026-06-09T14:53:59+00:00"
+            "time": "2026-06-09T18:26:26+00:00"
         },
         {
             "name": "wpboilerplate/wpb-mcp-servers-list",
