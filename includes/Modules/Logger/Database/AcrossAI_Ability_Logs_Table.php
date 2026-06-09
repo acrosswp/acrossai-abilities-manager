@@ -10,6 +10,7 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database;
 
 use BerlinDB\Database\Table;
+use AcrossAI_Abilities_Manager\Includes\Modules\Logger\Database\AcrossAI_Ability_Logs_Schema;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -46,6 +47,13 @@ class AcrossAI_Ability_Logs_Table extends Table {
 	protected $db_version_key = 'acrossai_ability_logs_db_version';
 
 	/**
+	 * Schema class for this table (BerlinDB v3: property, not overridden method).
+	 *
+	 * @var string
+	 */
+	protected $schema = AcrossAI_Ability_Logs_Schema::class;
+
+	/**
 	 * Use per-site table prefix ($wpdb->prefix), not the network base prefix.
 	 * Explicitly set to false for per-site isolation (multisite compliance — SEC-03).
 	 *
@@ -76,35 +84,5 @@ class AcrossAI_Ability_Logs_Table extends Table {
 			self::$instance = new self();
 		}
 		return self::$instance;
-	}
-
-	/**
-	 * Define the raw SQL column list for CREATE TABLE.
-	 *
-	 * BerlinDB interpolates $this->schema directly into:
-	 *   CREATE TABLE {name} ( {schema} ) {charset_collation}
-	 * so this must be a raw SQL column definition string.
-	 *
-	 * @since  0.1.0
-	 * @return void
-	 */
-	protected function set_schema() {
-		$this->schema = "
-			`id` bigint(20) unsigned NOT NULL auto_increment,
-			`ability_slug` varchar(255) NOT NULL DEFAULT '',
-			`source` varchar(20) NOT NULL DEFAULT '',
-			`mcp_server_id` varchar(255) DEFAULT NULL,
-			`user_id` bigint(20) unsigned DEFAULT NULL,
-			`input` longtext DEFAULT NULL,
-			`output` longtext DEFAULT NULL,
-			`status` varchar(20) NOT NULL DEFAULT 'success',
-			`duration_ms` int(11) NOT NULL DEFAULT 0,
-			`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (`id`),
-			KEY `idx_ability_slug_created` (`ability_slug`, `created_at`),
-			KEY `idx_source_created` (`source`, `created_at`),
-			KEY `idx_user_id_created` (`user_id`, `created_at`),
-			KEY `idx_status_created` (`status`, `created_at`)
-		";
 	}
 }

@@ -10,6 +10,7 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database;
 
 use BerlinDB\Database\Table;
+use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Schema;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -44,6 +45,14 @@ class AcrossAI_Abilities_Table extends Table {
 	protected $db_version_key = 'acrossai_abilities_db_version';
 
 	/**
+	 * Schema class for this table (BerlinDB v3: property, not overridden method).
+	 * The parent's private set_schema() reads this and instantiates the class.
+	 *
+	 * @var string
+	 */
+	protected $schema = AcrossAI_Abilities_Schema::class;
+
+	/**
 	 * Use per-site table prefix ($wpdb->prefix), not the network base prefix.
 	 * Explicitly set to false so multisite intent is declared in code, not
 	 * inherited from BerlinDB library defaults (SAC-02 / Constitution §II).
@@ -70,51 +79,5 @@ class AcrossAI_Abilities_Table extends Table {
 			self::$instance = new self();
 		}
 		return self::$instance;
-	}
-
-	/**
-	 * Define the raw SQL column list for CREATE TABLE.
-	 *
-	 * BerlinDB interpolates $this->schema directly into:
-	 *   CREATE TABLE {name} ( {schema} ) {charset_collation}
-	 * so this must be a raw SQL column definition string.
-	 * AcrossAI_Abilities_Schema (BerlinDB\Schema subclass) is used by the
-	 * Query class for column metadata and is separate from this.
-	 *
-	 * @since  0.1.0
-	 * @return void
-	 */
-	protected function set_schema() {
-		$this->schema = "
-			`id`              bigint(20) unsigned NOT NULL auto_increment,
-			`ability_slug`    varchar(255) NOT NULL DEFAULT '',
-			`label`           varchar(255) DEFAULT NULL,
-			`description`     longtext DEFAULT NULL,
-			`category`        varchar(100) DEFAULT NULL,
-			`status`          varchar(20) DEFAULT NULL,
-			`provider`        varchar(100) DEFAULT NULL,
-			`source`          varchar(50) NOT NULL DEFAULT 'db',
-			`site_allowed`    tinyint(1) DEFAULT NULL,
-			`callback_type`   varchar(50) DEFAULT NULL,
-			`callback_config` longtext DEFAULT NULL,
-			`input_schema`    longtext DEFAULT NULL,
-			`output_schema`   longtext DEFAULT NULL,
-			`show_in_rest`    tinyint(1) DEFAULT NULL,
-			`show_in_mcp`     tinyint(1) DEFAULT NULL,
-			`mcp_type`        varchar(100) DEFAULT NULL,
-			`mcp_servers`     longtext DEFAULT NULL,
-			`readonly`        tinyint(1) DEFAULT NULL,
-			`destructive`     tinyint(1) DEFAULT NULL,
-			`idempotent`      tinyint(1) DEFAULT NULL,
-			`created_at`      datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			`updated_at`      datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			`created_by`      bigint(20) unsigned DEFAULT NULL,
-			`updated_by`      bigint(20) unsigned DEFAULT NULL,
-			PRIMARY KEY (`id`),
-			UNIQUE KEY `ability_slug` (`ability_slug`(191)),
-			KEY `idx_status` (`status`),
-			KEY `idx_source` (`source`),
-			KEY `idx_updated_at` (`updated_at`)
-		";
 	}
 }
