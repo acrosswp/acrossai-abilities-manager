@@ -30,14 +30,13 @@ class AcrossAI_Abilities_Schema extends Schema {
 	 */
 	public $columns = array(
 
-		// Primary key.
+		// Primary key — 'primary' flag omitted; PRIMARY KEY DDL comes from $indexes.
 		array(
 			'name'     => 'id',
 			'type'     => 'bigint',
 			'length'   => '20',
 			'unsigned' => true,
 			'extra'    => 'auto_increment',
-			'primary'  => true,
 			'sortable' => true,
 		),
 
