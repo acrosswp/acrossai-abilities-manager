@@ -13,7 +13,6 @@
 namespace AcrossAI_Abilities_Manager\Includes\Modules\Logger\Rest;
 
 use WP_REST_Controller;
-use WP_REST_Response;
 use WP_REST_Request;
 
 // Exit if accessed directly.
@@ -86,17 +85,23 @@ class AcrossAI_Logger_Controller extends WP_REST_Controller {
 	 *
 	 * @since 0.1.0
 	 * @param WP_REST_Request $request REST request object.
-	 * @return bool|WP_REST_Response True if allowed, WP_REST_Response with error if denied
+	 * @return true|\WP_Error True if allowed, WP_Error on denial
 	 */
-	public function check_permission( $request ) {
-		// Check capability (FR-010: only manage_options).
+	public function check_permission( \WP_REST_Request $request ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_REST_Response(
-				array(
-					'code'    => 'rest_forbidden',
-					'message' => __( 'You do not have permission to access logger endpoints.', 'acrossai-abilities-manager' ),
-				),
-				403
+			return new \WP_Error(
+				'rest_forbidden',
+				__( 'You do not have permission to access logger endpoints.', 'acrossai-abilities-manager' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$nonce = $request->get_header( 'X-WP-Nonce' );
+		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__( 'Nonce verification failed.', 'acrossai-abilities-manager' ),
+				array( 'status' => 403 )
 			);
 		}
 
