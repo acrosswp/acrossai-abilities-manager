@@ -85,4 +85,22 @@ class AcrossAI_Ability_Logs_Table extends Table {
 		}
 		return self::$instance;
 	}
+
+	/**
+	 * Create or upgrade the table.
+	 *
+	 * Overrides the parent to handle the "phantom version" case: if the stored
+	 * db_version_key option exists but the physical table was manually dropped,
+	 * BerlinDB's needs_upgrade() would return false and skip installation.
+	 * Clearing the option first forces a fresh install on the next run.
+	 *
+	 * @since  0.1.0
+	 * @return void
+	 */
+	public function maybe_upgrade(): void {
+		if ( ! $this->exists() ) {
+			delete_option( $this->db_version_key );
+		}
+		parent::maybe_upgrade();
+	}
 }
