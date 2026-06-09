@@ -228,16 +228,16 @@
         },
         {
             "name": "wpboilerplate/wpb-access-control",
-            "version": "v1.2.1",
+            "version": "v1.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WPBoilerplate/wpb-access-control.git",
-                "reference": "9c73892b422e238b35312acd28b4d815205b8e99"
+                "reference": "8a1917f0209c9bdb8adb1de69aeca028cd4f0535"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/9c73892b422e238b35312acd28b4d815205b8e99",
-                "reference": "9c73892b422e238b35312acd28b4d815205b8e99",
+                "url": "https://api.github.com/repos/WPBoilerplate/wpb-access-control/zipball/8a1917f0209c9bdb8adb1de69aeca028cd4f0535",
+                "reference": "8a1917f0209c9bdb8adb1de69aeca028cd4f0535",
                 "shasum": ""
             },
             "require": {
@@ -269,7 +269,6 @@
                     "/.phpunit.result.cache",
                     "/AGENTS.md",
                     "/composer.lock",
-                    "/js",
                     "/node_modules",
                     "/package.json",
                     "/package-lock.json",
@@ -306,7 +305,7 @@
                 "issues": "https://github.com/WPBoilerplate/wpb-access-control/issues",
                 "source": "https://github.com/WPBoilerplate/wpb-access-control"
             },
-            "time": "2026-06-09T18:26:26+00:00"
+            "time": "2026-06-09T18:43:57+00:00"
         },
         {
             "name": "wpboilerplate/wpb-mcp-servers-list",
