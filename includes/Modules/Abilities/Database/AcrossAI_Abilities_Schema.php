@@ -206,11 +206,12 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'default'    => null,
 		),
 
-		// Audit timestamps.
+		// Audit timestamps — no explicit default; BerlinDB uses '0000-00-00 00:00:00'
+		// for datetime columns. 'created'/'modified' flags handle auto-timestamping
+		// at the application layer (CURRENT_TIMESTAMP quoted by BerlinDB is invalid DDL).
 		array(
 			'name'       => 'created_at',
 			'type'       => 'datetime',
-			'default'    => 'CURRENT_TIMESTAMP',
 			'created'    => true,
 			'date_query' => true,
 			'sortable'   => true,
@@ -218,7 +219,6 @@ class AcrossAI_Abilities_Schema extends Schema {
 		array(
 			'name'       => 'updated_at',
 			'type'       => 'datetime',
-			'default'    => 'CURRENT_TIMESTAMP',
 			'modified'   => true,
 			'date_query' => true,
 			'sortable'   => true,
