@@ -263,12 +263,13 @@ $warn:    #dba617;
 
 // Pagination nav (above and below table)
 .tablenav-pages {
-	display:     flex;
-	align-items: center;
-	gap:         8px;
-	margin-left: auto;
-	font-size:   13px;
-	color:       $muted;
+	display:         flex;
+	align-items:     center;
+	justify-content: flex-end;
+	gap:             8px;
+	margin-left:     auto;
+	font-size:       13px;
+	color:           $muted;
 
 	.displaying-num { margin-right: 4px; }
 
