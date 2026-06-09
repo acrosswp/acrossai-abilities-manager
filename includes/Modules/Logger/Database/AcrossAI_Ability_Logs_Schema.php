@@ -50,7 +50,6 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 			'name'       => 'ability_slug',
 			'type'       => 'varchar',
 			'length'     => '255',
-			'null'       => false,
 			'searchable' => true,
 			'sortable'   => true,
 		),
@@ -60,7 +59,6 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 			'name'     => 'source',
 			'type'     => 'varchar',
 			'length'   => '20',
-			'null'     => false,
 			'sortable' => true,
 		),
 
@@ -106,7 +104,6 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 			'name'     => 'status',
 			'type'     => 'varchar',
 			'length'   => '20',
-			'null'     => false,
 			'sortable' => true,
 		),
 
@@ -124,7 +121,6 @@ class AcrossAI_Ability_Logs_Schema extends Schema {
 		array(
 			'name'     => 'created_at',
 			'type'     => 'datetime',
-			'null'     => false,
 			'sortable' => true,
 		),
 	);

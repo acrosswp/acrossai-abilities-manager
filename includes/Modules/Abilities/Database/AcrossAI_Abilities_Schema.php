@@ -44,7 +44,6 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'name'       => 'ability_slug',
 			'type'       => 'varchar',
 			'length'     => '255',
-			'null'       => false,
 			'searchable' => true,
 			'sortable'   => true,
 		),
@@ -104,7 +103,6 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'name'     => 'source',
 			'type'     => 'varchar',
 			'length'   => '50',
-			'null'     => false,
 			'default'  => 'db',
 			'sortable' => true,
 		),
@@ -211,7 +209,6 @@ class AcrossAI_Abilities_Schema extends Schema {
 		array(
 			'name'       => 'created_at',
 			'type'       => 'datetime',
-			'null'       => false,
 			'default'    => 'CURRENT_TIMESTAMP',
 			'created'    => true,
 			'date_query' => true,
@@ -220,7 +217,6 @@ class AcrossAI_Abilities_Schema extends Schema {
 		array(
 			'name'       => 'updated_at',
 			'type'       => 'datetime',
-			'null'       => false,
 			'default'    => 'CURRENT_TIMESTAMP',
 			'modified'   => true,
 			'date_query' => true,
