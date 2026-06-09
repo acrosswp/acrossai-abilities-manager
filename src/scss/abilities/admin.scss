@@ -259,6 +259,15 @@ $warn:    #dba617;
 		display:       inline-flex;
 		align-items:   center;
 	}
+
+	// Override WP list-tables.css: .tablenav .tablenav-pages { float:right; margin:0 0 9px }
+	// That rule has specificity 20 and sets margin-left:0, defeating our margin-left:auto below.
+	// This nested rule has the same specificity (20) but loads later, so it wins.
+	.tablenav-pages {
+		float:       none;
+		margin:      0;
+		margin-left: auto;
+	}
 }
 
 // Pagination nav (above and below table)
