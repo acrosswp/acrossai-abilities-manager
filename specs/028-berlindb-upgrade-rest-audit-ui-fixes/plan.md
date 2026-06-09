@@ -152,6 +152,7 @@ Run these checks after composer update and document results in the PR:
 | SEC-04 (strict comparison) | `grep -n "===\|!==" vendor/wpboilerplate/wpb-access-control/src/` | strict operators in access checks |
 | DEC-PERM-CB (callback wrapper) | `grep -n "wrap_permission_callback\|build_permission_callback" includes/Modules/` | both methods still intact |
 | DEC-TABLE-SOFT-SINGLETON | `grep -n "private.*__construct" includes/Modules/Abilities/Database/AcrossAI_Abilities_Table.php` | no match |
+| DEC-FAIL-OPEN-NOTICE (fail-open + admin notice) | `grep -rn "fail.open\|admin_notices\|access_control_available" includes/Modules/Abilities/` | fail-open path and admin notice hook both present |
 
 ### 1.4 — Quality gates
 
