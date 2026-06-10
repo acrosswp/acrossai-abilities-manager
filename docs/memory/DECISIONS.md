@@ -1396,3 +1396,41 @@ Feature 027 governed-tasks session 2026-06-06 — ARCH-003 advisory raised; user
 **Where to look next**
 `includes/Modules/AbilityAPI/AcrossAI_Ability_API_Config.php` (sanitize_entry, size constants — highest unit-test priority),
 `includes/Modules/AbilityAPI/AcrossAI_Ability_API_Processor.php` (is_permitted — gating logic with multiple branches).
+
+---
+
+### 2026-06-11 — DEC-MCP-TOOLS-PASSTHROUGH-COLUMN
+
+**Status**
+Active
+
+**Why this is durable**
+Establishes the contract between the plugin's abilities table and `mcp-adapter`'s
+`mcp_adapter_server_config` filter. Future code must keep the column and the filter
+callback aligned.
+
+**Decision**
+Per-ability MCP tool pass-through is a tri-state tinyint column (`pass_as_tool`)
+on `acrossai_abilities`. NULL = default (server's own tools[] unchanged); 1 = inject
+the slug into every MCP server's tools[] via `mcp_adapter_server_config` priority 10.
+Slug reads happen through `AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()`.
+
+The filter bridge lives in `AcrossAI_Mcp_Tools_Passthrough` (singleton, wired in
+`Main::define_public_hooks()`). Value 0 (explicit deny) is stored by the sanitizer
+but excluded from injection — reserved for future per-server deny semantics.
+Protected slugs are rejected at the API layer by
+`AcrossAI_Abilities_Write_Controller::update_ability()` L308 (slug-level,
+strict comparison, fires before sanitize).
+
+**Tradeoffs**
+- Gained: single toggle, no per-server config UI; matches the shape of existing
+  tri-state columns (site_allowed, show_in_mcp).
+- Reconsider: if per-server allowlists are ever needed, replace the tinyint with a
+  `pass_as_tool_servers longtext` JSON column. Only the filter callback and the
+  toggle cell need to change.
+
+**Where to look next**
+`includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php` (filter
+bridge), `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`
+(`get_pass_as_tool_slugs()`), `src/js/abilities/components/AbilitiesList.jsx`
+(`PassAsToolCell`), PATTERN-PROTECTED-SLUGS-JS-LOCALIZE (JS localization pattern).

@@ -165,6 +165,13 @@ class AcrossAI_Abilities_Schema extends Schema {
 			'allow_null' => true,
 			'default'    => null,
 		),
+		array(
+			'name'       => 'pass_as_tool',
+			'type'       => 'tinyint',
+			'length'     => '1',
+			'allow_null' => true,
+			'default'    => null,
+		),
 
 		// MCP type.
 		array(

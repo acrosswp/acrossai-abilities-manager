@@ -758,3 +758,37 @@ Do not pick an early `init` priority (P10–P20) for collection filters. A futur
 
 **Evidence**
 Feature 027: plan.md initially proposed `init P20`; corrected to P99 by Security Review finding SEC-004 / SC-027-04 (specs/027-keys-submenu/security-constraints.md).
+
+### PATTERN-PROTECTED-SLUGS-JS-LOCALIZE
+
+When a PHP-managed list needs to gate UI behavior in JSX, expose it from PHP via
+the `window.acrossaiAbilitiesManager` inline script in `admin/Main.php` rather
+than hardcoding it in JSX.
+
+**Pattern**
+```php
+// admin/Main.php — inline script
+'protected_slugs' => \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Protected_Abilities::get_protected_slugs(),
+```
+```jsx
+// AbilitiesList.jsx
+const PROTECTED_SLUGS = window.acrossaiAbilitiesManager?.protected_slugs || [];
+```
+
+**Why this is durable**
+`AcrossAI_Protected_Abilities::get_protected_slugs()` is the single source of
+truth for protected slugs (DEC-PROTECTED-SLUGS-PATTERN). Hardcoding the slug list
+in JSX would duplicate it and create drift when the PHP list changes (e.g. when
+a new mcp-adapter system tool is added via the filter). Discovered in Feature 029
+when the plan referenced a non-existent `PROTECTED_SLUGS` JS constant.
+
+**Future mistake prevented**
+Do not define a `PROTECTED_SLUGS` array literal in JSX. Always read from
+`window.acrossaiAbilitiesManager?.protected_slugs`. Apply this pattern to any
+future PHP-managed list that gates admin UI behavior.
+
+**Where to look next**
+`admin/Main.php` (inline script localization, Feature 029 addition),
+`src/js/abilities/components/AbilitiesList.jsx` (`PROTECTED_SLUGS` constant),
+`includes/Utilities/AcrossAI_Protected_Abilities.php` (PHP source of truth),
+DEC-PROTECTED-SLUGS-PATTERN (PHP-side centralization decision).

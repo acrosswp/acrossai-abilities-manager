@@ -479,6 +479,29 @@ class AcrossAI_Abilities_Query extends Query {
 	}
 
 	/**
+	 * Return slugs of all abilities flagged to be passed as MCP tools.
+	 *
+	 * Uses 'number' => 0 for unlimited results — BerlinDB interprets 0 as no LIMIT.
+	 * Never use -1 here (absint(-1) = 1 → LIMIT 1). (BUG-BERLINDB-UNLIMITED)
+	 *
+	 * Value 0 (explicit deny) is excluded intentionally — currently equivalent to NULL
+	 * at the filter layer; reserved for future per-server deny semantics. (SEC-005)
+	 *
+	 * @since  0.1.0
+	 * @return string[]
+	 */
+	public function get_pass_as_tool_slugs(): array {
+		$rows = $this->query(
+			array(
+				'pass_as_tool' => 1,
+				'fields'       => 'ability_slug',
+				'number'       => 0,
+			)
+		);
+		return array_values( array_filter( (array) $rows ) );
+	}
+
+	/**
 	 * Return a paginated result set with total/pages metadata.
 	 *
 	 * All filtering, searching, and sorting stays in this method — not in REST controllers.
@@ -616,7 +639,7 @@ class AcrossAI_Abilities_Query extends Query {
 	 */
 	private function prepare_fields_for_write( array $fields ): array {
 		// 1. Tri-state bool → int cast (must come first — FR-018 block order).
-		$tri_state = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		$tri_state = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp', 'pass_as_tool' );
 		foreach ( $tri_state as $col ) {
 			if ( array_key_exists( $col, $fields ) && is_bool( $fields[ $col ] ) ) {
 				$fields[ $col ] = (int) $fields[ $col ]; // true→1, false→0.

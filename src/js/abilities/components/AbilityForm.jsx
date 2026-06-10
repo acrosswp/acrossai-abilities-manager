@@ -172,7 +172,7 @@ function CallbackTypeChips({ value, onChange, disabled = false }) {
 // options = [{ value: null|bool|string, label: string }, ...]
 // "default" option should carry value: null
 // ---------------------------------------------------------------------------
-function TriChips({ label, value, onChange, hint, options }) {
+function TriChips({ label, value, onChange, hint, options, disabled }) {
 	return (
 		<div className="fr">
 			<label className="fl">{label}</label>
@@ -183,7 +183,8 @@ function TriChips({ label, value, onChange, hint, options }) {
 							key={i}
 							type="button"
 							className={`chip${opt.value === value ? ' on' : ''}`}
-							onClick={() => onChange(opt.value)}
+							disabled={!!disabled}
+							onClick={() => !disabled && onChange(opt.value)}
 						>
 							{opt.label}
 						</button>
@@ -520,6 +521,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 					site_allowed: data.site_allowed,
 					show_in_rest: data.show_in_rest,
 					show_in_mcp: data.show_in_mcp,
+					pass_as_tool: data.pass_as_tool,
 					mcp_type: data.mcp_type,
 					mcp_servers: data.mcp_servers,
 					readonly: data.readonly,
@@ -1234,6 +1236,37 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 										? `${__('Plugin declares:', 'acrossai-abilities-manager')} ${true === savedAbility._registry.show_in_mcp ? 'yes' : 'no'}`
 										: null
 								}
+							/>
+
+							{/* Pass as Tool — inject ability slug into every MCP server's tool list */}
+							<TriChips
+								label={__(
+									'Pass as Tool',
+									'acrossai-abilities-manager'
+								)}
+								value={draftAbility.pass_as_tool ?? null}
+								onChange={(v) =>
+									patch({ pass_as_tool: v })
+								}
+								disabled={(
+									abilitiesConfig.protected_slugs || []
+								).includes(slug)}
+								options={[
+									{
+										value: null,
+										label: __(
+											'default',
+											'acrossai-abilities-manager'
+										),
+									},
+									{
+										value: true,
+										label: __(
+											'on',
+											'acrossai-abilities-manager'
+										),
+									},
+								]}
 							/>
 
 							{/* MCP Type */}

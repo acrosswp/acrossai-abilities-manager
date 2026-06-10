@@ -293,7 +293,7 @@ class AcrossAI_Abilities_Sanitizer {
 			$fields['output_schema'] = self::sanitize_schema( $request->get_param( 'output_schema' ) );
 		}
 
-		$tri_state_fields = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		$tri_state_fields = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp', 'pass_as_tool' );
 		foreach ( $tri_state_fields as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = self::sanitize_tri_state( $request->get_param( $field ) );

@@ -260,6 +260,7 @@ class Main {
 						'perPage'                  => (int) get_option( 'acrossai_abilities_per_page', 20 ),
 						// Client rendering gate only — server authorization enforced by wpb-ac/v1 REST endpoints (SEC-018-02).
 						'access_control_available' => \AcrossAI_Abilities_Manager\Includes\Modules\Abilities\AcrossAI_Abilities_Access_Control::instance()->is_available(),
+						'protected_slugs'          => \AcrossAI_Abilities_Manager\Includes\Utilities\AcrossAI_Protected_Abilities::get_protected_slugs(),
 					)
 				) . ';',
 				'before'

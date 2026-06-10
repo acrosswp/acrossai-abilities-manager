@@ -40,6 +40,7 @@ defined( 'ABSPATH' ) || exit;
  * @property array|null  $output_schema
  * @property bool|null   $show_in_rest
  * @property bool|null   $show_in_mcp
+ * @property bool|null   $pass_as_tool
  * @property string|null $mcp_type
  * @property array|null  $mcp_servers
  * @property bool|null   $readonly
@@ -158,6 +159,13 @@ class AcrossAI_Abilities_Row extends Row {
 	public $show_in_mcp = null;
 
 	/**
+	 * Whether to pass this ability as a tool to every MCP server. NULL = default (no injection).
+	 *
+	 * @var bool|null
+	 */
+	public $pass_as_tool = null;
+
+	/**
 	 * MCP type override. NULL = use registry default.
 	 *
 	 * @var string|null
@@ -245,6 +253,7 @@ class AcrossAI_Abilities_Row extends Row {
 			'callback_type',
 			'show_in_rest',
 			'show_in_mcp',
+			'pass_as_tool',
 			'mcp_type',
 			'readonly',
 			'destructive',
@@ -281,7 +290,7 @@ class AcrossAI_Abilities_Row extends Row {
 		parent::__construct( $item );
 
 		// Cast tinyint columns using the shared sanitizer utility (RF-02).
-		$tri_state_fields = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp' );
+		$tri_state_fields = array( 'site_allowed', 'readonly', 'destructive', 'idempotent', 'show_in_rest', 'show_in_mcp', 'pass_as_tool' );
 		foreach ( $tri_state_fields as $field ) {
 			$this->{$field} = AcrossAI_Sanitizer::cast_tri_state( $this->{$field} );
 		}

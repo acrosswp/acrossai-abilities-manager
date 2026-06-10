@@ -5,6 +5,17 @@ This is not a changelog. Do not record routine releases, version bumps, or imple
 
 ---
 
+### 2026-06-11 — Feature 029: MCP Tools Pass-through — pass_as_tool column, filter bridge, PassAsToolCell
+
+Feature 029 MVP complete (Phase 1–3, T001–T018). Governed workflow (governed-tasks + governed-implement) caught one P0 architectural error before any code was written.
+
+- **Why durable**: Three new patterns/bugs captured: (1) `AcrossAI_Abilities_Query` has a private constructor — `new AcrossAI_Abilities_Query()` is a fatal PHP error, always use `::instance()` (BUG-BERLINDDB-QUERY-PRIVATE-CTOR); (2) PHP-managed lists (protected slugs) must be localized to JS via `window.acrossaiAbilitiesManager`, not hardcoded in JSX (PATTERN-PROTECTED-SLUGS-JS-LOCALIZE); (3) MCP tool pass-through contract established (DEC-MCP-TOOLS-PASSTHROUGH-COLUMN).
+- **Future mistake prevented**: Any module that calls `new AcrossAI_Abilities_Query()` will fatal. The Query class is singleton-only. Protected slug gating in JSX must read from the PHP-localized list, not a JSX constant.
+- **Evidence**: Branch `029-mcp-tools-passthrough`. 9 source files changed + 1 new module + 6 new test files. PHPCS ✅, `npm run build` ✅, `validate-packages` ✅. PHPStan blocked (pre-existing environment issue).
+- **Where to look**: `includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php` (filter bridge), `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php` (`get_pass_as_tool_slugs()`), `admin/Main.php` (protected_slugs localization), `src/js/abilities/components/AbilitiesList.jsx` (`PassAsToolCell`), `docs/memory/BUGS.md` (BUG-BERLINDDB-QUERY-PRIVATE-CTOR), `docs/memory/DECISIONS.md` (DEC-MCP-TOOLS-PASSTHROUGH-COLUMN).
+
+---
+
 ### 2026-06-10 — Feature 028: BerlinDB 3.0 migration, REST security fix, vendor distribution fix
 
 Feature 028 complete (BerlinDB v3 migration, permission_callback security fix, wpb-access-control vendor fix).

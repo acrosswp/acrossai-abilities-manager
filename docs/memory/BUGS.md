@@ -1219,3 +1219,42 @@ If a vendor directory is missing after `composer update` from a GitHub tag: insp
 
 **Where to look next**
 `wpb-access-control` `.gitattributes` (v1.2.3) — reference of corrected state with `/js export-ignore` line removed.
+
+---
+
+### 2026-06-11 — BUG-BERLINDDB-QUERY-PRIVATE-CTOR: `new AcrossAI_Abilities_Query()` causes a fatal PHP error
+
+**Status**: Active
+
+**Pattern**
+`AcrossAI_Abilities_Query` has a private constructor (line 130). Calling
+`new AcrossAI_Abilities_Query()` outside the class causes a fatal PHP error.
+Always access via `AcrossAI_Abilities_Query::instance()`.
+
+**Why this is durable**
+DEC-TABLE-SOFT-SINGLETON documents that Table classes use a soft-singleton (no
+private constructor) because Activator calls `new` on them directly. It also
+states that Query classes "are free to use private constructors" — without
+confirming that this specific Query class does. That ambiguity caused a plan-level
+bug in Feature 029 (plan.md CHANGE-6 originally contained
+`( new AcrossAI_Abilities_Query() )->get_pass_as_tool_slugs()`), which would have
+produced a fatal PHP error on every MCP server init. Caught only by the
+architecture review (ARCH-REFACTOR-001).
+
+**Evidence**
+Feature 029: `AcrossAI_Mcp_Tools_Passthrough::inject_tools()` — corrected to
+`AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()` before
+implementation. Every existing caller (e.g. `AcrossAI_Abilities_Write_Controller`
+constructor, L79) already uses `::instance()`.
+
+**Prevention / Detection**
+Architecture review: grep for `new AcrossAI_Abilities_Query()` in any new plan or
+implementation diff before shipping. The ONLY valid access is `::instance()`.
+Distinct from DEC-TABLE-SOFT-SINGLETON — Table classes permit `new` (used by
+Activator); Query classes do not.
+
+**Where to look next**
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php` (private
+constructor at L130), DEC-TABLE-SOFT-SINGLETON (Table vs Query distinction),
+`includes/Modules/Abilities/Rest/AcrossAI_Abilities_Write_Controller.php` L79
+(canonical `::instance()` call site).

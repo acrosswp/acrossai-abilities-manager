@@ -43,6 +43,7 @@ const OVERRIDABLE_FIELDS = [
 	'idempotent',
 	'show_in_rest',
 	'show_in_mcp',
+	'pass_as_tool',
 	'mcp_type',
 	'mcp_servers',
 ];

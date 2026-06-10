@@ -121,6 +121,39 @@ function McpCell({ item }) {
 	);
 }
 
+// Protected slugs sourced from PHP AcrossAI_Protected_Abilities::get_protected_slugs()
+// via window.acrossaiAbilitiesManager.protected_slugs (DEC-PROTECTED-SLUGS-PATTERN — no duplicate list).
+const PROTECTED_SLUGS = window.acrossaiAbilitiesManager?.protected_slugs || [];
+
+function PassAsToolCell({ item, onToggle, disabled }) {
+	const isOn = item.pass_as_tool === true;
+	const [isBusy, setIsBusy] = useState(false);
+	return (
+		<button
+			type="button"
+			className={`ibadge ${isOn ? 'ib-a' : 'ib-d'}`}
+			disabled={disabled || isBusy}
+			aria-label={
+				isOn
+					? __('Remove from MCP tools', 'acrossai-abilities-manager')
+					: __('Pass as MCP tool', 'acrossai-abilities-manager')
+			}
+			onClick={async () => {
+				setIsBusy(true);
+				try {
+					await onToggle(item, isOn ? null : true);
+				} finally {
+					setIsBusy(false);
+				}
+			}}
+		>
+			{isOn
+				? __('On', 'acrossai-abilities-manager')
+				: __('Off', 'acrossai-abilities-manager')}
+		</button>
+	);
+}
+
 function DescriptionCell({ item }) {
 	const desc = item.description || item._registry?.description || '';
 	if (!desc) {
@@ -156,6 +189,7 @@ const COLUMN_DEFAULTS = {
 	description: true,
 	show_in_rest: true,
 	mcp: true,
+	pass_as_tool: true,
 };
 
 const COLUMN_LABELS = {
@@ -696,6 +730,14 @@ export default function AbilitiesList() {
 						{!!visibleColumns.mcp && (
 							<th>{__('MCP', 'acrossai-abilities-manager')}</th>
 						)}
+						{!!visibleColumns.pass_as_tool && (
+							<th>
+								{__(
+									'Pass as Tool',
+									'acrossai-abilities-manager'
+								)}
+							</th>
+						)}
 						<th>{__('Actions', 'acrossai-abilities-manager')}</th>
 					</tr>
 				</thead>
@@ -795,6 +837,25 @@ export default function AbilitiesList() {
 								{!!visibleColumns.mcp && (
 									<td>
 										<McpCell item={item} />
+									</td>
+								)}
+								{!!visibleColumns.pass_as_tool && (
+									<td>
+										<PassAsToolCell
+											item={item}
+											disabled={PROTECTED_SLUGS.includes(
+												item.ability_slug
+											)}
+											onToggle={async (
+												ability,
+												nextValue
+											) => {
+												await dispatch.updateAbility(
+													ability.ability_slug,
+													{ pass_as_tool: nextValue }
+												);
+											}}
+										/>
 									</td>
 								)}
 								<td>

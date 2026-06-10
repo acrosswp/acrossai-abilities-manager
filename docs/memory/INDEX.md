@@ -34,6 +34,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | DEC-COLUMN-VISIBILITY-LOCALSTORAGE | Column prefs in localStorage with merge-over-COLUMN_DEFAULTS; new columns always default visible (FR-025) | Abilities/Admin | column-visibility, localstorage, merge-defaults, fr-025 | Active | DECISIONS.md |
 | DEC-EXTERNAL-PACKAGE-HOOK-CTOR | External Composer packages whose constructor self-registers hooks MAY bypass Loader; instantiate in define_admin_hooks() with class_exists() guard; cite this decision ID | Plugin-wide | external-package, boot-flow-rule, constructor, class_exists | Active | DECISIONS.md |
 | DEC-FREEMIUS-PER-PLUGIN-INIT | fs_dynamic_init() keyed per product_id; each consumer passes own credentials (id, public_key, slug); never hardcode in shared package | Plugin-wide/Freemius | freemius, per-plugin, product-id, multi-instance | Active | DECISIONS.md |
+| DEC-MCP-TOOLS-PASSTHROUGH-COLUMN | Per-ability MCP tool pass-through column + filter bridge (pass_as_tool tinyint, AcrossAI_Mcp_Tools_Passthrough, mcp_adapter_server_config P10) | McpToolsPassthrough/DB | mcp, tools, filter, abilities, berlinddb | Active | DECISIONS.md |
 
 ## Architecture Constraints
 | ID | Constraint | Scope | Tags | Source |
@@ -119,6 +120,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | PATTERN-JEST-SECTION-SCOPE | Scope test assertions to correct .sect via sect-num to avoid false matches from sibling sections | Testing/Jest | jest, section, selector, dom, abilityform | ARCHITECTURE.md |
 | PATTERN-WORDPRESS-PEER-DEPENDENCIES | @wordpress/* globals go in peerDependencies (not devDependencies) to satisfy import/no-extraneous-dependencies | Build | package.json, peer-dependencies, eslint, wordpress-globals | ARCHITECTURE.md |
 | PATTERN-JESTENV-WPSCRIPTS | Browser-API tests (localStorage) must use npx wp-scripts test-unit-js, not plain npx jest | Testing/Jest | jest, wp-scripts, jsdom, localstorage, test-environment | ARCHITECTURE.md |
+| PATTERN-PROTECTED-SLUGS-JS-LOCALIZE | PHP-managed lists (e.g. protected slugs) must be localized to JS via window.acrossaiAbilitiesManager, not hardcoded in JSX | Abilities/Admin | protected-slugs, localize-script, jsx, window, dry | ARCHITECTURE.md |
 | ARCH-PHPUNIT-BOOTSTRAP | ABSPATH define MUST precede autoloader; phpunit.xml.dist must exclude BerlinDB-loading test files | Testing | phpunit, bootstrap, abspath, berlinddb | ARCHITECTURE.md |
 | PATTERN-ADDON-FILTER-LATE-INIT | Add-on registration filters MUST fire at init P99; early priority silently drops add-ons that hook later | Plugin-wide | filter, init, add-on, registration, priority | ARCHITECTURE.md |
 
@@ -141,6 +143,7 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-PHPUNIT-BERLINDDB-SCOPE | phpunit.xml.dist must be narrowly scoped; BerlinDB Table constructors fatal under stub bootstrap | Testing | phpunit, berlinddb, scope, fatal | BUGS.md |
 | BUG-ABILITIES-STRIP-PROTECTED-PREEXISTING | Pre-existing test/code mismatch: strip_protected_fields test expects broader stripping than implementation provides (line 470) | Testing | phpunit, preexisting, strip-protected, mismatch | BUGS.md |
 | BUG-ESLINT-DISABLE-LINE-EXACT | eslint-disable-next-line covers exactly one line; must be directly before the offending call, not before a wrapping if() | JS/ESLint | eslint, no-alert, disable-next-line, position | BUGS.md |
+| BUG-BERLINDDB-QUERY-PRIVATE-CTOR | `new AcrossAI_Abilities_Query()` causes fatal PHP error — private constructor; always use `::instance()` | Abilities/DB | berlinddb, query, private-constructor, singleton, fatal | BUGS.md |
 | BUG-PHP-ABSINT-NEGATIVE-RANGE | absint(-5)=5, valid in [1,200]; only large negatives (absint > max) fall back to default — test both cases | PHP | absint, negative, sanitize, range-check | BUGS.md |
 | BUG-PHPUNIT-TYPED-PROPERTY-SETUP | WP_UnitTestCase typed class property uninitialized if set_up() is used — call singleton inline per test instead | Testing/PHPUnit | phpunit, typed-property, wp_unittestcase, singleton | BUGS.md |
 
@@ -192,4 +195,5 @@ This is a compact routing map for durable memory. Keep it short. It points to so
 | BUG-BERLINDB-V3-TIMESTAMP-QUOTING | BerlinDB v3 quotes all column defaults; `'default'=>'CURRENT_TIMESTAMP'` generates invalid literal — use `'created'/'modified'` flags | BerlinDB/DB | berlinddb, v3, datetime, timestamp, current-timestamp | BUGS.md |
 | BUG-PERMISSION-CALLBACK-TRUTHY-RESPONSE | WP_REST_Response returned from permission_callback is truthy — passes both WordPress access checks, silently granting access | REST/Security | permission-callback, wp_rest_response, truthy, access-control, security | BUGS.md |
 | BUG-GITATTRIBUTES-EXPORT-IGNORE | composer.json archive.exclude does not control GitHub tag ZIPs — .gitattributes export-ignore does; fix vendor missing dirs there | Composer/Distribution | gitattributes, export-ignore, archive-exclude, composer-vcs, github-tag | BUGS.md |
+| 2026-06-11 | Feature 029: MCP Tools Pass-through — pass_as_tool column, filter bridge, PassAsToolCell; Query private-ctor bug caught by arch review | McpToolsPassthrough | feature-029, pass-as-tool, mcp, filter-bridge, berlinddb, react | WORKLOG.md |
 | 2026-06-10 | Feature 028: BerlinDB 3.0 migration, WP_REST_Response permission bypass fix, .gitattributes vendor distribution fix | DB/REST/Vendor | feature-028, berlinddb-v3, permission-callback, gitattributes, vendor | WORKLOG.md |
