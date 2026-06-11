@@ -620,10 +620,12 @@ final class AcrossAI_Ability_Override_Processor {
 	 * does not expose mcp_adapter_server_config. Adding slugs here ensures both tools/list
 	 * and tools/call work; mcp_adapter_tools_list only affects the display list.
 	 *
-	 * Three checks per ability, applied in order inside the per-server loop:
-	 *   1. pass_as_tool = 1   — pre-filtered before the server loop (FR-004 early-exit).
-	 *   2. mcp_servers        — null = all servers; [] = deny; [...] = allowlist (strict).
-	 *   3. user access (AC)   — uses user_has_ability_access(); fail-open when absent (FR-011).
+	 * Four checks per ability, applied in order inside the per-server loop:
+	 *   1. pass_as_tool = 1        — pre-filtered before the server loop (FR-004 early-exit).
+	 *   2. mcp_servers             — null = all servers; [] = deny; [...] = allowlist (strict).
+	 *   3. user access (AC rules)  — uses user_has_ability_access(); fail-open when absent (FR-011).
+	 *   4. permission_callback     — calls the ability's own registered permission gate (e.g.
+	 *                                manage_options); authoritative even when no AC rule exists.
 	 *
 	 * Timing note (SEC-003): get_current_user_id() is called at action time (mcp_adapter_init P20).
 	 * The MCP adapter initializes inside a REST request after wp_set_current_user() runs, so the
@@ -686,6 +688,23 @@ final class AcrossAI_Ability_Override_Processor {
 				// Check 3: per-user access via AC rules — fail-open (FR-011).
 				if ( ! self::user_has_ability_access( $slug, $user_id ) ) {
 					continue; // Current user denied.
+				}
+
+				// Check 4: the ability's own permission_callback — respects plugin-defined
+				// access gates (e.g. manage_options) that are not expressed as AC rules.
+				// AC rules (Check 3) are fail-open when absent; this gate is always authoritative.
+				$wp_ability = \wp_get_ability( $slug );
+				if ( $wp_ability ) {
+					$perm_callback = null;
+					if ( method_exists( $wp_ability, 'get_permission_callback' ) ) {
+						$perm_callback = $wp_ability->get_permission_callback();
+					} elseif ( method_exists( $wp_ability, 'get_args' ) ) {
+						$ability_args  = $wp_ability->get_args();
+						$perm_callback = $ability_args['permission_callback'] ?? null;
+					}
+					if ( is_callable( $perm_callback ) && ! \call_user_func( $perm_callback ) ) {
+						continue; // Ability's own permission gate denies the current user.
+					}
 				}
 
 				$extra_slugs[] = $slug;
