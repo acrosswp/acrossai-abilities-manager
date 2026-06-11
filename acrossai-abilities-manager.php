@@ -72,6 +72,7 @@ register_deactivation_hook( __FILE__, 'AcrossAI_Abilities_Manager\acrossai_abili
  * The core plugin class that is used to define internationalization,
  * admin-specific hooks, and public-facing site hooks.
  */
+require plugin_dir_path( __FILE__ ) . 'includes/AcrossAI_Loader.php';
 require plugin_dir_path( __FILE__ ) . 'includes/Main.php';
 
 use AcrossAI_Abilities_Manager\Includes\Main;
