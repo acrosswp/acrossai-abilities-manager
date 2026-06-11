@@ -22,7 +22,7 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 
 **Purpose**: Create the new module directory and file stub so autoload registration and parallel Foundational work can proceed.
 
-- [x] T001 Create `includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php` with `defined('ABSPATH') || exit`, full `@package`/`@subpackage` file header, `namespace AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough`, class declaration, `protected static $instance = null`, private constructor, and public static `instance(): self` method (singleton skeleton only — `inject_tools()` body added in Phase 3)
+- [x] T001 Add `inject_mcp_tools()` static action callback to `includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php`; register `add_action('mcp_adapter_init', array(__CLASS__, 'inject_mcp_tools'), 20)` inside `boot()`; add hook to boot() docblock summary. Uses Reflection to access private `McpServer::$component_registry` because `mcp_adapter_init P20` does not exist in the installed mcp-adapter version (ARCH-ADV-001)
 
 ---
 
@@ -57,21 +57,21 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 
 **Goal**: Admin clicks the "Pass as Tool" toggle in the Abilities list and the opted-in ability slug appears in every MCP server's tool list on the next resolution.
 
-**Independent Test**: Call `apply_filters('mcp_adapter_server_config', ['tools' => ['existing/slug']], 'test-server')` with one ability flagged `pass_as_tool = 1` — result must contain both `'existing/slug'` and the flagged slug, with no duplicates. With zero flagged abilities the result must equal the input config byte-for-byte.
+**Independent Test**: With one ability flagged `pass_as_tool = 1` and `mcp_servers` including the test server ID, confirm that after `mcp_adapter_init` fires and `inject_mcp_tools()` runs, `$server->get_mcp_tool('core-get-environment-info')` returns a non-null McpTool. With zero flagged abilities the server's tool registry is unchanged.
 
 ### PHPUnit Test — Write First, Ensure Fail
 
-- [x] T013 [US1] Write `tests/phpunit/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough_Test.php` — assert: (a) opted-in slugs are merged into `$config['tools']` with `array_unique`; (b) a non-array `$config['tools']` value falls back to empty array and the result is a flat array of opted-in slugs only; (c) when no abilities are opted in, the returned config is identical to the input (early-return path) — **(depends on T001 class stub existing before this test file can reference the class; TSEC-T03)**
+- [x] T013 [US1] Update `tests/phpunit/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough_Test.php` — assert: (a) `inject_mcp_tools()` returns Tool DTOs for opted-in rows without duplicates; (b) non-array tools falls back to empty array and result is a flat array; (c) when no abilities are opted in, the returned tools list is identical to the input (early-return path, US2). Tests call `AcrossAI_Ability_Override_Processor::inject_mcp_tools()` directly (static method, no singleton needed)
 
 ### Implementation
 
-- [x] T014 [US1] Implement `inject_tools(array $config, string $server_id): array` in `includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php`: call `AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()` (**NOT** `new AcrossAI_Abilities_Query()` — the constructor is private; see ARCH-REFACTOR-001), early-return if empty, `is_array()` guard on `$config['tools']`, merge via `array_values(array_unique(array_merge($existing, $extra)))`, return `$config`
-- [x] T015 [US1] Wire the filter in `includes/Main.php` inside `define_public_hooks()`: `$mcp_tools_passthrough = \AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough\AcrossAI_Mcp_Tools_Passthrough::instance();` then `$this->loader->add_filter('mcp_adapter_server_config', $mcp_tools_passthrough, 'inject_tools', 10, 2)` — Boot Flow Rule: singleton must be resolved into a named variable before being passed to the Loader (AC-HOOKS-MAIN); add adjacent comment: "mcp_adapter_server_config assembles the server tool list; mcp_adapter_expose_ability (if used) operates at a different enforcement layer — pass-as-tool injection does not bypass per-server mcp_adapter_expose_ability restrictions" (TSEC-T04)
-- [x] T016 [US1] Run `composer dump-autoload` from the plugin root to register `AcrossAI_Mcp_Tools_Passthrough` in the autoload classmap
+- [x] T014 [US1] Implement `public static function inject_mcp_tools(array $tools, $server): array` in `includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php`: guard `class_exists('\WP\MCP\Domain\Tools\McpTool')` + `function_exists('wp_get_ability')`; call `self::load_overrides_cache()`; resolve `$current_server_id`; collect rows with `pass_as_tool === true`; early-return if empty (FR-004); apply `mcp_servers` allowlist check; build Tool DTOs via `McpTool::fromAbility()`; deduplicate by `getName()` (FR-005); return `$tools`
+- [x] T015 [US1] Wire the action in `AcrossAI_Ability_Override_Processor::boot()`: `add_action('mcp_adapter_init', array(__CLASS__, 'inject_mcp_tools'), 20)` — ARCH-ADV-001; fires at P20 after DefaultServerFactory (P10) and acrossai-mcp-manager database servers (P11); add comment noting required capability (`manage_options`) and Reflection rationale (TSEC-T01, TSEC-T04). Leave a note comment in `Main.php::define_public_hooks()` pointing to `boot()`.
+- [x] T016 [US1] Run `composer dump-autoload` from the plugin root to clean the autoload classmap after deleting `AcrossAI_Mcp_Tools_Passthrough.php` and verify no broken class references remain
 - [x] T017 [US1] Add to `src/js/abilities/components/AbilitiesList.jsx`: (1) `'pass_as_tool'` in `COLUMN_DEFAULTS` array (~L150); (2) `PassAsToolCell` function component with `isOn = item.pass_as_tool === true`, `Button` variant toggle, `aria-label` with `__()`, `disabled` prop; (3) column definition with `id: 'pass_as_tool'`, header `__('Pass as Tool', ...)`, `render` calling `PassAsToolCell` with `disabled={PROTECTED_SLUGS.includes(item.ability_slug)}`, `onToggle` dispatching `updateAbility` with `{ pass_as_tool: nextValue }` and `createErrorNotice` on failure; (4) `enableHiding: true`, `enableSorting: false` — no `0` state in v1 UI, only `null`/`true`
 - [x] T018 [US1] Run `npm run build` to regenerate `build/js/abilities.js` and `build/js/abilities.asset.php`
 
-**Checkpoint**: User Story 1 is fully functional. Admin can toggle any non-protected ability. The filter injects opted-in slugs into MCP server tool lists. Zero-impact when nothing is opted in (US2 is covered by the `empty($extra)` early-return in T014).
+**Checkpoint**: User Story 1 is fully functional. Admin can toggle any non-protected ability. The filter injects opted-in abilities as Tool DTOs into MCP server tool lists. Zero-impact when nothing is opted in (US2 is covered by the `empty($extra_rows)` early-return in T014).
 
 ---
 
@@ -79,11 +79,11 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 
 **Goal**: Sites with zero opted-in abilities see MCP server tool lists that are byte-for-byte identical to pre-feature behavior.
 
-**Independent Test**: With no rows having `pass_as_tool = 1`, call `apply_filters('mcp_adapter_server_config', $original_config, 'any-server')` — result must equal `$original_config` with no modifications.
+**Independent Test**: With no rows having `pass_as_tool = 1`, call `apply_filters('mcp_adapter_init P20', $original_tools, $mock_server)` — result must equal `$original_tools` with no modifications.
 
-> **Implementation status**: No new code required. The `empty($extra) → return $config` early-return in `inject_tools()` (T014) covers this entirely.
+> **Implementation status**: No new code required. The `empty($extra_rows) → return $tools` early-return in `inject_mcp_tools()` (T014) covers this entirely.
 
-- [ ] T019 [US2] Manual validation: with no abilities flagged, confirm `(new AcrossAI_Abilities_Query())->get_pass_as_tool_slugs()` returns `[]` and `apply_filters('mcp_adapter_server_config', $config, 'test')` returns the original config unchanged — run validation checklist item "When no rows are flagged, the filter returns `$config` byte-for-byte unchanged"
+- [ ] T019 [US2] Manual validation: with no abilities flagged, confirm `AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()` returns `[]` and `apply_filters('mcp_adapter_init P20', [], $mock_server)` returns an empty array unchanged — run validation checklist item "When no rows are flagged, the filter returns tools byte-for-byte unchanged"
 
 **Checkpoint**: US2 acceptance scenario confirmed. No regression to existing MCP tool lists.
 
@@ -98,7 +98,7 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 > **Implementation status**: No new code required. API guard is `AcrossAI_Abilities_Write_Controller::update_ability()` L308 — slug-level, strict `in_array(..., true)`, fires before `sanitize_update_request()` (SEC-001 resolved). UI disabled state is `disabled={PROTECTED_SLUGS.includes(item.ability_slug)}` wired in T017.
 
 - [ ] T020 [US3] Verify in `src/js/abilities/components/AbilitiesList.jsx` (T017 output) that the `PassAsToolCell` `disabled` prop is `PROTECTED_SLUGS.includes(item.ability_slug)` — confirm no duplicate protected-slug list (must reference the central `PROTECTED_SLUGS` constant per DEC-PROTECTED-SLUGS-PATTERN)
-- [ ] T021 [US3] REST validation: send `POST /wp-json/acrossai-abilities-manager/v1/abilities/{protected-slug}` with `{ "pass_as_tool": true }` and confirm the response is 403 `rest_protected_ability` — this exercises the existing guard at `AcrossAI_Abilities_Write_Controller::update_ability()` L308; no code change required; also confirm `check_permission()` enforces `manage_options` (or the documented equivalent) as the required capability for the write endpoint, and add a one-line comment in `includes/Main.php` adjacent to T015's filter wire naming the required capability (TSEC-T01)
+- [ ] T021 [US3] REST validation: send `POST /wp-json/acrossai-abilities-manager/v1/abilities/{protected-slug}` with `{ "pass_as_tool": true }` and confirm the response is 403 `rest_protected_ability` — this exercises the existing guard at `AcrossAI_Abilities_Write_Controller::update_ability()` L308; no code change required; also confirm `check_permission()` enforces `manage_options` as the required capability; verify the comment added in T015 inside `AcrossAI_Ability_Override_Processor::boot()` names this capability (TSEC-T01)
 
 **Checkpoint**: US3 acceptance scenarios confirmed. Protected abilities are guarded at both UI and API layers.
 
@@ -117,6 +117,14 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 
 ---
 
+## Phase 3c: User Access Check (FR-011)
+
+**Why added**: `/speckit-analyze` identified that `inject_mcp_tools()` lacked per-user AC enforcement — abilities with AC rules could appear in the tool list for unauthorized users even though `tools/call` would fail at `permission_callback` time.
+
+- [x] T031 Add Stage 1 per-user access filter to `inject_mcp_tools()` in `AcrossAI_Ability_Override_Processor.php`: call `AcrossAI_Abilities_Access_Control::instance()->get_manager()`; for each pass_row, if no manager → allow all (fail-open); if manager present, call `get_rule('acrossai-abilities', $slug)` and skip when empty key; if rule exists, call `user_has_access(get_current_user_id(), 'acrossai-abilities', $slug)` and `unset($pass_rows[$slug])` on denial. Mirrors `build_permission_callback()` fail-open semantics (FR-011).
+
+---
+
 ## Phase 3b: Edit-Form Coverage (speckit-analyze finding U1)
 
 **Why added**: `/speckit-analyze` identified that every other tri-state field appears in `AbilityForm.jsx` but `pass_as_tool` did not, causing a discoverability gap (reported by user on first use).
@@ -130,10 +138,10 @@ description: "Task list for Feature 029 — MCP Tools Pass-through"
 
 **Purpose**: Durable memory updates, Constitution bump, and full quality gate.
 
-- [ ] T024 [P] Append `DEC-MCP-TOOLS-PASSTHROUGH-COLUMN` decision block to `docs/memory/DECISIONS.md` (see plan.md CHANGE-9 for exact text)
-- [ ] T025 [P] Add `DEC-MCP-TOOLS-PASSTHROUGH-COLUMN` routing row to the active-decisions table in `docs/memory/INDEX.md` (see plan.md CHANGE-9 for exact row format)
-- [ ] T026 [P] Update `.specify/memory/CONSTITUTION.md`: bump version `1.4.5 → 1.4.6` in the footer, add `McpToolsPassthrough/` to the Directory Layout module list under `includes/Modules/`, and update the SYNC IMPACT REPORT HTML comment at the top (see plan.md CHANGE-10 for exact text)
-- [ ] T027 Run full quality gate: `composer phpcs` and `composer phpstan` (level 8) for all touched PHP files; `npm run build` to verify build succeeds and `build/js/abilities.asset.php` is regenerated; `npm run validate-packages` (Constitution §VI + §VII DoD — required before every commit); confirm ESLint clean for `AbilitiesList.jsx`; confirm Plugin Check clean
+- [x] T024 [P] Update `DEC-MCP-TOOLS-PASSTHROUGH-COLUMN` entry in `docs/memory/DECISIONS.md` to reference `mcp_adapter_init P20`, `AcrossAI_Ability_Override_Processor::inject_mcp_tools()`, and `boot()` (ARCH-ADV-001) — see plan.md CHANGE-9 for exact text
+- [x] T025 [P] Update `DEC-MCP-TOOLS-PASSTHROUGH-COLUMN` routing row in `docs/memory/INDEX.md` to reference `mcp_adapter_init P20` and `Abilities/DB` scope — see plan.md CHANGE-9 for exact row format
+- [ ] T026 [P] No constitution change required (Option B: injection stays in existing `Abilities/` module, no new directory added). Verify `.specify/memory/CONSTITUTION.md` version remains `1.4.6` (bumped in Feature 028) and Directory Layout is unchanged.
+- [x] T027 Run full quality gate: `composer phpcs` and `composer phpstan` (level 8) for all touched PHP files; `npm run build` to verify build succeeds and `build/js/abilities.asset.php` is regenerated; `npm run validate-packages` (Constitution §VI + §VII DoD — required before every commit); confirm ESLint clean for `AbilitiesList.jsx`; confirm Plugin Check clean
 - [ ] T028 Run all validation checklist items from plan.md: schema describe, REST round-trip (`GET`, `POST true`, `POST null`), protected-slug 403, `get_pass_as_tool_slugs()` return value, filter integration (union, no-op, non-array fallback), admin UI toggle, column visibility localStorage persistence
 
 ---
@@ -187,7 +195,7 @@ T011 → T012  includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php
 # Write and fail test first:
 T013  tests/phpunit/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough_Test.php
 
-# Then implement (T014 must precede T015 — inject_tools() must exist before Main.php wires it):
+# Then implement (T014 must precede T015 — inject_mcp_tools() must exist before boot() registers it):
 T014 → T015 → T016  PHP filter implementation + autoload
 T017 → T018         JSX toggle + npm build  (parallel to T014–T016 once T001/T012 done)
 ```
@@ -220,7 +228,7 @@ T017 → T018         JSX toggle + npm build  (parallel to T014–T016 once T001
 - PHPUnit tests must be written first (TDD) and verified to FAIL before the matching implementation task begins
 - PHPUnit bootstrap is currently blocked (see ARCHITECTURE.md T014 pre-existing gap) — tests can be written but not executed until the bootstrap shim is added; this does not block feature shipping
 - No Jest tests for `PassAsToolCell` (matches Feature 027 accepted pattern — the cell is a thin dispatch call)
-- `composer dump-autoload` (T016) must run before any WordPress request loads the new class
+- `composer dump-autoload` (T016) must run to clean the autoload map after deleting `AcrossAI_Mcp_Tools_Passthrough.php`
 - `npm run build` (T018) must run before the new UI column appears in the browser
 - Never use `'' !== (string) $value` to guard `pass_as_tool` off a Row — use `null !== $value` only (BUG-MERGER-BOOL-STRING-CAST)
 - `pass_as_tool = 0` (explicit deny) is stored by the sanitizer but not injected — `get_pass_as_tool_slugs()` queries `= 1` only; this state is reserved for future use

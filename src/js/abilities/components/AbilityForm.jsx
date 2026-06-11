@@ -1238,37 +1238,6 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								}
 							/>
 
-							{/* Pass as Tool — inject ability slug into every MCP server's tool list */}
-							<TriChips
-								label={__(
-									'Pass as Tool',
-									'acrossai-abilities-manager'
-								)}
-								value={draftAbility.pass_as_tool ?? null}
-								onChange={(v) =>
-									patch({ pass_as_tool: v })
-								}
-								disabled={(
-									abilitiesConfig.protected_slugs || []
-								).includes(slug)}
-								options={[
-									{
-										value: null,
-										label: __(
-											'default',
-											'acrossai-abilities-manager'
-										),
-									},
-									{
-										value: true,
-										label: __(
-											'on',
-											'acrossai-abilities-manager'
-										),
-									},
-								]}
-							/>
-
 							{/* MCP Type */}
 							<TriChips
 								label={__(
@@ -1453,11 +1422,79 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							</div>
 						</div>
 
-						{/* ── Section 4 — Annotations ── */}
+						{/* ── Section 4 — Pass as Tool ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
 									<span className="sect-num">4</span>
+									{__(
+										'Pass as Tool',
+										'acrossai-abilities-manager'
+									)}
+								</div>
+								<div className="sect-desc">
+									{__(
+										'Inject this ability into every connected MCP server\'s tool list at server initialization.',
+										'acrossai-abilities-manager'
+									)}
+								</div>
+							</div>
+							{/* Also disabled when show_in_mcp is explicitly off — passing a non-MCP ability as a tool is meaningless. */}
+							<TriChips
+								label={__(
+									'Pass as Tool',
+									'acrossai-abilities-manager'
+								)}
+								value={draftAbility.pass_as_tool ?? null}
+								onChange={(v) => patch({ pass_as_tool: v })}
+								disabled={
+									(
+										abilitiesConfig.protected_slugs || []
+									).includes(slug) ||
+									draftAbility.show_in_mcp === false
+								}
+								options={[
+									{
+										value: null,
+										label: __(
+											'default',
+											'acrossai-abilities-manager'
+										),
+									},
+									{
+										value: true,
+										label: __(
+											'on',
+											'acrossai-abilities-manager'
+										),
+									},
+								]}
+							/>
+							{ draftAbility.show_in_mcp === false && (
+								<p className="description">
+									{ __(
+										'Set "Show in MCP" to default or on to enable this option.',
+										'acrossai-abilities-manager'
+									) }
+								</p>
+							) }
+							{ draftAbility.pass_as_tool === true && (
+								<div className="notice notice-warning inline" style={ { margin: '8px 0 0', padding: '8px 12px' } }>
+									<p>
+										{ __(
+											'This ability will be registered alongside the 3 default MCP tools on every server initialization request. Adding many abilities as tools may increase server load time and memory usage.',
+											'acrossai-abilities-manager'
+										) }
+									</p>
+								</div>
+							) }
+						</div>
+
+						{/* ── Section 5 — Annotations ── */}
+						<div className="sect">
+							<div className="sect-hdr">
+								<div className="sect-title">
+									<span className="sect-num">5</span>
 									{isNonDb
 										? __(
 												'Annotation Overrides',
@@ -1642,11 +1679,11 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								/>
 							)}
 						</div>
-						{/* ── Section 5 — User Access ── */}
+						{/* ── Section 6 — User Access ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
-									<span className="sect-num">5</span>
+									<span className="sect-num">6</span>
 									{__(
 										'User Access',
 										'acrossai-abilities-manager'
@@ -1696,11 +1733,11 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 									/>
 								)}
 						</div>
-						{/* ── VARIANT A: Section 6 — Callback ── */}
+						{/* ── VARIANT A: Section 7 — Callback ── */}
 						<div className="sect">
 							<div className="sect-hdr">
 								<div className="sect-title">
-									<span className="sect-num">6</span>
+									<span className="sect-num">7</span>
 									{__(
 										'Callback',
 										'acrossai-abilities-manager'
@@ -1783,7 +1820,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 							</div>
 						</div>
 
-						{/* ── VARIANT A: Section 7 — Schema (optional) ── */}
+						{/* ── VARIANT A: Section 8 — Schema (optional) ── */}
 						{(() => {
 							const regInput =
 								savedAbility?._registry?.input_schema ?? null;
@@ -1793,7 +1830,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								<div className="sect">
 									<div className="sect-hdr">
 										<div className="sect-title">
-											<span className="sect-num">7</span>
+											<span className="sect-num">8</span>
 											{__(
 												'Schema',
 												'acrossai-abilities-manager'

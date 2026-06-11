@@ -149,6 +149,7 @@ final class AcrossAI_Ability_Override_Processor {
 	 *   wp_abilities_api_init    P100001   — unregister_blocked_abilities()
 	 *   mcp_adapter_tool_call_result P10   — filter_discover_abilities_result()
 	 *   mcp_adapter_pre_tool_call    P10   — block_execute_ability_by_server()
+	 *   mcp_adapter_init         P20       — inject_mcp_tools()
 	 *
 	 * @since  0.1.0
 	 * @return void
@@ -178,6 +179,13 @@ final class AcrossAI_Ability_Override_Processor {
 		// Block ExecuteAbilityAbility before it runs when the current server is not allowed.
 		// Returning WP_Error from mcp_adapter_pre_tool_call short-circuits execution.
 		add_filter( 'mcp_adapter_pre_tool_call', array( __CLASS__, 'block_execute_ability_by_server' ), 10, 4 );
+
+		// Register opted-in ability slugs into every MCP server's callable tool registry.
+		// Runs at mcp_adapter_init P20, after DefaultServerFactory (P10) and
+		// acrossai-mcp-manager database servers (P11) are both created.
+		// Uses Reflection to reach McpServer::$component_registry (private) because
+		// mcp_adapter_server_config does not exist in the installed mcp-adapter version.
+		add_action( 'mcp_adapter_init', array( __CLASS__, 'inject_mcp_tools' ), 20 );
 	}
 
 	/**
@@ -409,10 +417,7 @@ final class AcrossAI_Ability_Override_Processor {
 		}
 
 		return static function () use ( $slug ): bool {
-			$mgr = AcrossAI_Abilities_Access_Control::instance()->get_manager();
-			return null !== $mgr
-				? $mgr->user_has_access( \get_current_user_id(), 'acrossai-abilities', $slug )
-				: true; // Fail-open: AC library unavailable.
+			return AcrossAI_Ability_Override_Processor::user_has_ability_access( $slug, \get_current_user_id() );
 		};
 	}
 
@@ -599,6 +604,138 @@ final class AcrossAI_Ability_Override_Processor {
 		}
 		$adapter_meta = $mcp_tool->get_adapter_meta();
 		return ( $adapter_meta['ability'] ?? '' ) === $ability_name;
+	}
+
+	// -------------------------------------------------------------------------
+	// MCP tools pass-through
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Action callback: register opted-in ability slugs into every MCP server's callable registry.
+	 *
+	 * Registered at mcp_adapter_init P20 (PATH B only, ARCH-ADV-001). Fires after all servers
+	 * are created (DefaultServerFactory P10, acrossai-mcp-manager database servers P11).
+	 * Uses Reflection to reach the private McpServer::$component_registry and calls
+	 * register_tools() on it — this is necessary because the installed mcp-adapter version
+	 * does not expose mcp_adapter_server_config. Adding slugs here ensures both tools/list
+	 * and tools/call work; mcp_adapter_tools_list only affects the display list.
+	 *
+	 * Three checks per ability, applied in order inside the per-server loop:
+	 *   1. pass_as_tool = 1   — pre-filtered before the server loop (FR-004 early-exit).
+	 *   2. mcp_servers        — null = all servers; [] = deny; [...] = allowlist (strict).
+	 *   3. user access (AC)   — uses user_has_ability_access(); fail-open when absent (FR-011).
+	 *
+	 * Timing note (SEC-003): get_current_user_id() is called at action time (mcp_adapter_init P20).
+	 * The MCP adapter initializes inside a REST request after wp_set_current_user() runs, so the
+	 * user ID is reliable. If the initialization context changes (e.g. CLI or cron), user_id = 0
+	 * and any AC-ruled ability will be denied for that context (correct, fail-safe behavior).
+	 *
+	 * @since  0.1.0
+	 * @param  mixed $adapter McpAdapter singleton instance.
+	 * @return void
+	 */
+	public static function inject_mcp_tools( $adapter ): void {
+		if ( ! method_exists( $adapter, 'get_servers' ) ) {
+			return;
+		}
+
+		self::load_overrides_cache();
+
+		// Check 1: collect only pass_as_tool = 1 rows (FR-004 early-exit).
+		// Check 1: collect only pass_as_tool = 1 rows that are tool-typed (FR-004 early-exit).
+		// resource/prompt types are registered by DefaultServerFactory via their own paths;
+		// injecting them into the tool registry conflicts with their mcp.type contract.
+		$non_tool_types = array( 'resource', 'prompt' );
+		$pass_rows      = array();
+		foreach ( self::$overrides_cache as $slug => $row ) {
+			if ( true === $row->pass_as_tool && ! in_array( $row->mcp_type, $non_tool_types, true ) ) {
+				$pass_rows[ $slug ] = $row;
+			}
+		}
+
+		if ( empty( $pass_rows ) ) {
+			return;
+		}
+
+		$servers = $adapter->get_servers();
+		if ( empty( $servers ) ) {
+			return;
+		}
+
+		$user_id = \get_current_user_id();
+
+		foreach ( $servers as $server ) {
+			if ( ! method_exists( $server, 'get_server_id' ) ) {
+				continue;
+			}
+
+			$server_id   = $server->get_server_id();
+			$extra_slugs = array();
+
+			foreach ( $pass_rows as $slug => $row ) {
+				// Check 2: mcp_servers allowlist — mirrors is_ability_allowed_on_server().
+				if ( is_array( $row->mcp_servers ) ) {
+					if ( empty( $row->mcp_servers ) ) {
+						continue; // Explicit deny.
+					}
+					if ( ! in_array( $server_id, $row->mcp_servers, true ) ) {
+						continue; // Not in allowlist.
+					}
+				}
+
+				// Check 3: per-user access via AC rules — fail-open (FR-011).
+				if ( ! self::user_has_ability_access( $slug, $user_id ) ) {
+					continue; // Current user denied.
+				}
+
+				$extra_slugs[] = $slug;
+			}
+
+			if ( empty( $extra_slugs ) ) {
+				continue;
+			}
+
+			// Access McpServer::$component_registry via Reflection (private field).
+			// Required because mcp_adapter_server_config does not exist in installed version.
+			try {
+				$reflection = new \ReflectionClass( $server );
+				if ( ! $reflection->hasProperty( 'component_registry' ) ) {
+					continue;
+				}
+				$prop = $reflection->getProperty( 'component_registry' );
+				$prop->setAccessible( true );
+				$registry = $prop->getValue( $server );
+				if ( $registry && method_exists( $registry, 'register_tools' ) ) {
+					$registry->register_tools( $extra_slugs );
+				}
+			} catch ( \ReflectionException $e ) {
+				// Silently skip — non-fatal, injection just won't happen for this server.
+				continue;
+			}
+		}
+	}
+
+	/**
+	 * Check whether the given user has access to an ability per AC rules.
+	 *
+	 * Fail-open: returns true when the AC library is absent or no rule is configured —
+	 * mirrors build_permission_callback() semantics (FR-009, FR-011).
+	 *
+	 * @since  0.1.0
+	 * @param  string $slug    Ability slug.
+	 * @param  int    $user_id WordPress user ID.
+	 * @return bool True when access is granted or no rule applies.
+	 */
+	private static function user_has_ability_access( string $slug, int $user_id ): bool {
+		$manager = AcrossAI_Abilities_Access_Control::instance()->get_manager();
+		if ( null === $manager ) {
+			return true; // Fail-open: no AC library.
+		}
+		$rule = $manager->get_query()->get_rule( 'acrossai-abilities', $slug );
+		if ( '' === $rule['key'] ) {
+			return true; // No rule configured — allow.
+		}
+		return $manager->user_has_access( $user_id, 'acrossai-abilities', $slug );
 	}
 
 	/**

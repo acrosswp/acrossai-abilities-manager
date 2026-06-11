@@ -97,7 +97,15 @@
       "Bash(composer show *)",
       "Bash(sed -n '78,100p' /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/acrossai-abilities-manager/includes/Modules/Library/Rest/AcrossAI_Ability_Library_Rest_Controller.php)",
       "Bash(sed -n '90,115p' /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/acrossai-abilities-manager/includes/Modules/Abilities/Rest/AcrossAI_Abilities_Rest_Controller.php)",
-      "Bash(.claude/skills/speckit-architecture-guard-architecture-review/../scripts/bash/detect-changed-files.sh --json)"
+      "Bash(.claude/skills/speckit-architecture-guard-architecture-review/../scripts/bash/detect-changed-files.sh --json)",
+      "Bash(GIT_BRANCH_NAME=\"029-mcp-tools-passthrough\" .specify/extensions/git/scripts/bash/create-new-feature.sh *)",
+      "Bash(composer phpcs *)",
+      "Bash(composer phpstan *)",
+      "mcp__agents__mcp-local-wp__mysql_query",
+      "Bash(CLAUDE_CODE_TMPDIR=/tmp grep -n \"resources\\\\|register\\\\|core/get\" /Users/raftaar1191/local-sites/wordpress-7-0/app/public/wp-content/plugins/mcp-adapter/includes/Infrastructure/Factories/DefaultServerFactory.php)",
+      "Bash(CLAUDE_CODE_TMPDIR=/tmp git diff *)",
+      "Bash(CLAUDE_CODE_TMPDIR=/tmp tail *)",
+      "Bash(CLAUDE_CODE_TMPDIR=/tmp cat *)"
     ]
   }
 }

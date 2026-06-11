@@ -84,8 +84,8 @@ Pass-as-tool opt-ins survive routine admin operations such as plugin deactivatio
 
 ### Functional Requirements
 
-- **FR-001**: Admins MUST be able to opt any non-protected ability into "pass as MCP tool" from the Abilities admin list using a single inline control, without navigating to a separate page or triggering a full page reload.
-- **FR-002**: When an ability is opted in, every MCP server on the site MUST include that ability's slug in its advertised tool list the next time the tool list is resolved.
+- **FR-001**: Admins MUST be able to opt any non-protected ability into "pass as MCP tool" from the Abilities admin list using a single inline control, without navigating to a separate page or triggering a full page reload. The pass_as_tool flag MUST also be surfaced in the per-ability edit form (AbilityForm) as a tri-state control in the MCP settings section; protected abilities MUST render it in a disabled state there too.
+- **FR-002**: When an ability is opted in, every MCP server on the site MUST include that ability as an advertised tool the next time the tool list is resolved (non-Manager REST paths only — Manager REST requests are excluded by design per ARCH-ADV-001/PATH B).
 - **FR-003**: When an ability is opted out (returned to default), the slug MUST be absent from all MCP server tool lists resolved after that point via this mechanism.
 - **FR-004**: When zero abilities are opted in, MCP server tool lists MUST be identical to their pre-feature behavior.
 - **FR-005**: If an opted-in ability slug is already present in a server's own tool configuration, the slug MUST appear only once in that server's final tool list.
@@ -93,7 +93,8 @@ Pass-as-tool opt-ins survive routine admin operations such as plugin deactivatio
 - **FR-007**: The opt-in state MUST be stored persistently with the ability record and MUST survive plugin deactivation and reactivation without manual re-entry (assuming the database table is not dropped).
 - **FR-008**: The pass-as-tool status MUST be visible in the Abilities admin list as a dedicated column.
 - **FR-009**: When the MCP adapter plugin is not installed or inactive, the pass-as-tool feature MUST be inert — the admin UI and storage continue to function, but no tool injection occurs.
-- **FR-010**: If the MCP adapter provides a non-array value for the server tool list, the injection MUST treat it as an empty list and produce a valid flat list containing only the opted-in slugs.
+- **FR-010**: The injection MUST never corrupt or truncate the existing server tool list. Non-array `$config['tools']` is treated as empty; the result is a valid flat array of ability slugs. Deduplication via `array_unique` prevents double-registration.
+- **FR-011**: Before an opted-in ability is registered as an MCP tool for the current request, the current user's access MUST be checked using the same per-ability AC rules enforced by `permission_callback`. If a rule is configured for the ability and the current user fails the check, the ability MUST NOT appear in that user's tool list. When no AC library is present or no rule is configured for the ability, the check is skipped (fail-open, matching the existing `permission_callback` pattern).
 
 ### Key Entities
 

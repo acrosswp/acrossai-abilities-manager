@@ -1405,32 +1405,67 @@ Feature 027 governed-tasks session 2026-06-06 — ARCH-003 advisory raised; user
 Active
 
 **Why this is durable**
-Establishes the contract between the plugin's abilities table and `mcp-adapter`'s
-`mcp_adapter_server_config` filter. Future code must keep the column and the filter
-callback aligned.
+Establishes the contract between the plugin's abilities table and the MCP server tool
+registry. Future code must keep the column and the injection callback aligned.
 
 **Decision**
 Per-ability MCP tool pass-through is a tri-state tinyint column (`pass_as_tool`)
-on `acrossai_abilities`. NULL = default (server's own tools[] unchanged); 1 = inject
-the slug into every MCP server's tools[] via `mcp_adapter_server_config` priority 10.
-Slug reads happen through `AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()`.
-
-The filter bridge lives in `AcrossAI_Mcp_Tools_Passthrough` (singleton, wired in
-`Main::define_public_hooks()`). Value 0 (explicit deny) is stored by the sanitizer
+on `acrossai_abilities`. NULL = default (server's own tools unchanged); 1 = register
+the ability into every MCP server's callable tool registry via `mcp_adapter_init`
+P20 (PATH B only). The injection lives in
+`AcrossAI_Ability_Override_Processor::inject_mcp_tools()` (static action callback),
+registered in `boot()` per ARCH-ADV-001. Uses PHP Reflection to access private
+`McpServer::$component_registry` because `mcp_adapter_server_config` does not exist
+in the installed mcp-adapter version. `mcp_adapter_init` P20 fires after
+DefaultServerFactory (P10) and acrossai-mcp-manager database servers (P11). Value 0 (explicit deny) is stored by the sanitizer
 but excluded from injection — reserved for future per-server deny semantics.
 Protected slugs are rejected at the API layer by
 `AcrossAI_Abilities_Write_Controller::update_ability()` L308 (slug-level,
-strict comparison, fires before sanitize).
+strict comparison, fires before sanitize). `mcp_servers` allowlist is respected:
+null = all servers; [] = blocked on all; [...] = inject only if current server ID
+is in the list (strict comparison).
 
 **Tradeoffs**
 - Gained: single toggle, no per-server config UI; matches the shape of existing
-  tri-state columns (site_allowed, show_in_mcp).
-- Reconsider: if per-server allowlists are ever needed, replace the tinyint with a
-  `pass_as_tool_servers longtext` JSON column. Only the filter callback and the
-  toggle cell need to change.
+  tri-state columns (site_allowed, show_in_mcp). Allowlist check reuses the existing
+  `mcp_servers` column — no new storage needed.
+- Reconsider: if finer-grained per-server control beyond `mcp_servers` is needed,
+  update only `inject_mcp_tools()`. Column schema and REST layer unchanged.
 
 **Where to look next**
-`includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php` (filter
-bridge), `includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (`inject_mcp_tools()`),
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`
 (`get_pass_as_tool_slugs()`), `src/js/abilities/components/AbilitiesList.jsx`
 (`PassAsToolCell`), PATTERN-PROTECTED-SLUGS-JS-LOCALIZE (JS localization pattern).
+
+---
+
+### 2026-06-11 — DEC-MCP-INJECT-REFLECTION-PATTERN
+
+**Status**
+Active
+
+**Why this is durable**
+Any future feature that injects abilities into MCP server registries post-creation
+will hit the same `mcp_adapter_server_config` absence and the same `tools/list` ≠
+`tools/call` trap unless this pattern is documented.
+
+**Decision**
+`mcp_adapter_server_config` does not exist in the installed mcp-adapter version and
+never fires. The canonical post-creation injection pattern is: hook `mcp_adapter_init`
+at priority 20 (after DefaultServerFactory P10 and acrossai-mcp-manager P11), iterate
+`$adapter->get_servers()`, use PHP Reflection to access the private
+`McpServer::$component_registry`, then call `$registry->register_tools($slugs)`.
+Do NOT use `mcp_adapter_tools_list` — it only affects the display list; tools added
+there are NOT callable via `tools/call`.
+
+**Tradeoffs**
+- Gained: both `tools/list` and `tools/call` work; no hard dependency on a
+  non-existent filter.
+- Reconsider: if mcp-adapter exposes a public API for post-creation tool injection
+  in a future version, replace the Reflection approach with that API and remove this
+  pattern.
+
+**Where to look**
+`AcrossAI_Ability_Override_Processor::inject_mcp_tools()` — boot() registration and
+full implementation.

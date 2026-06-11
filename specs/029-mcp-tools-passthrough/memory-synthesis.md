@@ -2,17 +2,16 @@
 
 ## Current Scope
 
-Feature 029 adds a tri-state `pass_as_tool` column to the `acrossai_abilities` BerlinDB table, wires it through the existing tri-state plumbing (Row → Sanitizer → Query → Formatter), creates a new singleton module `AcrossAI_Mcp_Tools_Passthrough` that hooks `mcp_adapter_server_config` to merge opted-in slugs into every MCP server's tool list, and adds an inline toggle column to `AbilitiesList.jsx`.
+Feature 029 adds a tri-state `pass_as_tool` column to the `acrossai_abilities` BerlinDB table, wires it through the existing tri-state plumbing (Row → Sanitizer → Query → Formatter), adds `inject_mcp_tools()` to the existing `AcrossAI_Ability_Override_Processor` hooking `mcp_adapter_init P20` (ARCH-ADV-001, Option B), and adds an inline toggle column to `AbilitiesList.jsx`.
 
-Affected modules: `Abilities/Database` (Schema, Row, Query), `Utilities` (Sanitizer, Formatter), `Modules/McpToolsPassthrough` (new), `Main.php`, `src/js/abilities/components/AbilitiesList.jsx`.
+Affected modules: `Abilities/Database` (Schema, Row, Query), `Abilities` (Override Processor — `inject_mcp_tools()` added), `Utilities` (Sanitizer, Formatter), `Main.php` (comment only), `src/js/abilities/components/AbilitiesList.jsx`.
 
 ---
 
 ## Relevant Decisions
 
-- **DEC-NAMESPACE-CONVENTION** — New module MUST use `AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough` (underscore convention). No PSR-4 camelCase. (Reason: plugin-wide convention; Source: DECISIONS.md)
-- **DEC-SINGLETON-PSR2-PROPERTY** — New class uses `protected static $instance` (not `$_instance`). Only `instance()` may be `public static`. (Reason: PSR-2 enforcement after Feature 022; Source: DECISIONS.md)
-- **DEC-UTILITY-STATIC-ONLY** — `AcrossAI_Mcp_Tools_Passthrough` is an orchestrator (stateful singleton with a hook callback), NOT a utility class. Utility classes are 100% static. The new class is correctly a singleton. (Reason: architecture boundary; Source: DECISIONS.md)
+- **DEC-NAMESPACE-CONVENTION** — No new namespace. `inject_mcp_tools()` added to existing `AcrossAI_Ability_Override_Processor` in `AcrossAI_Abilities_Manager\Includes\Modules\Abilities`. (Reason: Option B — no standalone module; Source: DECISIONS.md)
+- **DEC-SINGLETON-PSR2-PROPERTY** — No new singleton class. Override Processor already uses `$instance` (not `$_instance`) per DEC-SINGLETON-PSR2-PROPERTY. (Reason: PSR-2 enforcement after Feature 022; Source: DECISIONS.md)
 - **DEC-COLUMN-VISIBILITY-LOCALSTORAGE** — The new "Pass as Tool" column MUST default to visible and be persisted via the existing `acrossai_abilities_columns` localStorage merge-over-`COLUMN_DEFAULTS` pattern (FR-025). New columns always default visible. (Reason: Feature 025 UX pattern; Source: DECISIONS.md)
 - **DEC-ABILITIES-DUAL-MODE-LIST** — `format_merged_ability()` normalises the response shape for registry abilities; `pass_as_tool` must be added there alongside `format_for_response()` and `format_for_exposure()`. (Reason: formatter is single source of truth; Source: DECISIONS.md)
 - **DEC-PROTECTED-SLUGS-PATTERN** — Protected slug exclusion is centralised in `AcrossAI_Protected_Abilities`. The disabled UI state in `PassAsToolCell` references this same list; no duplicate guard logic. (Reason: extensibility; Source: DECISIONS.md)
@@ -22,7 +21,7 @@ Affected modules: `Abilities/Database` (Schema, Row, Query), `Utilities` (Saniti
 
 ## Active Architecture Constraints
 
-- **AC-HOOKS-MAIN** — ONLY `Main.php` calls `$this->loader->add_action()` / `->add_filter()`. `AcrossAI_Mcp_Tools_Passthrough` MUST NOT call `add_filter()` in its own code. Resolve the singleton into a named variable before passing to the Loader. (Source: CONSTITUTION.md §I)
+- **AC-HOOKS-MAIN** — ONLY `Main.php` calls `$this->loader->add_action()` / `->add_filter()` — **except ARCH-ADV-001**: `AcrossAI_Ability_Override_Processor::boot()` wires MCP adapter filters directly for PATH-B-only conditional loading. `mcp_adapter_init P20` falls under this accepted deviation. (Source: CONSTITUTION.md §I, DECISIONS.md ARCH-ADV-001)
 - **ARCH-UNIFIED-ABILITIES-STORAGE** — Abilities module owns the unified abilities table. `pass_as_tool` column belongs there. No new table, no option. (Source: ARCHITECTURE.md)
 - **ARCH-SANITIZER-TWO-CLASS** — `AcrossAI_Sanitizer` (base, owns `sanitize_mcp_servers_array`) ≠ `AcrossAI_Abilities_Sanitizer` (wrapper, owns tri-state field lists). The `$tri_state_fields` arrays live in `AcrossAI_Abilities_Sanitizer`. PHPUnit tests targeting the sanitizer must use the correct FQCN. (Source: ARCHITECTURE.md)
 - **PATTERN-CONSTITUTION-SYNC-REPORT** — If `.specify/memory/CONSTITUTION.md` is version-bumped, the SYNC IMPACT REPORT HTML comment at the top must also be updated. (Source: ARCHITECTURE.md)
@@ -31,7 +30,7 @@ Affected modules: `Abilities/Database` (Schema, Row, Query), `Utilities` (Saniti
 
 ## Accepted Deviations
 
-None applicable to Feature 029.
+- **ARCH-ADV-001** — `AcrossAI_Ability_Override_Processor::boot()` wires `mcp_adapter_*` hooks directly (bypasses Loader / Boot Flow Rule) for PATH-B-only conditional loading. Feature 029 adds `mcp_adapter_init P20` registration inside `boot()` under this same accepted deviation. No new deviation — scope extended to one additional filter. (Reason: Loader cannot express PATH-A/B conditional registration; accepted since Feature 004. Source: DECISIONS.md)
 
 ---
 
@@ -48,14 +47,13 @@ None applicable to Feature 029.
 - **BUG-BERLINDB-V3-TIMESTAMP-QUOTING** — Not directly applicable to `pass_as_tool` (tinyint, no timestamp), but reinforces the rule: never set `'default' => 'CURRENT_TIMESTAMP'`. The tinyint column must use `'default' => null`. (Source: BUGS.md, Feature 028)
 - **BUG-BERLINDB-UNLIMITED** — `number => -1` becomes `absint(-1) = 1` → LIMIT 1. The finder `get_pass_as_tool_slugs()` MUST use `'number' => 0` (which BerlinDB interprets as no LIMIT), not `-1`. (Source: BUGS.md)
 - **BUG-MERGER-BOOL-STRING-CAST** — When reading `pass_as_tool` off a BerlinDB row (`?bool`), never use `'' !== (string) $value` as a guard. Use `null !== $value` only. PHP casts `false` to `''`, silently dropping boolean-false overrides. Affects `AcrossAI_Ability_Merger` if `pass_as_tool` is ever consumed there. (Source: BUGS.md, Feature 024)
-- **BUG-STATIC-METHOD-SINGLETON-BYPASS** — `AcrossAI_Mcp_Tools_Passthrough` must not expose any `public static` method other than `instance()`. Adding public static methods bypasses the singleton contract and was flagged in architecture review. (Source: BUGS.md)
-- **BUG-ABSPATH-STATIC-CLASS** — The new module file must include `defined('ABSPATH') || exit;` even though it is instantiated only via `Main.php`. Per-file guard is required. (Source: BUGS.md, Feature 027)
+- **BUG-STATIC-METHOD-SINGLETON-BYPASS** — Not applicable to Feature 029 (Option B: no new singleton class). `inject_mcp_tools()` is a `public static` method on Override Processor, which is intentional — static callbacks for `array(__CLASS__, 'method')` are the established pattern in this class. (Source: BUGS.md)
 
 ---
 
 ## Conflict Warnings
 
-None. The feature is purely additive: new column, new module, new UI column. No existing decision is violated by the proposed approach.
+None. The feature is purely additive: new column, new static method on Override Processor, new UI column. ARCH-ADV-001 scope extension is pre-approved — the accepted deviation explicitly covers `boot()` wiring for all MCP adapter filters.
 
 ---
 

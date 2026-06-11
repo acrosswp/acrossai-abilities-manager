@@ -7,7 +7,7 @@
 
 ## Summary
 
-Add a per-ability tri-state tinyint column `pass_as_tool` to the `acrossai_abilities` BerlinDB table. Wire it through the existing tri-state plumbing (Row → Sanitizer → Query → Formatter). Create a new singleton module `AcrossAI_Mcp_Tools_Passthrough` that hooks the `mcp_adapter_server_config` filter (priority 10, 2 args) and merges opted-in slugs into `$config['tools']` via `array_unique`. Surface the flag as an inline toggle column ("Pass as Tool") in `AbilitiesList.jsx` that POSTs to the existing sparse-update endpoint.
+Add a per-ability tri-state tinyint column `pass_as_tool` to the `acrossai_abilities` BerlinDB table. Wire it through the existing tri-state plumbing (Row → Sanitizer → Query → Formatter). Add a `inject_mcp_tools()` static action callback to the existing `AcrossAI_Ability_Override_Processor` and register it in `boot()` on `mcp_adapter_init` priority 20 (ARCH-ADV-001). The method fires after all servers are created and uses PHP Reflection to access the private `McpServer::$component_registry`, then calls `register_tools()` on it — this registers opted-in ability slugs so both `tools/list` and `tools/call` work. `mcp_adapter_server_config` is not used because it does not exist in the installed mcp-adapter version. Respects the per-ability `mcp_servers` allowlist. Surface the flag as an inline toggle column ("Pass as Tool") in `AbilitiesList.jsx` that POSTs to the existing sparse-update endpoint.
 
 ---
 
@@ -21,7 +21,7 @@ Add a per-ability tri-state tinyint column `pass_as_tool` to the `acrossai_abili
 **Project Type**: WordPress plugin feature increment
 **Performance Goals**: N/A — filter runs once per MCP server init; row count is bounded (tens of abilities)
 **Constraints**: No DB migration, no new REST namespace, no new admin page, no `mcp-adapter` hard dependency
-**Scale/Scope**: 10 files modified, 1 new PHP file, ~250 lines PHP delta, ~80 lines JSX delta
+**Scale/Scope**: 10 files modified, 0 new PHP files, ~250 lines PHP delta, ~80 lines JSX delta
 
 ---
 
@@ -31,15 +31,15 @@ Add a per-ability tri-state tinyint column `pass_as_tool` to the `acrossai_abili
 
 | Principle | Status | Notes |
 |---|---|---|
-| §I Modular Architecture | PASS | New module `McpToolsPassthrough/` is self-contained, singular purpose. No `includes/Base/`. |
+| §I Modular Architecture | DEVIATION (accepted) | Injection logic added to `AcrossAI_Ability_Override_Processor` (ARCH-ADV-001). The Override Processor already owns all per-server MCP adapter hooks; `mcp_adapter_init P20` is a natural extension. No standalone module required. No `includes/Base/`. |
 | §II WordPress Standards | PASS | No new SQL, no `eval()`, no deprecated functions. PHPCS + PHPStan + Plugin Check must remain clean. |
 | §III User-Centric Design | DEVIATION (accepted) | Inline toggle cell in Abilities list is NOT a DataForm — it matches the existing `status` `<select>` inline pattern. `DEC-DESIGN-OVERRIDES-DATAVIEWS` covers this; the list view is the correct UX context. |
 | §IV Security First | PASS | No new input boundaries. Pass-through uses existing sparse-update endpoint (nonce + capability already enforced). Protected slug guard (server-side) rejects writes for `mcp-adapter/*` slugs. |
-| §V Extensibility | PASS | `AcrossAI_Mcp_Tools_Passthrough` is a no-op when `mcp_adapter_server_config` filter never fires. No hard dependency on `mcp-adapter`. |
+| §V Extensibility | PASS | `inject_mcp_tools()` is a no-op when `mcp_adapter_server_config` filter never fires (e.g. mcp-adapter absent). No hard dependency on `mcp-adapter`. |
 | §VI DRY | PASS | All plumbing (Row cast, Sanitizer, Query write, Formatter) reuses existing tri-state paths. No new utility class. |
 | §VII Definition of Done | TRACKED | Quality gates listed in Validation Checklist below. |
 
-**Constitution note on `$instance` vs `$_instance`**: The Constitution §Architecture & UI Standards shows `$_instance` as the singleton property name, but `DEC-SINGLETON-PSR2-PROPERTY` (Feature 022, Active) renamed it to `$instance` across all 21 singleton classes for PSR-2 compliance. The new module uses `$instance`.
+**Constitution note on `$instance` vs `$_instance`**: The Constitution §Architecture & UI Standards shows `$_instance` as the singleton property name, but `DEC-SINGLETON-PSR2-PROPERTY` (Feature 022, Active) renamed it to `$instance` across all 21 singleton classes for PSR-2 compliance. All existing classes including `AcrossAI_Ability_Override_Processor` use `$instance`.
 
 ---
 
@@ -67,8 +67,8 @@ includes/
 │   │       ├── AcrossAI_Abilities_Schema.php     [MOD]
 │   │       ├── AcrossAI_Abilities_Row.php         [MOD]
 │   │       └── AcrossAI_Abilities_Query.php       [MOD]
-│   └── McpToolsPassthrough/                       [NEW DIR]
-│       └── AcrossAI_Mcp_Tools_Passthrough.php     [NEW]
+│   └── Abilities/
+│       └── AcrossAI_Ability_Override_Processor.php [MOD — inject_mcp_tools() added]
 ├── Utilities/
 │   ├── AcrossAI_Abilities_Sanitizer.php           [MOD]
 │   └── AcrossAI_Abilities_Formatter.php           [MOD]
@@ -82,7 +82,7 @@ docs/memory/
 ├── DECISIONS.md                                   [MOD]
 └── INDEX.md                                       [MOD]
 .specify/memory/
-└── CONSTITUTION.md                                [MOD — version bump + McpToolsPassthrough module entry]
+└── CONSTITUTION.md                                [no change — no new directory added]
 ```
 
 ---
@@ -216,111 +216,57 @@ public function get_pass_as_tool_slugs(): array {
 
 ---
 
-### CHANGE-6 — New module: `AcrossAI_Mcp_Tools_Passthrough`
+### CHANGE-6 — Override Processor: `inject_mcp_tools()` static method
 
-**File**: `includes/Modules/McpToolsPassthrough/AcrossAI_Mcp_Tools_Passthrough.php` (new)
+**File**: `includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (modified)
 
-```php
-<?php
-/**
- * MCP Tools Pass-through Module
- *
- * @package    AcrossAI_Abilities_Manager
- * @subpackage AcrossAI_Abilities_Manager/includes/Modules/McpToolsPassthrough
- * @since      0.1.0
- */
+**Architecture decision (Option B)**: Instead of a standalone `McpToolsPassthrough/` module, the injection logic lives in `AcrossAI_Ability_Override_Processor`. This class already owns all per-server MCP adapter hooks and wires them in `boot()` via ARCH-ADV-001. `mcp_adapter_init P20` is natural — runs after all servers are created.
 
-namespace AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough;
+**Why `mcp_adapter_init` + Reflection, NOT `mcp_adapter_server_config` or `mcp_adapter_tools_list`**:
+- `mcp_adapter_tools_list` only affects `tools/list` display. Tools added there are NOT callable.
+- `mcp_adapter_server_config` does not exist in the installed mcp-adapter version.
+- `mcp_adapter_init P20` fires after DefaultServerFactory (P10) and acrossai-mcp-manager (P11) create all servers. We then use PHP Reflection to access private `McpServer::$component_registry` and call `register_tools()` — this makes tools both listable AND callable.
 
-use AcrossAI_Abilities_Manager\Includes\Modules\Abilities\Database\AcrossAI_Abilities_Query;
-
-defined( 'ABSPATH' ) || exit;
-
-/**
- * Bridges the per-ability pass_as_tool flag into the mcp-adapter server-config filter.
- *
- * @since 0.1.0
- */
-class AcrossAI_Mcp_Tools_Passthrough {
-
-    /**
-     * Singleton instance.
-     *
-     * @since 0.1.0
-     * @static
-     * @var AcrossAI_Mcp_Tools_Passthrough|null
-     */
-    protected static $instance = null;
-
-    /**
-     * Get singleton instance.
-     *
-     * @since 0.1.0
-     * @static
-     * @return AcrossAI_Mcp_Tools_Passthrough
-     */
-    public static function instance(): self {
-        if ( null === self::$instance ) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-
-    /**
-     * Private constructor for singleton.
-     *
-     * @since 0.1.0
-     */
-    private function __construct() {}
-
-    /**
-     * Inject opted-in ability slugs into every MCP server's tools[] array.
-     *
-     * @since      0.1.0
-     * @param array  $config    Server config passed by mcp-adapter.
-     * @param string $server_id Server identifier (reserved for future per-server logic).
-     * @return array
-     */
-    public function inject_tools( array $config, string $server_id ): array {
-        $extra = AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs();
-        if ( empty( $extra ) ) {
-            return $config;
-        }
-        $existing        = isset( $config['tools'] ) && is_array( $config['tools'] ) ? $config['tools'] : array();
-        $config['tools'] = array_values( array_unique( array_merge( $existing, $extra ) ) );
-        return $config;
-    }
-}
+Add to `boot()` hook summary docblock:
+```
+ *   mcp_adapter_init         P20       — inject_mcp_tools()
 ```
 
+Add inside `boot()` after the existing `mcp_adapter_pre_tool_call` registration:
+```php
+// Register opted-in ability slugs into every MCP server's callable tool registry.
+// Runs at mcp_adapter_init P20, after all servers are created.
+// Required capability for pass_as_tool writes: manage_options (TSEC-T01).
+// ARCH-ADV-001: boot() wires this directly; not registered via Main.php Loader.
+add_action( 'mcp_adapter_init', array( __CLASS__, 'inject_mcp_tools' ), 20 );
+```
+
+Add the action callback method — see `AcrossAI_Ability_Override_Processor.php` for full implementation. Signature: `public static function inject_mcp_tools( $adapter ): void`.
+
 **Guards**:
-- `defined( 'ABSPATH' ) || exit` per-file even for instantiation-only classes (BUG-ABSPATH-STATIC-CLASS).
-- `$instance` not `$_instance` (DEC-SINGLETON-PSR2-PROPERTY).
-- Only `instance()` is `public static` (BUG-STATIC-METHOD-SINGLETON-BYPASS).
-- `inject_tools` is a regular public method — no `add_filter()` inside this class (AC-HOOKS-MAIN).
-- Non-array `$config['tools']`: falls back to empty array (FR-010, clarification Q3).
-- `array_unique` prevents duplicate when a server already listed the ability (FR-005).
-- `number => 0` in the query for unlimited results (BUG-BERLINDB-UNLIMITED).
-- File header uses full `@subpackage` path per AC-FILE-HEADER-PATTERN.
+- `method_exists($adapter, 'get_servers')` guard: no-op when mcp-adapter is absent (FR-009).
+- `self::load_overrides_cache()` reuses the existing override cache — no extra DB query.
+- `mcp_servers` allowlist check mirrors `is_ability_allowed_on_server()` semantics.
+- Early-return when no pass_as_tool rows (FR-004 — zero-impact).
+- Reflection try/catch silently skips servers where `$component_registry` is absent.
+- PATH B only (ARCH-ADV-001): action fires on non-Manager REST requests only.
 
 ---
 
-### CHANGE-7 — Main.php: wire the filter
+### CHANGE-7 — Main.php: leave unchanged
 
 **File**: `includes/Main.php`
 
-Inside `define_public_hooks()` (or the appropriate runtime hook method), following the Boot Flow Rule variable-first pattern:
+No hook registration in `Main.php`. The `mcp_adapter_init` action is registered in `AcrossAI_Ability_Override_Processor::boot()` per ARCH-ADV-001.
 
+Leave the comment in `define_public_hooks()` that reads:
 ```php
-$mcp_tools_passthrough = \AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough\AcrossAI_Mcp_Tools_Passthrough::instance();
-$this->loader->add_filter( 'mcp_adapter_server_config', $mcp_tools_passthrough, 'inject_tools', 10, 2 );
+// Note: mcp_adapter_init P20 (pass_as_tool injection) is registered inside
+// AcrossAI_Ability_Override_Processor::boot() — PATH B only, per ARCH-ADV-001.
+// Runs after all servers are created (P10 default, P11 database servers).
+// Uses Reflection on McpServer::$component_registry because mcp_adapter_server_config
+// does not exist in the installed mcp-adapter version.
 ```
-
-**Guards**:
-- Singleton resolved into named variable `$mcp_tools_passthrough` before the Loader call (Boot Flow Rule — inline `::instance()` as second arg is prohibited).
-- Goes through `$this->loader->add_filter()` — not `add_filter()` directly (AC-HOOKS-MAIN).
-- Priority 10, `accepted_args = 2` (filter signature passes `$config, $server_id`).
-- After `composer dump-autoload`, the new class must be autoloaded.
 
 ---
 
@@ -409,63 +355,61 @@ function PassAsToolCell( { item, onToggle, disabled } ) {
 
 **Files**: `docs/memory/DECISIONS.md`, `docs/memory/INDEX.md`
 
-Append to `docs/memory/DECISIONS.md`:
+Update `docs/memory/DECISIONS.md` entry `DEC-MCP-TOOLS-PASSTHROUGH-COLUMN` to read:
 
 ```markdown
-### 2026-06-10 - DEC-MCP-TOOLS-PASSTHROUGH-COLUMN
+### 2026-06-11 — DEC-MCP-TOOLS-PASSTHROUGH-COLUMN
 
 **Status**
 Active
 
 **Why this is durable**
-Establishes the contract between this plugin's abilities table and `mcp-adapter`'s
-`mcp_adapter_server_config` filter. Future code must keep the column and the filter callback
-aligned.
+Establishes the contract between the plugin's abilities table and `mcp-adapter`'s
+`mcp_adapter_server_config` filter. Future code must keep the column and the filter
+callback aligned.
 
-**Decision / Finding**
-Per-ability MCP tool pass-through is a tri-state tinyint column (`pass_as_tool`) on
-`acrossai_abilities`. NULL is the default (server's own tools[] stands); 1 injects the slug into
-every MCP server's tools[] via `mcp_adapter_server_config` priority 10. Slug reads happen
-through `AcrossAI_Abilities_Query::get_pass_as_tool_slugs()`.
+**Decision**
+Per-ability MCP tool pass-through is a tri-state tinyint column (`pass_as_tool`)
+on `acrossai_abilities`. NULL = default (server's own tools unchanged); 1 = inject
+the ability as a Tool DTO into every MCP server's tools list via `mcp_adapter_server_config`
+priority 10 (PATH B only). The filter bridge lives in
+`AcrossAI_Ability_Override_Processor::inject_mcp_tools()` (static), registered in
+`boot()` per ARCH-ADV-001. Value 0 (explicit deny) is stored by the sanitizer
+but excluded from injection — reserved for future per-server deny semantics.
+Protected slugs are rejected at the API layer by
+`AcrossAI_Abilities_Write_Controller::update_ability()` L308 (slug-level,
+strict comparison, fires before sanitize). `mcp_servers` allowlist is respected:
+null = all servers; [] = blocked; [...] = inject only if current server ID matches.
 
-**Tradeoffs / Prevention**
-- Gained: single toggle, no per-server config UI; matches the shape of existing tri-state
-  columns (`site_allowed`, `show_in_mcp`).
-- Reconsider: if per-server allowlists are ever needed, replace the tinyint with a
-  `pass_as_tool_servers longtext` JSON column. Only the filter callback and the toggle cell
-  need to change.
+**Tradeoffs**
+- Gained: single toggle, no per-server config UI; matches the shape of existing
+  tri-state columns (site_allowed, show_in_mcp). Allowlist check reuses existing
+  mcp_servers column — no new storage.
+- Reconsider: if finer-grained per-server control is needed beyond the existing
+  mcp_servers allowlist, revisit inject_mcp_tools() logic only.
+
+**Where to look next**
+`includes/Modules/Abilities/AcrossAI_Ability_Override_Processor.php` (inject_mcp_tools),
+`includes/Modules/Abilities/Database/AcrossAI_Abilities_Query.php`
+(`get_pass_as_tool_slugs()`), `src/js/abilities/components/AbilitiesList.jsx`
+(`PassAsToolCell`).
 ```
 
-Add to `docs/memory/INDEX.md` active-decisions table:
+Update `docs/memory/INDEX.md` active-decisions table row to:
 
 ```
-| DEC-MCP-TOOLS-PASSTHROUGH-COLUMN | Per-ability MCP tool pass-through column + filter bridge | Abilities/DB | mcp,tools,filter,abilities | Active | DECISIONS.md |
+| DEC-MCP-TOOLS-PASSTHROUGH-COLUMN | Per-ability MCP tool pass-through column + filter bridge (pass_as_tool tinyint, AcrossAI_Ability_Override_Processor::inject_mcp_tools, mcp_adapter_server_config P10) | Abilities/DB | mcp, tools, filter, abilities, berlindb | Active | DECISIONS.md |
 ```
 
 ---
 
-### CHANGE-10 — Constitution version bump
+### CHANGE-10 — Constitution: no change required
 
 **File**: `.specify/memory/CONSTITUTION.md`
 
-1. Bump version: `1.4.5 → 1.4.6` in the footer.
-2. Add `McpToolsPassthrough/` to the Directory Layout module list under `includes/Modules/`.
-3. Update the SYNC IMPACT REPORT HTML comment at the top (PATTERN-CONSTITUTION-SYNC-REPORT):
+No change. Feature 029 (Option B) does not introduce a new module directory — the injection logic lives in the existing `Abilities/` module per ARCH-ADV-001. The Directory Layout does not change. The constitution version bump `1.4.5 → 1.4.6` is deferred; it will be applied when the next section-level change occurs.
 
-```html
-<!--
-SYNC IMPACT REPORT
-Version change: 1.4.5 → 1.4.6
-Modified sections: §I Modular Architecture — added McpToolsPassthrough/ as seventh active module directory
-Rationale: Feature 029 introduces includes/Modules/McpToolsPassthrough/ as a self-contained filter bridge
-for the mcp_adapter_server_config hook. Added to Directory Layout to match implementation reality.
-Templates reviewed:
-  - .specify/templates/plan-template.md ✅ reviewed — no outdated references
-  - .specify/templates/spec-template.md ✅ reviewed — no outdated references
-  - .specify/templates/tasks-template.md ✅ reviewed — no outdated references
-  - .specify/templates/checklist-template.md ✅ reviewed — no outdated references
-Deferred TODOs: None
-```
+T026 in tasks.md is updated to reflect this: no constitution edit needed for this feature.
 
 ---
 
@@ -498,10 +442,10 @@ Deferred TODOs: None
 
 ### Query and filter integration
 
-- [ ] `(new AcrossAI_Abilities_Query())->get_pass_as_tool_slugs()` returns only opted-in slugs.
-- [ ] `apply_filters( 'mcp_adapter_server_config', array( 'tools' => array( 'existing/slug' ) ), 'test-server' )` returns the union of existing + opted-in slugs, with no duplicates.
+- [ ] `AcrossAI_Abilities_Query::instance()->get_pass_as_tool_slugs()` returns only opted-in slugs.
+- [ ] `apply_filters( 'mcp_adapter_server_config', array( 'tools' => array( 'existing/slug' ) ), 'test-server' )` returns a config where `tools` contains both `'existing/slug'` and opted-in ability slugs, with no duplicates.
 - [ ] When no rows are flagged, the filter returns `$config` byte-for-byte unchanged.
-- [ ] When `$config['tools']` is `null` (non-array), the filter returns a flat array of opted-in slugs.
+- [ ] Non-array `$config['tools']` is treated as empty — result `tools` contains only the opted-in slugs.
 
 ### Admin UI
 
@@ -519,13 +463,13 @@ Deferred TODOs: None
 - [ ] `npm run build` succeeds; `build/js/abilities.asset.php` is regenerated.
 - [ ] ESLint clean for `AbilitiesList.jsx`.
 - [ ] Plugin Check clean on the production surface.
-- [ ] `composer dump-autoload` run after new PHP file added.
+- [ ] `composer dump-autoload` run to clean autoload map after deleted `AcrossAI_Mcp_Tools_Passthrough.php`.
 
 ---
 
 ## Post-implementation steps
 
-1. Run `composer dump-autoload` after creating `AcrossAI_Mcp_Tools_Passthrough.php`.
+1. Run `composer dump-autoload` to clean the autoload map after deleting `AcrossAI_Mcp_Tools_Passthrough.php`.
 2. Manually deactivate plugin → drop `wp_acrossai_abilities` → reactivate to get the new column.
 3. Run `npm run build` after editing `AbilitiesList.jsx`.
 4. Run full quality gate: `composer phpcs && composer phpstan && npm run build`.

@@ -380,13 +380,11 @@ final class Main {
 		// Named variable before Loader call — Boot Flow Rule variable-first pattern.
 		$ability_library_processor = \AcrossAI_Abilities_Manager\Includes\Modules\Library\AcrossAI_Ability_Library_Processor::instance();
 		$this->loader->add_action( 'wp_abilities_api_init', $ability_library_processor, 'register_abilities', 5 );
-
-		// MCP Tools Pass-through — inject opted-in ability slugs into every MCP server's tool list.
-		// Required capability for writes to pass_as_tool: manage_options (enforced by
-		// AcrossAI_Abilities_Write_Controller::check_permission() via AcrossAI_Abilities_Rest_Controller).
-		// Named variable before Loader call — Boot Flow Rule variable-first pattern (AC-HOOKS-MAIN).
-		$mcp_tools_passthrough = \AcrossAI_Abilities_Manager\Includes\Modules\McpToolsPassthrough\AcrossAI_Mcp_Tools_Passthrough::instance();
-		$this->loader->add_filter( 'mcp_adapter_server_config', $mcp_tools_passthrough, 'inject_tools', 10, 2 );
+		// Note: mcp_adapter_init P20 (pass_as_tool injection) is registered inside
+		// AcrossAI_Ability_Override_Processor::boot() — PATH B only, per ARCH-ADV-001.
+		// Runs after all servers are created (P10 default, P11 database servers).
+		// Uses Reflection on McpServer::$component_registry because mcp_adapter_server_config
+		// does not exist in the installed mcp-adapter version.
 	}
 
 	/**

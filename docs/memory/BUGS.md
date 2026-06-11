@@ -1258,3 +1258,55 @@ Activator); Query classes do not.
 constructor at L130), DEC-TABLE-SOFT-SINGLETON (Table vs Query distinction),
 `includes/Modules/Abilities/Rest/AcrossAI_Abilities_Write_Controller.php` L79
 (canonical `::instance()` call site).
+
+---
+
+### 2026-06-11 — BUG-MCP-TYPE-PASSTOOL-CONFLICT
+
+**Pattern**
+`pass_as_tool = 1` + `mcp_type = 'resource'` (or `'prompt'`) on the same ability
+row causes two simultaneous failures on every `mcp_adapter_init` call:
+1. `DefaultServerFactory::discover_abilities_by_type('resource')` auto-discovers the
+   ability and calls `McpResource::fromAbility()` — which requires `mcp.uri` — failing
+   with an ERROR log entry once per server (N servers = N errors).
+2. `inject_mcp_tools()` also tries to register it as a tool, creating a type conflict.
+
+**Prevention**
+Guard `inject_mcp_tools()` before building `$pass_rows`:
+```php
+$non_tool_types = array( 'resource', 'prompt' );
+if ( true === $row->pass_as_tool
+     && ! in_array( $row->mcp_type, $non_tool_types, true ) ) { ... }
+```
+Resource/prompt-typed abilities are handled by DefaultServerFactory's own discovery
+paths; they must not also be injected as tools.
+
+**Root cause (Feature 029)**
+`core/get-site-info` had `mcp_type = 'resource'` + `pass_as_tool = 1`
+simultaneously. Fix: clear `mcp_type` override in the Abilities Manager UI (set
+to Inherit/null) or provide a valid `mcp.uri`.
+
+---
+
+### 2026-06-11 — BUG-PHPUNIT-VOID-ACTION-INTERFACE
+
+**Pattern**
+PHPUnit tests written for a filter-based interface `($config, $server_id): array`
+when the real WordPress hook callback is a void action `($adapter): void` do not
+fail loudly. PHP does not enforce the return type at call sites; `$result` becomes
+`null`; assertions on `$result['tools']` emit PHP notices, not PHPUnit failures.
+The test suite appears to "pass" while testing nothing about the actual
+implementation.
+
+**Prevention**
+Before writing tests for a static action callback, check the hook type:
+- `add_action` → callback returns void; test side-effects via Reflection on
+  internal state or mock objects that record calls (e.g. `register_tools()`).
+- `add_filter` → callback returns a value; assert the return value directly.
+Never assign `$result = SomeClass::voidCallback(...)` and then assert on `$result`.
+
+**Evidence (Feature 029)**
+`AcrossAI_Mcp_Tools_Passthrough_Test.php` originally called
+`inject_mcp_tools($config, 'test-server')` and asserted `$result['tools']`.
+The real signature is `inject_mcp_tools($adapter): void`. Rewrite used anonymous
+class mocks with `component_registry` Reflection to verify `register_tools()` calls.
