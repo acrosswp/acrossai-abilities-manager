@@ -48,7 +48,6 @@ export default function LibraryPage() {
 	const [error, setError] = useState(null);
 
 	const initialLoadComplete = useRef(false);
-	const debounceTimer = useRef(null);
 
 	useEffect(() => {
 		fetchConfig()
@@ -75,21 +74,18 @@ export default function LibraryPage() {
 			return;
 		}
 
-		clearTimeout(debounceTimer.current);
-		debounceTimer.current = setTimeout(() => {
-			setIsSaving(true);
-			setError(null);
-			saveConfig(next)
-				.catch(() =>
-					setError(
-						__(
-							'Failed to save configuration.',
-							'acrossai-abilities-manager'
-						)
+		setIsSaving(true);
+		setError(null);
+		saveConfig(next)
+			.catch(() =>
+				setError(
+					__(
+						'Failed to save configuration.',
+						'acrossai-abilities-manager'
 					)
 				)
-				.finally(() => setIsSaving(false));
-		}, 1000);
+			)
+			.finally(() => setIsSaving(false));
 	}
 
 	return (
