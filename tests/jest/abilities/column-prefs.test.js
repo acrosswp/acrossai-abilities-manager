@@ -22,7 +22,10 @@ jest.mock('@wordpress/element', () => ({
 jest.mock('../../../src/js/abilities/store/index', () => ({
 	STORE_NAME: 'test-store',
 }));
-jest.mock('../../../src/js/abilities/components/cells/SourceBadge', () => () => null);
+jest.mock(
+	'../../../src/js/abilities/components/cells/SourceBadge',
+	() => () => null
+);
 
 const LS_KEY = 'acrossai_abilities_columns';
 

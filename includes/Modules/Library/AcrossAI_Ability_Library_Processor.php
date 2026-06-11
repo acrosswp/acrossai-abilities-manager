@@ -6,8 +6,8 @@
  * gate which add-on abilities are registered into the WordPress Abilities API.
  *
  * Default behavior when a key is absent from saved config (D6):
- *   - main_key missing → enabled=true, mode='all'
- *   - sub_key missing in Specific mode → enabled=false
+ *   - category missing → enabled=true, mode='all'
+ *   - slug missing in Specific mode → enabled=false
  *
  * @package    AcrossAI_Abilities_Manager
  * @subpackage includes/Modules/Library
@@ -80,11 +80,11 @@ class AcrossAI_Ability_Library_Processor {
 	/**
 	 * Determine whether a definition is permitted by the saved config.
 	 *
-	 * FR-013: main_key absent → enabled by default.
-	 * FR-014: main_key disabled → skip.
-	 * FR-015: mode=all → all sub_keys permitted.
-	 * FR-016: mode=specific → only explicitly enabled sub_keys permitted.
-	 * FR-017: sub_key absent in Specific mode → disabled by default (D6).
+	 * FR-013: category absent → enabled by default.
+	 * FR-014: category disabled → skip.
+	 * FR-015: mode=all → all slugs permitted.
+	 * FR-016: mode=specific → only explicitly enabled slugs permitted.
+	 * FR-017: slug absent in Specific mode → disabled by default (D6).
 	 *
 	 * @since  0.1.0
 	 * @param  array<string, mixed>                $definition Validated definition from the Registry.
@@ -92,30 +92,31 @@ class AcrossAI_Ability_Library_Processor {
 	 * @return bool
 	 */
 	private function is_permitted( array $definition, array $config ): bool {
-		$main_key = $definition['main_key'];
-		$sub_key  = $definition['sub_key'];
+		$category = $definition['category'];
+		$slug     = $definition['slug'];
 
-		// Main key absent from config → permitted with default all-mode (FR-013).
-		if ( ! isset( $config[ $main_key ] ) ) {
+		// Category absent from config → permitted with default all-mode (FR-013).
+		if ( ! isset( $config[ $category ] ) ) {
 			return true;
 		}
 
-		$entry   = $config[ $main_key ];
+		$entry   = $config[ $category ];
 		$enabled = isset( $entry['enabled'] ) ? (bool) $entry['enabled'] : true;
 
-		// Main key is disabled (FR-014).
+		// Category is disabled (FR-014).
 		if ( ! $enabled ) {
 			return false;
 		}
 
 		$mode = isset( $entry['mode'] ) && 'specific' === $entry['mode'] ? 'specific' : 'all';
 
-		// All mode → all sub_keys for this main_key are permitted (FR-015).
+		// All mode → all slugs for this category are permitted (FR-015).
 		if ( 'all' === $mode ) {
 			return true;
 		}
 
-		// Specific mode: sub_key must be explicitly enabled; absent defaults to false (FR-016, FR-017).
-		return isset( $entry['sub_keys'][ $sub_key ] ) && (bool) $entry['sub_keys'][ $sub_key ];
+		// Specific mode: slug must be explicitly enabled; absent defaults to false (FR-016, FR-017).
+		// Note: sub_keys is the on-disk wire key — intentionally preserved for backwards compat.
+		return isset( $entry['sub_keys'][ $slug ] ) && (bool) $entry['sub_keys'][ $slug ];
 	}
 }

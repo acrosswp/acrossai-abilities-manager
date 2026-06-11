@@ -5,6 +5,16 @@ This is not a changelog. Do not record routine releases, version bumps, or imple
 
 ---
 
+### 2026-06-11 — Feature 031: Library category/slug rebrand + Ability_Definition simplification — 0 security findings
+
+- **Why durable**: DEC-LIBRARY-CATEGORY-SLUG-REBRAND establishes that `Ability_Definition` subclasses need only implement `ability()`; all Library grouping fields derive automatically. 17 external subclasses in `acrossai-core-abilities` remained compatible without code changes.
+- **Future mistake prevented**: (1) Never add redundant abstract methods to a base class when the required data already exists in another abstract method's return value. (2) PHP only fatals on *missing* abstract implementations — extra non-abstract methods on a subclass are silently ignored, enabling backwards-compatible base class simplification. (3) `args['category']` absent from an ability spec causes silent Registry rejection; add-on authors must include it.
+- **Also shipped**: `category_label` auto-derived via `ucwords(str_replace('-', ' ', $category))`; saves fire instantly (no debounce); "Saving…" spinner removed to eliminate layout-shift flash.
+- **Evidence**: `includes/Modules/Library/Ability_Definition.php` (push_definition derivation), `src/js/ability-library/components/LibraryPage.js` (instant save pattern).
+- **Where to look**: `specs/031-library-category-slug-rebrand/plan.md` (Rename Map), `docs/memory/DECISIONS.md` (DEC-LIBRARY-CATEGORY-SLUG-REBRAND).
+
+---
+
 ### 2026-06-11 — Feature 030: Library page blank-page fix + AddonsPage package rebrand — 0 security findings
 
 - **Why durable**: Two new bug patterns (BUG-LIBRARY-HOOK-SUFFIX, BUG-WP-LOCALIZE-SCRIPT-RENDER) prevent the same class of mistake on every future admin submenu page with JS assets.

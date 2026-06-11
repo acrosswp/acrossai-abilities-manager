@@ -1434,7 +1434,7 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 								</div>
 								<div className="sect-desc">
 									{__(
-										'Inject this ability into every connected MCP server\'s tool list at server initialization.',
+										"Inject this ability into every connected MCP server's tool list at server initialization.",
 										'acrossai-abilities-manager'
 									)}
 								</div>
@@ -1470,24 +1470,30 @@ export default function AbilityForm({ mode, slug, initialAbility }) {
 									},
 								]}
 							/>
-							{ draftAbility.show_in_mcp === false && (
+							{draftAbility.show_in_mcp === false && (
 								<p className="description">
-									{ __(
+									{__(
 										'Set "Show in MCP" to default or on to enable this option.',
 										'acrossai-abilities-manager'
-									) }
+									)}
 								</p>
-							) }
-							{ draftAbility.pass_as_tool === true && (
-								<div className="notice notice-warning inline" style={ { margin: '8px 0 0', padding: '8px 12px' } }>
+							)}
+							{draftAbility.pass_as_tool === true && (
+								<div
+									className="notice notice-warning inline"
+									style={{
+										margin: '8px 0 0',
+										padding: '8px 12px',
+									}}
+								>
 									<p>
-										{ __(
+										{__(
 											'This ability will be registered alongside the 3 default MCP tools on every server initialization request. Adding many abilities as tools may increase server load time and memory usage.',
 											'acrossai-abilities-manager'
-										) }
+										)}
 									</p>
 								</div>
-							) }
+							)}
 						</div>
 
 						{/* ── Section 5 — Annotations ── */}

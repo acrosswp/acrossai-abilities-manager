@@ -21,6 +21,7 @@ class AcrossAI_Ability_Library_Config {
 	const MAX_KEY_LENGTH = 100;
 	const MAX_KEYS       = 50;
 	const MAX_SUB_KEYS   = 50;
+	const MAX_SLUGS      = self::MAX_SUB_KEYS;
 	const VALID_MODES    = array( 'all', 'specific' );
 
 	/**
@@ -67,7 +68,10 @@ class AcrossAI_Ability_Library_Config {
 	}
 
 	/**
-	 * Sanitizes a single main_key entry.
+	 * Sanitizes a single category entry.
+	 *
+	 * On-disk shape uses sub_keys as the inner map key for backwards compatibility
+	 * with saved configs written before Feature 031.
 	 *
 	 * @param array<string, mixed> $raw Raw entry.
 	 * @return array<string, mixed>

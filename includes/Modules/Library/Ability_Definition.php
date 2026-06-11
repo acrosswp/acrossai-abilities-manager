@@ -15,9 +15,9 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Base class for ability definitions.
  *
- * Subclasses implement five abstract methods describing the ability's
- * Library-page grouping and its wp_register_ability() spec. The constructor
- * hooks the existing acrossai_abilities_api_init filter automatically.
+ * Subclasses implement one abstract method (ability()) — the Library page
+ * derives its grouping fields (category, slug, labels) automatically.
+ * The constructor hooks acrossai_abilities_api_init automatically.
  */
 abstract class Ability_Definition {
 
@@ -30,18 +30,6 @@ abstract class Ability_Definition {
 		add_filter( 'acrossai_abilities_api_init', array( $this, 'push_definition' ) );
 	}
 
-	/** Library card grouping key (e.g. 'sre-tools'). */
-	abstract protected function main_key(): string;
-
-	/** Human-readable label for the card title (e.g. 'SRE Tools'). */
-	abstract protected function main_key_label(): string;
-
-	/** Sub-key for the per-ability checkbox (e.g. 'transient-flush'). */
-	abstract protected function sub_key(): string;
-
-	/** Human-readable label for the sub-key checkbox (e.g. 'Flush Transients'). */
-	abstract protected function sub_key_label(): string;
-
 	/**
 	 * Full ability spec for wp_register_ability().
 	 *
@@ -50,25 +38,37 @@ abstract class Ability_Definition {
 	 *   - 'args'  (array)  the args passed to wp_register_ability:
 	 *                      label, description, category, execute_callback,
 	 *                      permission_callback, input_schema, output_schema, meta
+	 *
+	 * The Library page derives its display fields from this return value:
+	 *   - Library card grouping: args['category']
+	 *   - Per-row label:         args['label']
+	 *   - Unique slug:           name
 	 */
 	abstract protected function ability(): array;
 
 	/**
 	 * Filter callback — wired automatically by the constructor.
 	 *
+	 * Derives Library grouping fields from ability() so subclasses only need
+	 * to implement the single ability() method.
+	 *
 	 * @param array $definitions Existing definitions collected so far.
 	 * @return array
 	 */
 	public function push_definition( array $definitions ): array {
 		$spec = $this->ability();
+		$name = $spec['name'] ?? '';
+		$args = $spec['args'] ?? array();
+
+		$category = $args['category'] ?? '';
 
 		$definitions[] = array(
-			'main_key'       => $this->main_key(),
-			'main_key_label' => $this->main_key_label(),
-			'sub_key'        => $this->sub_key(),
-			'sub_key_label'  => $this->sub_key_label(),
-			'name'           => $spec['name'] ?? '',
-			'args'           => $spec['args'] ?? array(),
+			'category'       => $category,
+			'category_label' => ucwords( str_replace( '-', ' ', $category ) ),
+			'slug'           => $name,
+			'slug_label'     => $args['label'] ?? $name,
+			'name'           => $name,
+			'args'           => $args,
 		);
 
 		return $definitions;

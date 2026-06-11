@@ -1470,3 +1470,42 @@ there are NOT callable via `tools/call`.
 **Where to look**
 `AcrossAI_Ability_Override_Processor::inject_mcp_tools()` — boot() registration and
 full implementation.
+
+---
+
+### 2026-06-11 — Ability_Definition abstract contract simplified to single ability() method (DEC-LIBRARY-CATEGORY-SLUG-REBRAND)
+
+**Context**
+Feature 031 renames the Library module's grouping scheme from `main_key`/`sub_key` to
+`category`/`slug`. The original design required subclasses to implement four abstract
+grouping methods (`main_key()`, `main_key_label()`, `sub_key()`, `sub_key_label()`) in
+addition to `ability()`. Discovery of 17 existing concrete subclasses in `acrossai-core-abilities`
+revealed that all the necessary grouping information already exists in `ability()['args']['category']`
+and `ability()['name']`.
+
+**Decision**
+Remove the four abstract grouping methods. `push_definition()` now derives all Library
+display fields from the single `ability()` return value:
+- `category` ← `args['category']`
+- `category_label` ← `ucwords(str_replace('-', ' ', $category))`
+- `slug` ← `name`
+- `slug_label` ← `args['label']` ?? `name`
+
+**Backwards compatibility**
+External subclasses that still implement the old `main_key()`/`sub_key()` methods are
+**not broken** — PHP only fatals on *missing* abstract method implementations, not on
+extra non-abstract methods. The 17 existing subclasses load and function correctly.
+
+**On-disk config shape**
+`acrossai_library_config` site option retains `{enabled, mode, sub_keys: {slug→bool}}`
+per category entry. The `sub_keys` inner map key is intentionally preserved for backwards
+compatibility with saved configs. Only in-memory field names and JS props were renamed.
+
+**Rule**
+New `Ability_Definition` subclasses MUST implement only `ability()`. The `args` array
+returned by `ability()` MUST include a `category` key — its absence causes the Registry
+to silently reject the definition (logged under `WP_DEBUG_LOG`).
+
+**Evidence**
+`includes/Modules/Library/Ability_Definition.php` — `push_definition()` derivation;
+`specs/031-library-category-slug-rebrand/plan.md` — Technical Context and Rename Map.

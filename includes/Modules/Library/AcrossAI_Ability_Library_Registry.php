@@ -42,10 +42,10 @@ class AcrossAI_Ability_Library_Registry {
 	 * @var string[]
 	 */
 	private const REQUIRED_FIELDS = array(
-		'main_key',
-		'main_key_label',
-		'sub_key',
-		'sub_key_label',
+		'category',
+		'category_label',
+		'slug',
+		'slug_label',
 		'name',
 		'args',
 	);
@@ -104,8 +104,12 @@ class AcrossAI_Ability_Library_Registry {
 		 * Filter: collect ability definitions from add-ons.
 		 *
 		 * Add-ons hook here at standard init priority (10) and push definition arrays
-		 * onto the accumulator. Each definition must include main_key, main_key_label,
-		 * sub_key, sub_key_label, name, and args. Unknown args keys are stripped.
+		 * onto the accumulator. Each definition must include category, category_label,
+		 * slug, slug_label, name, and args. Unknown args keys are stripped.
+		 * Note: the top-level 'category' field is the Library card grouping key; it is
+		 * distinct from the 'category' key permitted inside args (the WordPress Abilities
+		 * API ability category). These two fields exist at different array depths and are
+		 * validated independently.
 		 *
 		 * @since 0.1.0
 		 * @param array<int, array<string, mixed>> $definitions Accumulated definitions.
@@ -163,21 +167,21 @@ class AcrossAI_Ability_Library_Registry {
 				array_flip( self::ALLOWED_ARGS_FIELDS )
 			);
 
-			$main_key = AcrossAI_Ability_Library_Config::sanitize_key_field( (string) $item['main_key'] );
-			$sub_key  = AcrossAI_Ability_Library_Config::sanitize_key_field( (string) $item['sub_key'] );
+			$category = AcrossAI_Ability_Library_Config::sanitize_key_field( (string) $item['category'] );
+			$slug     = AcrossAI_Ability_Library_Config::sanitize_key_field( (string) $item['slug'] );
 			// Preserve the namespace/name slash: sanitize_key() strips '/', corrupting names like 'plugin/ability'.
 			$name = preg_replace( '/[^a-z0-9_\-\/]/', '', strtolower( (string) $item['name'] ) );
 
-			if ( '' === $main_key || '' === $sub_key || '' === $name ) {
-				$this->log_invalid( $index, 'key or name became empty after sanitization' );
+			if ( '' === $category || '' === $slug || '' === $name ) {
+				$this->log_invalid( $index, 'category, slug, or name became empty after sanitization' );
 				continue;
 			}
 
 			$valid[] = array(
-				'main_key'       => $main_key,
-				'main_key_label' => wp_kses_post( (string) $item['main_key_label'] ),
-				'sub_key'        => $sub_key,
-				'sub_key_label'  => wp_kses_post( (string) $item['sub_key_label'] ),
+				'category'       => $category,
+				'category_label' => wp_kses_post( (string) $item['category_label'] ),
+				'slug'           => $slug,
+				'slug_label'     => wp_kses_post( (string) $item['slug_label'] ),
 				'name'           => $name,
 				'args'           => $item['args'],
 			);

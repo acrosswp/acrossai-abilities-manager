@@ -1,30 +1,36 @@
 import { useEffect, useRef, useState } from '@wordpress/element';
-import { Notice, Spinner } from '@wordpress/components';
+import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { fetchConfig, saveConfig } from '../api';
 import LibraryCard from './LibraryCard';
 
 /**
- * Group flat definitions array by main_key into card items.
+ * Group flat definitions array by category into card items.
  *
  * @param {Array} definitions Raw definitions from window.acrossaiAbilityLibraryData.
- * @return {Array} Grouped items, one per main_key.
+ * @return {Array} Grouped items, one per category.
  */
 function groupDefinitions(definitions) {
 	const map = new Map();
 	for (const def of definitions) {
 		const {
-			main_key: mainKey,
-			main_key_label: mainKeyLabel,
-			sub_key: subKey,
-			sub_key_label: subKeyLabel,
+			category,
+			category_label: categoryLabel,
+			slug,
+			slug_label: slugLabel,
+			name,
 		} = def;
-		if (!map.has(mainKey)) {
-			map.set(mainKey, { id: mainKey, mainKey, mainKeyLabel, subKeys: [] });
+		if (!map.has(category)) {
+			map.set(category, {
+				id: category,
+				category,
+				categoryLabel,
+				slugs: [],
+			});
 		}
-		const group = map.get(mainKey);
-		if (!group.subKeys.some((s) => s.subKey === subKey)) {
-			group.subKeys.push({ subKey, subKeyLabel });
+		const group = map.get(category);
+		if (!group.slugs.some((s) => s.slug === slug)) {
+			group.slugs.push({ slug, slugLabel, name });
 		}
 	}
 	return Array.from(map.values());
@@ -38,11 +44,9 @@ export default function LibraryPage() {
 	const items = groupDefinitions(data.definitions || []);
 
 	const [config, setConfig] = useState({});
-	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState(null);
 
 	const initialLoadComplete = useRef(false);
-	const debounceTimer = useRef(null);
 
 	useEffect(() => {
 		fetchConfig()
@@ -61,40 +65,27 @@ export default function LibraryPage() {
 			});
 	}, []);
 
-	function handleChange(mainKey, updatedEntry) {
-		const next = { ...config, [mainKey]: updatedEntry };
+	function handleChange(category, updatedEntry) {
+		const next = { ...config, [category]: updatedEntry };
 		setConfig(next);
 
 		if (!initialLoadComplete.current) {
 			return;
 		}
 
-		clearTimeout(debounceTimer.current);
-		debounceTimer.current = setTimeout(() => {
-			setIsSaving(true);
-			setError(null);
-			saveConfig(next)
-				.catch(() =>
-					setError(
-						__(
-							'Failed to save configuration.',
-							'acrossai-abilities-manager'
-						)
-					)
+		setError(null);
+		saveConfig(next).catch(() =>
+			setError(
+				__(
+					'Failed to save configuration.',
+					'acrossai-abilities-manager'
 				)
-				.finally(() => setIsSaving(false));
-		}, 1000);
+			)
+		);
 	}
 
 	return (
 		<div className="acrossai-library-page">
-			{isSaving && (
-				<div className="acrossai-library-page__saving">
-					<Spinner />
-					<span>{__('Saving…', 'acrossai-abilities-manager')}</span>
-				</div>
-			)}
-
 			{error && (
 				<Notice
 					status="error"
@@ -116,7 +107,7 @@ export default function LibraryPage() {
 
 			{items.map((item) => (
 				<LibraryCard
-					key={item.mainKey}
+					key={item.category}
 					item={item}
 					config={config}
 					onChange={handleChange}

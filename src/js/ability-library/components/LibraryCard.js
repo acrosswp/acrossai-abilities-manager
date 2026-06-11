@@ -1,20 +1,24 @@
-import { CheckboxControl, RadioControl, ToggleControl } from '@wordpress/components';
+import {
+	CheckboxControl,
+	RadioControl,
+	ToggleControl,
+} from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 /**
- * Card renderer for a single main_key ability group.
+ * Card renderer for a single category ability group.
  *
  * Header row: toggle + label on left, All/Specific radio on right.
- * Sub-key checkboxes appear below when mode is "specific".
+ * Slug checkboxes appear below when mode is "specific".
  *
  * @param {Object}   props
- * @param {Object}   props.item     { mainKey, mainKeyLabel, subKeys: [{subKey, subKeyLabel}] }
- * @param {Object}   props.config   Full config keyed by main_key.
- * @param {Function} props.onChange Called with (mainKey, updatedEntry) on any change.
+ * @param {Object}   props.item     { category, categoryLabel, slugs: [{slug, slugLabel, name}] }
+ * @param {Object}   props.config   Full config keyed by category.
+ * @param {Function} props.onChange Called with (category, updatedEntry) on any change.
  */
 export default function LibraryCard({ item, config, onChange }) {
-	const { mainKey, mainKeyLabel, subKeys } = item;
-	const entry = config[mainKey] ?? {
+	const { category, categoryLabel, slugs } = item;
+	const entry = config[category] ?? {
 		enabled: true,
 		mode: 'all',
 		sub_keys: {},
@@ -22,10 +26,10 @@ export default function LibraryCard({ item, config, onChange }) {
 
 	const enabled = entry.enabled ?? true;
 	const mode = entry.mode ?? 'all';
-	const subKeysConfig = entry.sub_keys ?? {};
+	const slugsConfig = entry.sub_keys ?? {};
 
 	function update(patch) {
-		onChange(mainKey, { ...entry, ...patch });
+		onChange(category, { ...entry, ...patch });
 	}
 
 	return (
@@ -33,7 +37,7 @@ export default function LibraryCard({ item, config, onChange }) {
 			<div className="acrossai-library-card__header">
 				<ToggleControl
 					__nextHasNoMarginBottom
-					label={<strong>{mainKeyLabel}</strong>}
+					label={<strong>{categoryLabel}</strong>}
 					checked={enabled}
 					onChange={(value) => update({ enabled: value })}
 				/>
@@ -56,25 +60,28 @@ export default function LibraryCard({ item, config, onChange }) {
 							},
 						]}
 						onChange={(value) =>
-						update({ mode: value, sub_keys: value === 'all' ? {} : subKeysConfig })
-					}
+							update({
+								mode: value,
+								sub_keys: value === 'all' ? {} : slugsConfig,
+							})
+						}
 					/>
 				)}
 			</div>
 
-			{enabled && mode === 'specific' && subKeys.length > 0 && (
-				<div className="acrossai-library-card__sub-keys">
-					{subKeys.map(({ subKey, subKeyLabel }) => (
+			{enabled && mode === 'specific' && slugs.length > 0 && (
+				<div className="acrossai-library-card__slugs">
+					{slugs.map(({ slug, slugLabel, name }) => (
 						<CheckboxControl
 							__nextHasNoMarginBottom
-							key={subKey}
-							label={subKeyLabel}
-							checked={subKeysConfig[subKey] ?? false}
+							key={slug}
+							label={slugLabel || name}
+							checked={slugsConfig[slug] ?? false}
 							onChange={(value) =>
 								update({
 									sub_keys: {
-										...subKeysConfig,
-										[subKey]: value,
+										...slugsConfig,
+										[slug]: value,
 									},
 								})
 							}
