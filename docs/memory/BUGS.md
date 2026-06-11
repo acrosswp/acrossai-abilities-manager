@@ -1310,3 +1310,54 @@ Never assign `$result = SomeClass::voidCallback(...)` and then assert on `$resul
 `inject_mcp_tools($config, 'test-server')` and asserted `$result['tools']`.
 The real signature is `inject_mcp_tools($adapter): void`. Rewrite used anonymous
 class mocks with `component_registry` Reflection to verify `register_tools()` calls.
+
+---
+
+### 2026-06-11 — BUG-LIBRARY-HOOK-SUFFIX
+
+**Pattern**
+WordPress generates a submenu hook suffix from `sanitize_title($menu_title)`, NOT
+from `$menu_slug`. Hardcoding `{parent-slug}_page_{submenu-slug}` assumes the
+title sanitizes identically to the slug — this can silently fail if they differ.
+`is_*_page()` guards built on a hardcoded string will never match, causing
+the enqueue block to be skipped and the page to load with no scripts or data.
+
+**Prevention**
+Always capture the return value of `add_submenu_page()` and store it on the menu
+singleton:
+```php
+$this->hook_suffix = is_string( $suffix ) ? $suffix : '';
+```
+Compare in `is_*_page()` via `get_hook_suffix()`, NOT a hardcoded literal.
+Only top-level `add_menu_page()` suffixes (which use the slug directly) may be
+safely hardcoded — see `is_manager_page()` and DEC-MENU-HOOK-SUFFIX.
+
+**Evidence (Feature 030)**
+`admin/Main.php::is_library_page()` previously returned
+`'acrossai-abilities-manager_page_acrossai-abilities-library' === $hook_suffix`.
+Fix: `LibraryMenu::register_submenu()` captures `$suffix = add_submenu_page(...)`,
+`LibraryMenu::get_hook_suffix()` exposes it,
+`is_library_page()` compares against the live value (same pattern as `is_logs_page()`).
+
+---
+
+### 2026-06-11 — BUG-WP-LOCALIZE-SCRIPT-RENDER
+
+**Pattern**
+`wp_localize_script()` called from inside a page render callback (the function
+registered as the last arg to `add_submenu_page()`) fires after WordPress has
+already output the `<head>` and registered script tags. The localization data
+arrives too late for the script to read it synchronously, producing a blank page
+or runtime `undefined` errors.
+
+**Prevention**
+Data injection MUST happen at `admin_enqueue_scripts` time via `wp_add_inline_script()`:
+- Use `'before'` position so `window.*` global is defined before the script executes.
+- Call only from `Admin\Main::enqueue_scripts()` (AC-ENQUEUE-ADMIN).
+- Never inject data from `render()`, `register_submenu()`, or any page-output callback.
+
+**Evidence (Feature 030)**
+`LibraryMenu::localize_data()` called `wp_localize_script()` from `render()`,
+causing a blank Library page on every first load. Fix: moved injection to
+`admin/Main.php::enqueue_scripts()` via `wp_add_inline_script(..., 'before')`.
+See also: AC-ENQUEUE-ADMIN, DEC-ABILITIES-LIST-UX-025.

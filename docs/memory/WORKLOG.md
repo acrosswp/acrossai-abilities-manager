@@ -5,6 +5,16 @@ This is not a changelog. Do not record routine releases, version bumps, or imple
 
 ---
 
+### 2026-06-11 — Feature 030: Library page blank-page fix + AddonsPage package rebrand — 0 security findings
+
+- **Why durable**: Two new bug patterns (BUG-LIBRARY-HOOK-SUFFIX, BUG-WP-LOCALIZE-SCRIPT-RENDER) prevent the same class of mistake on every future admin submenu page with JS assets.
+- **Future mistake prevented**: (1) Never hardcode a submenu hook suffix — capture `add_submenu_page()` return value and expose via `get_hook_suffix()`. (2) Never inject page data via `wp_localize_script()` from a render callback — always use `wp_add_inline_script('before')` in `enqueue_scripts()`. (3) Composer package namespace must be confirmed from installed `vendor/*/composer.json` before writing FQCN in plugin code.
+- **Also shipped**: `wpboilerplate/addons-page` → `acrossai-co/addons-page` (FQCN: `\AcrossAI_Addon\AddonsPage`). VCS entry removed from `composer.json` (Packagist). All DEC-EXTERNAL-PACKAGE-HOOK-CTOR guards and Freemius credentials preserved unchanged.
+- **Evidence**: Branch `030-library-page-fix-and-addons-page-rebrand`. 3 PHP files + composer.json changed. 0 new files. PHPCS ✅, PHPStan L8 ✅. T001–T016 complete.
+- **Where to look**: `admin/Main.php::enqueue_scripts()` (wp_add_inline_script library block), `admin/Partials/LibraryMenu.php` (get_hook_suffix pattern), `includes/Main.php` (AcrossAI_Addon\AddonsPage block), `vendor/acrossai-co/addons-page/` (new package).
+
+---
+
 ### 2026-06-11 — Feature 029: MCP Tools Pass-through — pass_as_tool column, filter bridge, PassAsToolCell
 
 Feature 029 MVP complete (Phase 1–3, T001–T018). Governed workflow (governed-tasks + governed-implement) caught one P0 architectural error before any code was written.
