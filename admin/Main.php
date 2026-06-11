@@ -176,7 +176,7 @@ class Main {
 					? require $wpb_ac_base . 'index.asset.php'
 					: array( 'version' => '1.2.0' );
 				wp_register_style(
-					'wpb-access-control',
+					'acrossai-wpb-access-control',
 					\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'vendor/wpboilerplate/wpb-access-control/assets/build/index.css',
 					array(),
 					$wpb_ac_asset['version']
@@ -185,7 +185,7 @@ class Main {
 			wp_register_style(
 				'acrossai-abilities-manager-abilities',
 				\ACROSSAI_ABILITIES_MANAGER_PLUGIN_URL . 'build/css/abilities.css',
-				file_exists( $wpb_ac_css_path ) ? array( 'wpb-access-control' ) : array(),
+				file_exists( $wpb_ac_css_path ) ? array( 'acrossai-wpb-access-control' ) : array(),
 				$this->abilities_asset_file['version']
 			);
 			wp_enqueue_style( 'acrossai-abilities-manager-abilities' );
