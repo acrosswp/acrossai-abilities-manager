@@ -13,10 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Build plugin # Remove or modify this step as needed
+      - name: Build plugin
         run: |
           npm install
-          npm run build-production
+          npm run build
 
       - name: Generate zip
         uses: 10up/action-wordpress-plugin-build-zip@stable
