@@ -19,6 +19,8 @@ function groupDefinitions(definitions) {
 			slug,
 			slug_label: slugLabel,
 			name,
+			sub_group: subGroup,
+			sub_group_label: subGroupLabel,
 		} = def;
 		if (!map.has(category)) {
 			map.set(category, {
@@ -30,7 +32,13 @@ function groupDefinitions(definitions) {
 		}
 		const group = map.get(category);
 		if (!group.slugs.some((s) => s.slug === slug)) {
-			group.slugs.push({ slug, slugLabel, name });
+			group.slugs.push({
+				slug,
+				slugLabel,
+				name,
+				subGroup: subGroup || '',
+				subGroupLabel: subGroupLabel || '',
+			});
 		}
 	}
 	return Array.from(map.values());

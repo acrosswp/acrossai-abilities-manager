@@ -1441,3 +1441,73 @@ if ( $wp_ability ) {
 With Pass as Tool = On and no AC rule configured, non-admin users saw the tool in
 MCP tools/list. Root cause: `user_has_ability_access()` line ~734 returns `true`
 when `'' === $rule['key']`. Fix in `AcrossAI_Ability_Override_Processor::inject_mcp_tools()`.
+
+---
+
+### 2026-06-14 — BUG-PHPUNIT-AUTODISCOVERY-PREFIX
+
+**Status**: Active
+
+**Why this is durable**
+Any future Spec Kit feature that adds a new PHPUnit test directory using the project's
+`Test_*.php` prefix convention will silently produce zero tests if it wires the directory
+via `<directory>` rather than `<file>` entries.
+
+**Bug pattern**
+PHPUnit 10's `<directory>` element defaults to `suffix="Test.php"`. The project uses
+`Test_*.php` (prefix), so `<directory>tests/phpunit/Modules/X</directory>` matches zero
+files and silently emits no test failures — `vendor/bin/phpunit` reports an unchanged
+test count even though the new suite "ran." Same failure-mode family as
+BUG-PHPUNIT-ABSPATH-SILENT-EXIT and BUG-PHPUNIT-BERLINDDB-SCOPE.
+
+**Prevention**
+- For test directories using `Test_*.php` prefix, wire them via explicit `<file>` entries
+  in `phpunit.xml.dist`, OR
+- Add `suffix="Test_"` to the `<directory>` element (less clean — non-standard), OR
+- Adopt the `*Test.php` suffix going forward (would break existing naming consistency).
+- After wiring, verify the total test count in `vendor/bin/phpunit` output increased by
+  the expected delta. Silent "Tests: <unchanged>" means the new suite isn't being picked up.
+
+**Evidence (Feature 033 turn 1)**
+Added `tests/phpunit/Modules/Library/Test_Ability_Definition.php` (+ two siblings) under
+a `<directory>tests/phpunit/Modules/Library</directory>` testsuite. `vendor/bin/phpunit`
+reported the unchanged 71-test total. Switching to three explicit `<file>` entries
+flipped the count to the expected 85. See `phpunit.xml.dist` and the `library-unit`
+testsuite.
+
+---
+
+### 2026-06-14 — BUG-JEST-MOCK-LIST-STALENESS
+
+**Status**: Active
+
+**Why this is durable**
+PATTERN-NAMED-EXPORT-JEST helper tests will break whenever the host JSX file gains a
+new `@wordpress/*` top-level import. The failure is non-local: the broken test never
+references the new import, so the stack trace points at `require()` of the JSX module
+rather than the offending import line — easy to misdiagnose.
+
+**Bug pattern**
+Adding a new `@wordpress/*` top-level import to a JSX file breaks every Jest spec that
+`require()`s a **named export** from that file, because the spec's `jest.mock()`
+allowlist is stale and the new import can't be resolved under jsdom.
+
+**Prevention**
+- After adding any `@wordpress/*` import to a JSX file, grep
+  `tests/jest -l "require.*<that-file>"` and update each matching spec's `jest.mock()`
+  list to include the newly-imported package.
+- Prefer broad-stub mocks like
+  `jest.mock('@wordpress/components', () => ({ Button: ()=>null, CheckboxControl: ()=>null, RadioControl: ()=>null, ToggleControl: ()=>null }))`
+  over per-named-import mocks — they survive future import additions.
+- For `@wordpress/element` mocks, stub Fragment AND useState (and any other React hooks
+  the component uses) up-front; missing-hook errors surface late.
+- Run `npx wp-scripts test-unit-js tests/jest/<dir>/` after any JSX import change.
+
+**Evidence (Feature 033 turn 3)**
+Adding `@wordpress/components` `Button`, `@wordpress/element` `useState`, and
+`@wordpress/icons` `chevronDown`/`chevronUp` imports to `LibraryCard.js` broke
+`tests/jest/ability-library/groupBySubGroupPreservingOrder.test.js` at `require()` of
+LibraryCard.js, even though the imported helper (`groupBySubGroupPreservingOrder`)
+itself never uses any of them. The spec's `jest.mock('@wordpress/components', ...)`
+allowlist needed Button added, and a new `jest.mock('@wordpress/icons', ...)` block
+was required.

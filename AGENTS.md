@@ -78,6 +78,10 @@ package_hierarchy:
 - Plugin Check suppressions must be local and exact, and only for cases with no safe WordPress API replacement. Never use workflow-level ignore codes for one-line production-code findings.
 - PHPCS is already configured through Composer (`composer run phpcs`) with WPCS, WordPress-Docs, and PHPCompatibility. Do not make repo-wide PHPCS a required PR gate until the existing baseline is fixed or the PHPCS config is scoped to the production plugin surface.
 
+## Ability Library
+
+- Optional `args['sub_group']` on `Ability_Definition` subclasses is **display-only** — it adds a sub-heading inside the Library Specific panel. It MUST NOT change the saved `acrossai_library_config` shape (`{ enabled, mode, sub_keys }`) or the `sub_keys` slug-keyed map. Optional `args['sub_group_label']` overrides the auto-derived label.
+
 ---
 
 # AI Engineering Rules

@@ -48,6 +48,7 @@ $bg:        #f6f7f7;
 		display:         flex;
 		align-items:     center;
 		justify-content: space-between;
+		gap:             8px;
 
 		// Stretch the toggle label to fill available space.
 		.components-toggle-control {
@@ -59,6 +60,12 @@ $bg:        #f6f7f7;
 				margin-bottom: 0;
 			}
 		}
+	}
+
+	// Per-card disclosure (expand/collapse) button (Feature 033 turn 3).
+	&__disclosure {
+		flex-shrink: 0;
+		color:       $muted;
 	}
 
 	// Radio buttons displayed inline (horizontal) in the header.
@@ -97,6 +104,32 @@ $bg:        #f6f7f7;
 
 		.components-checkbox-control__label {
 			font-size: 13px;
+		}
+	}
+
+	// Sub-group heading inside the Specific panel (Feature 033 — display-only).
+	&__subgroup-heading {
+		margin:         12px 0 4px;
+		font-size:      13px;
+		font-weight:    600;
+		color:          $txt;
+		text-transform: none;
+	}
+
+	// Read-only ability row — shown inside the slugs panel when mode = "all".
+	// Renders the ability label as a bulleted item so admins can scan what the
+	// card covers without flipping the radio.
+	&__slug-readonly {
+		font-size:   13px;
+		color:       $muted;
+		padding-left: 14px;
+		position:    relative;
+
+		&::before {
+			content:   '\2022'; // Bullet.
+			position:  absolute;
+			left:      0;
+			color:     $muted;
 		}
 	}
 }

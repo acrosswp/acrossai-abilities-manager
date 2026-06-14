@@ -24,6 +24,11 @@
 			<file>tests/phpunit/abilities/AbilityOverrideInjectVariantATest.php</file>
 			<file>tests/phpunit/abilities/SettingsMenuTest.php</file>
 		</testsuite>
+		<testsuite name="library-unit">
+			<file>tests/phpunit/Modules/Library/Test_Ability_Definition.php</file>
+			<file>tests/phpunit/Modules/Library/Test_Ability_Library_Registry.php</file>
+			<file>tests/phpunit/Modules/Library/Test_Ability_Library_Config.php</file>
+		</testsuite>
 	</testsuites>
 	<source>
 		<include>

@@ -53,17 +53,35 @@ class AcrossAI_Ability_Library_Registry {
 	/**
 	 * Allowlist of permitted keys in the definition's args array (SC-027-02).
 	 *
+	 * Feature 033 added 'sub_group' and 'sub_group_label' as optional
+	 * display-only keys for the Library Specific panel sub-heading.
+	 *
 	 * @var string[]
 	 */
 	private const ALLOWED_ARGS_FIELDS = array(
 		'label',
 		'description',
 		'category',
+		'sub_group',
+		'sub_group_label',
 		'execute_callback',
 		'permission_callback',
 		'input_schema',
 		'output_schema',
 		'meta',
+	);
+
+	/**
+	 * Allowlist of optional top-level fields on a definition row (Feature 033).
+	 *
+	 * Optional fields are sanitized and copied to the validated row when
+	 * present; absence is acceptable.
+	 *
+	 * @var string[]
+	 */
+	private const OPTIONAL_FIELDS = array(
+		'sub_group',
+		'sub_group_label',
 	);
 
 	/**
@@ -110,6 +128,11 @@ class AcrossAI_Ability_Library_Registry {
 		 * distinct from the 'category' key permitted inside args (the WordPress Abilities
 		 * API ability category). These two fields exist at different array depths and are
 		 * validated independently.
+		 *
+		 * Optional (Feature 033): a row MAY include 'sub_group' (display-only sub-heading
+		 * inside the Specific panel; sanitized to a key form) and 'sub_group_label'
+		 * (overrides the auto-derived label). Both are display-only and never appear in
+		 * saved configuration.
 		 *
 		 * @since 0.1.0
 		 * @param array<int, array<string, mixed>> $definitions Accumulated definitions.
@@ -177,7 +200,7 @@ class AcrossAI_Ability_Library_Registry {
 				continue;
 			}
 
-			$valid[] = array(
+			$entry = array(
 				'category'       => $category,
 				'category_label' => wp_kses_post( (string) $item['category_label'] ),
 				'slug'           => $slug,
@@ -185,9 +208,38 @@ class AcrossAI_Ability_Library_Registry {
 				'name'           => $name,
 				'args'           => $item['args'],
 			);
+
+			// Feature 033 — optional sub_group / sub_group_label pass-through.
+			// Display-only; never written to saved configuration.
+			if ( isset( $item['sub_group'] ) && '' !== $item['sub_group'] ) {
+				$clean_sub = self::sanitize_sub_group( (string) $item['sub_group'] );
+				if ( '' !== $clean_sub ) {
+					$entry['sub_group']       = $clean_sub;
+					$entry['sub_group_label'] = isset( $item['sub_group_label'] ) && '' !== $item['sub_group_label']
+						? wp_kses_post( (string) $item['sub_group_label'] )
+						: ucwords( str_replace( '-', ' ', $clean_sub ) );
+				}
+			}
+
+			$valid[] = $entry;
 		}
 
 		return $valid;
+	}
+
+	/**
+	 * The sub-group identifier sanitizer (Feature 033).
+	 *
+	 * Reuses the existing 100-char + sanitize_key() rule already proven on
+	 * category/slug fields, so add-on authors face a single, consistent
+	 * key-shape contract. Display-only — never persisted.
+	 *
+	 * @since  0.1.0
+	 * @param  string $raw Raw sub-group identifier from a definition row.
+	 * @return string Sanitized key; may be empty if input cannot be sanitized.
+	 */
+	private static function sanitize_sub_group( string $raw ): string {
+		return AcrossAI_Ability_Library_Config::sanitize_key_field( $raw );
 	}
 
 	/**

@@ -5,6 +5,16 @@ This is not a changelog. Do not record routine releases, version bumps, or imple
 
 ---
 
+### 2026-06-14 — Feature 033: Library card visibility contract + optional sub_group display + chevron disclosure (3 turns)
+
+- **Why durable**: Feature shipped across three iterative turns driven by UX feedback, surfacing two reusable Spec Kit bug patterns (BUG-PHPUNIT-AUTODISCOVERY-PREFIX, BUG-JEST-MOCK-LIST-STALENESS). The three-turn revision pattern itself — initial contract → live UX review reveals gap → spec/tasks remediated → second UX revision → re-analyze — is a real Spec Kit workflow signature worth recognizing.
+- **Future mistake prevented**: (1) Don't wire new `Test_*.php`-prefix test directories via PHPUnit `<directory>`; use explicit `<file>` entries or the suite runs silently empty. (2) Helper-import Jest specs break when host JSX files gain new `@wordpress/*` imports; mock-list staleness is the failure mode. (3) Iterative UX revisions can drift FRs/SCs; `/speckit-analyze` after every implementation-stage UX change catches this before merge.
+- **Also shipped**: OPTIONAL `args['sub_group']` pass-through on `Ability_Definition` for display-only sub-group headings (no DB shape change, no REST shape change, `sub_keys` slug-keyed map preserved); chevron disclosure button per card with `useState(true)` default expanded, no persistence; turn-2 read-only ability list under "All" mode; spec.md FR-015 / SC-001 / SC-003 / US3 remediated to match the turn-3 contract.
+- **Evidence**: Branch `032-library-card-toggle-and-subgroup-display`. 85/85 PHPUnit, 20/20 Jest, PHPStan level 8 0 errors, PHPCS WPCS 0 errors. Saved `acrossai_library_config` shape `{ enabled, mode, sub_keys }` byte-for-byte unchanged.
+- **Where to look**: `specs/033-library-card-toggle-subgroup/{spec,plan,tasks}.md` (3-turn revision history); `includes/Modules/Library/Ability_Definition.php` (sub_group pass-through); `src/js/ability-library/components/LibraryCard.js` (visibility contract + disclosure + grouping render); `phpunit.xml.dist` (`library-unit` testsuite via `<file>` entries — see BUG-PHPUNIT-AUTODISCOVERY-PREFIX).
+
+---
+
 ### 2026-06-11 — Feature 032: Post-031 hotfixes — 3 new bug patterns, 1 HIGH security finding resolved
 
 - **Why durable**: Three independent post-launch bugs surfaced after Feature 031 shipped, each generating a reusable durable lesson. One was a HIGH-severity security hole (MCP tools bypassing `permission_callback` for non-admin users).

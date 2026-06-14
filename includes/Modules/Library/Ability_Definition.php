@@ -18,6 +18,9 @@ defined( 'ABSPATH' ) || exit;
  * Subclasses implement one abstract method (ability()) — the Library page
  * derives its grouping fields (category, slug, labels) automatically.
  * The constructor hooks acrossai_abilities_api_init automatically.
+ *
+ * Optional: args['sub_group'] adds a display-only sub-heading inside the
+ * Library Specific panel. Does NOT affect saved config or execution.
  */
 abstract class Ability_Definition {
 
@@ -60,9 +63,10 @@ abstract class Ability_Definition {
 		$name = $spec['name'] ?? '';
 		$args = $spec['args'] ?? array();
 
-		$category = $args['category'] ?? '';
+		$category  = $args['category'] ?? '';
+		$sub_group = isset( $args['sub_group'] ) ? (string) $args['sub_group'] : '';
 
-		$definitions[] = array(
+		$row = array(
 			'category'       => $category,
 			'category_label' => ucwords( str_replace( '-', ' ', $category ) ),
 			'slug'           => $name,
@@ -70,6 +74,15 @@ abstract class Ability_Definition {
 			'name'           => $name,
 			'args'           => $args,
 		);
+
+		if ( '' !== $sub_group ) {
+			$row['sub_group']       = $sub_group;
+			$row['sub_group_label'] = isset( $args['sub_group_label'] ) && '' !== $args['sub_group_label']
+				? (string) $args['sub_group_label']
+				: ucwords( str_replace( '-', ' ', $sub_group ) );
+		}
+
+		$definitions[] = $row;
 
 		return $definitions;
 	}

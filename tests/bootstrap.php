@@ -146,6 +146,72 @@ if ( ! function_exists( 'delete_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'sanitize_key' ) ) {
+	/**
+	 * Stub: lowercases and strips to [a-z0-9_-] only.
+	 *
+	 * Mirrors the WordPress core behavior closely enough for unit tests of
+	 * key-shape sanitizers (Feature 033 Library Registry sub_group helper).
+	 *
+	 * @param  string $key Raw key string.
+	 * @return string
+	 */
+	function sanitize_key( string $key ): string {
+		$key = strtolower( $key );
+		return preg_replace( '/[^a-z0-9_\-]/', '', $key );
+	}
+}
+
+if ( ! function_exists( 'acrossai_test_site_options' ) ) {
+	/**
+	 * The shared site-option store for get_site_option / update_site_option
+	 * stubs. Pass an associative array to merge writes; pass nothing to read
+	 * the current store. Pass array() to reset.
+	 *
+	 * @param  array<string,mixed>|null $write Optional writes to merge; empty array clears.
+	 * @return array<string,mixed>
+	 */
+	function acrossai_test_site_options( ?array $write = null ): array {
+		static $store = array();
+		if ( null !== $write ) {
+			if ( array() === $write ) {
+				$store = array();
+			} else {
+				$store = array_merge( $store, $write );
+			}
+		}
+		return $store;
+	}
+}
+
+if ( ! function_exists( 'get_site_option' ) ) {
+	/**
+	 * Stub: reads from the shared acrossai_test_site_options store.
+	 *
+	 * @param  string $option  Option name.
+	 * @param  mixed  $default Default value if not set.
+	 * @return mixed
+	 */
+	function get_site_option( string $option, mixed $default = false ): mixed {
+		$store = acrossai_test_site_options();
+		return array_key_exists( $option, $store ) ? $store[ $option ] : $default;
+	}
+}
+
+if ( ! function_exists( 'update_site_option' ) ) {
+	/**
+	 * Stub: writes to the shared acrossai_test_site_options store.
+	 *
+	 * @param  string $option Option name.
+	 * @param  mixed  $value  New value.
+	 * @return bool
+	 */
+	function update_site_option( string $option, mixed $value ): bool {
+		acrossai_test_site_options( array( $option => $value ) );
+		return true;
+	}
+}
+
 if ( ! function_exists( 'esc_sql' ) ) {
 	/** Stub: basic SQL escaping (no DB in unit tests). */
 	function esc_sql( mixed $sql ): string|array {
